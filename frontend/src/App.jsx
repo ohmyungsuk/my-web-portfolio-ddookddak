@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import MyRequestsPage from "./pages/MyRequestsPage";
+import RequestDetailPage from "./pages/RequestDetailPage";
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:8080/hello")
-      .then((response) => response.text())
-      .then((data) => {
-        setMessage(data);
-      });
-  }, []);
-
   return (
-    <div>
-      <h1>태준ENG 홈페이지</h1>
-      <p>리액트 화면 연결 성공</p>
-      <p>백엔드 응답: {message}</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/my-requests" element={<MyRequestsPage />} />
+        <Route path="/request-detail" element={<RequestDetailPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
