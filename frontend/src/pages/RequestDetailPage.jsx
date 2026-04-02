@@ -1,90 +1,103 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import "../index.css";
 
-function RequestDetailPage() {
-  const [searchParams] = useSearchParams();
-  const [request, setRequest] = useState(null);
-  const [status, setStatus] = useState("");
-  const [role, setRole] = useState("");
-
-  const id = searchParams.get("id");
-
-  useEffect(() => {
-    const savedRole = localStorage.getItem("role");
-    setRole(savedRole || "");
-
-    fetch(`http://localhost:8080/requests/detail?id=${id}`)
-      .then((response) => response.json())
-      .then((data) => {
-        setRequest(data);
-        setStatus(data.status);
-      })
-      .catch((error) => {
-        console.error("요청 상세 불러오기 실패:", error);
-      });
-  }, [id]);
-
-  const handleStatusUpdate = () => {
-    fetch("http://localhost:8080/requests/status", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: request.id,
-        status: status,
-      }),
-    })
-      .then((response) => response.text())
-      .then((data) => {
-        alert(data);
-        setRequest({ ...request, status });
-      })
-      .catch((error) => {
-        console.error("상태 변경 실패:", error);
-      });
-  };
-
+function RequestDetailPage({ request, onGoBack, onGoHome }) {
   if (!request) {
     return (
-      <div className="request-detail-page">
-        <div className="inner">
-          <p>불러오는 중...</p>
+      <div className="signup-page">
+        <div className="signup-card">
+          <div className="signup-header">
+            <h1 className="logo">FixFlow</h1>
+            <p className="subtitle">요청 상세보기</p>
+          </div>
+
+          <div className="signup-form">
+            <h2>요청 상세보기</h2>
+            <p className="message">선택된 요청이 없습니다.</p>
+
+            <button
+              type="button"
+              className="signup-button"
+              onClick={onGoBack}
+            >
+              뒤로가기
+            </button>
+
+            <button
+              type="button"
+              className="signup-button"
+              onClick={onGoHome}
+            >
+              메인으로 돌아가기
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="request-detail-page">
-      <div className="inner">
-        <h2>요청 상세 보기</h2>
+    <div className="signup-page">
+      <div className="signup-card">
+        <div className="signup-header">
+          <h1 className="logo">FixFlow</h1>
+          <p className="subtitle">요청 상세보기 페이지</p>
+        </div>
 
-        <div className="request-detail-card">
-          <h3>{request.title}</h3>
-          <p>카테고리: {request.category}</p>
-          <p>장소: {request.location}</p>
-          <p>내용: {request.content}</p>
-          <p>현재 상태: {request.status}</p>
+        <div className="signup-form">
+          <h2>요청 상세보기</h2>
 
-          {role === "ADMIN" && (
-            <div style={{ marginTop: "20px" }}>
-              <label>상태 변경: </label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="접수됨">접수됨</option>
-                <option value="처리중">처리중</option>
-                <option value="완료">완료</option>
-              </select>
+          <div className="input-group">
+            <label>제목</label>
+            <div className="input">{request.title}</div>
+          </div>
 
-              <button
-                type="button"
-                onClick={handleStatusUpdate}
-                style={{ marginLeft: "10px" }}
-              >
-                상태 변경
-              </button>
+          <div className="input-group">
+            <label>카테고리</label>
+            <div className="input">{request.category}</div>
+          </div>
+
+          <div className="input-group">
+            <label>장소</label>
+            <div className="input">{request.location}</div>
+          </div>
+
+          <div className="input-group">
+            <label>내용</label>
+            <div
+              style={{
+                minHeight: "120px",
+                border: "1px solid #d1d5db",
+                borderRadius: "10px",
+                padding: "14px",
+                fontSize: "15px",
+                backgroundColor: "#f9fafb",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {request.content}
             </div>
-          )}
+          </div>
+
+          <div className="input-group">
+            <label>상태</label>
+            <div className="input">{request.status}</div>
+          </div>
+
+          <button
+            type="button"
+            className="signup-button"
+            onClick={onGoBack}
+          >
+            뒤로가기
+          </button>
+
+          <button
+            type="button"
+            className="signup-button"
+            onClick={onGoHome}
+          >
+            메인으로 돌아가기
+          </button>
         </div>
       </div>
     </div>

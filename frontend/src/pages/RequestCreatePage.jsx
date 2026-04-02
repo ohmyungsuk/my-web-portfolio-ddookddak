@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../index.css";
 
-function RequestCreatePage() {
+function RequestCreatePage({ onGoHome }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -124,6 +124,14 @@ function RequestCreatePage() {
 
           <button type="submit" className="signup-button" disabled={isLoading}>
             {isLoading ? "등록 중..." : "요청 등록"}
+          </button>
+
+          <button
+            type="button"
+            className="signup-button"
+            onClick={onGoHome}
+          >
+            메인으로 돌아가기
           </button>
 
           {message && <p className="message">{message}</p>}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-function MyRequestsPage() {
+function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState("");
 
@@ -14,12 +14,10 @@ function MyRequestsPage() {
     }
 
     const userId = loginUser.id;
-    console.log("저장된 userId:", userId);
 
     fetch(`http://localhost:8080/requests/my?userId=${userId}`)
       .then((response) => response.json())
       .then((data) => {
-        console.log("받아온 데이터:", data);
         setRequests(data);
       })
       .catch((error) => {
@@ -49,11 +47,16 @@ function MyRequestsPage() {
                 <div
                   key={request.id}
                   className="request-card"
+                  onClick={() => {
+                    console.log("카드 클릭됨", request);
+                    onClickRequest(request);
+                  }}
                   style={{
                     border: "1px solid #d1d5db",
                     borderRadius: "12px",
                     padding: "16px",
                     marginBottom: "12px",
+                    cursor: "pointer",
                   }}
                 >
                   <h3>{request.title}</h3>
@@ -65,6 +68,14 @@ function MyRequestsPage() {
               ))}
             </div>
           )}
+
+          <button
+            type="button"
+            className="signup-button"
+            onClick={onGoHome}
+          >
+            메인으로 돌아가기
+          </button>
         </div>
       </div>
     </div>
