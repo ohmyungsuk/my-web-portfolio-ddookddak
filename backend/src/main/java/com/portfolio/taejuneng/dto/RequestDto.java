@@ -1,5 +1,7 @@
 package com.portfolio.taejuneng.dto;
 
+import java.time.LocalDateTime;
+
 public class RequestDto {
 
     private Long id;
@@ -9,6 +11,8 @@ public class RequestDto {
     private String location;
     private String content;
     private String status;
+    private Long assignedUserId;
+    private LocalDateTime createdAt;
 
     public Long getId() {
         return id;
@@ -64,5 +68,21 @@ public class RequestDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Long getAssignedUserId() {
+        return assignedUserId;
+    }
+
+    public void setAssignedUserId(Long assignedUserId) {
+        this.assignedUserId = assignedUserId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

@@ -1,32 +1,20 @@
 package com.portfolio.taejuneng.service;
 
 import com.portfolio.taejuneng.dto.RequestDto;
-import com.portfolio.taejuneng.mapper.RequestMapper;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
-public class RequestService {
+public interface RequestService {
 
-    private final RequestMapper requestMapper;
+    void createRequest(RequestDto dto);
 
-    public RequestService(RequestMapper requestMapper) {
-        this.requestMapper = requestMapper;
-    }
+    List<RequestDto> getMyRequests(Long userId);
 
-    public void saveRequest(RequestDto dto) {
-        requestMapper.insertRequest(dto);
-    }
+    RequestDto getRequestById(Long id);
 
-    public List<RequestDto> getMyRequests(Long userId) {
-        return requestMapper.findByUserId(userId);
-    }
+    void updateStatus(Long id, String status);
 
-    public RequestDto getRequestDetail(Long id) {
-        return requestMapper.findById(id);
-    }
-    public void updateRequestStatus(Long id, String status) {
-        requestMapper.updateStatus(id, status);
-    }
+    List<RequestDto> getAllRequests();
+
+    int acceptRequest(Long requestId, Long assignedUserId);
 }

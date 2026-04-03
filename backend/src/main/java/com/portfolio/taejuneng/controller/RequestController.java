@@ -1,7 +1,6 @@
 package com.portfolio.taejuneng.controller;
 
 import com.portfolio.taejuneng.dto.RequestDto;
-import com.portfolio.taejuneng.dto.RequestStatusUpdateDto;
 import com.portfolio.taejuneng.service.RequestService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +33,7 @@ public class RequestController {
 
     @PostMapping("/requests")
     public String createRequest(@RequestBody RequestDto dto) {
-        requestService.saveRequest(dto);
+        requestService.createRequest(dto);
         return "요청 등록 성공";
     }
 
@@ -45,19 +44,30 @@ public class RequestController {
 
     @GetMapping("/requests/detail")
     public RequestDto getRequestDetail(@RequestParam Long id) {
-        return requestService.getRequestDetail(id);
+        return requestService.getRequestById(id);
     }
 
-    @CrossOrigin(
-            origins = "http://localhost:5173",
-            methods = {
-                    RequestMethod.PUT,
-                    RequestMethod.OPTIONS
-            }
-    )
+    @GetMapping("/requests")
+    public List<RequestDto> getAllRequests() {
+        return requestService.getAllRequests();
+    }
+
     @PutMapping("/requests/status")
-    public String updateRequestStatus(@RequestBody RequestStatusUpdateDto dto) {
-        requestService.updateRequestStatus(dto.getId(), dto.getStatus());
+    public String updateStatus(@RequestParam Long id,
+                               @RequestParam String status) {
+        requestService.updateStatus(id, status);
         return "상태 변경 성공";
+    }
+
+    @PutMapping("/requests/accept")
+    public String acceptRequest(@RequestParam Long requestId,
+                                @RequestParam Long assignedUserId) {
+        int result = requestService.acceptRequest(requestId, assignedUserId);
+
+        if (result > 0) {
+            return "요청 수락 성공";
+        } else {
+            return "이미 다른 사람이 수락했거나 요청이 없습니다.";
+        }
     }
 }

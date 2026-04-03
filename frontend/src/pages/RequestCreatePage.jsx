@@ -40,7 +40,8 @@ function RequestCreatePage({ onGoHome }) {
           category: category,
           location: location,
           content: content,
-          status: "접수됨",
+          status: "모집중",
+          assignedUserId: null,
         }),
       });
 
