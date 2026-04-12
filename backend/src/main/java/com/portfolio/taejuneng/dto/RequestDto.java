@@ -6,6 +6,7 @@ public class RequestDto {
 
     private Long id;
     private Long userId;
+    private String writerNickname;
     private String title;
     private String category;
     private String location;
@@ -29,6 +30,14 @@ public class RequestDto {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getWriterNickname() {
+        return writerNickname;
+    }
+
+    public void setWriterNickname(String writerNickname) {
+        this.writerNickname = writerNickname;
     }
 
     public String getTitle() {

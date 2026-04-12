@@ -38,17 +38,20 @@ public interface RequestMapper {
         SELECT
             r.id,
             r.user_id AS userId,
+            writer.nickname AS writerNickname,
             r.title,
             r.category,
             r.location,
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.nickname AS assignedUsername,
+            assigned.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
-        LEFT JOIN users u
-          ON r.assigned_user_id = u.id
+        LEFT JOIN users writer
+          ON r.user_id = writer.id
+        LEFT JOIN users assigned
+          ON r.assigned_user_id = assigned.id
         WHERE r.user_id = #{userId}
         ORDER BY r.id DESC
     """)
@@ -58,17 +61,20 @@ public interface RequestMapper {
         SELECT
             r.id,
             r.user_id AS userId,
+            writer.nickname AS writerNickname,
             r.title,
             r.category,
             r.location,
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.nickname AS assignedUsername,
+            assigned.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
-        LEFT JOIN users u
-          ON r.assigned_user_id = u.id
+        LEFT JOIN users writer
+          ON r.user_id = writer.id
+        LEFT JOIN users assigned
+          ON r.assigned_user_id = assigned.id
         WHERE r.assigned_user_id = #{assignedUserId}
         ORDER BY r.id DESC
     """)
@@ -78,17 +84,20 @@ public interface RequestMapper {
         SELECT
             r.id,
             r.user_id AS userId,
+            writer.nickname AS writerNickname,
             r.title,
             r.category,
             r.location,
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.nickname AS assignedUsername,
+            assigned.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
-        LEFT JOIN users u
-          ON r.assigned_user_id = u.id
+        LEFT JOIN users writer
+          ON r.user_id = writer.id
+        LEFT JOIN users assigned
+          ON r.assigned_user_id = assigned.id
         WHERE r.id = #{id}
     """)
     RequestDto findById(Long id);
@@ -97,17 +106,20 @@ public interface RequestMapper {
         SELECT
             r.id,
             r.user_id AS userId,
+            writer.nickname AS writerNickname,
             r.title,
             r.category,
             r.location,
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.nickname AS assignedUsername,
+            assigned.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
-        LEFT JOIN users u
-          ON r.assigned_user_id = u.id
+        LEFT JOIN users writer
+          ON r.user_id = writer.id
+        LEFT JOIN users assigned
+          ON r.assigned_user_id = assigned.id
         ORDER BY r.id DESC
     """)
     List<RequestDto> findAll();
@@ -117,7 +129,7 @@ public interface RequestMapper {
     SET status = #{status}
     WHERE id = #{id}
 """)
-    void updateStatus(@Param("id") Long id, @Param("status") String statuㄹs);
+    void updateStatus(@Param("id") Long id, @Param("status") String status);
 
     @Update("""
     UPDATE requests

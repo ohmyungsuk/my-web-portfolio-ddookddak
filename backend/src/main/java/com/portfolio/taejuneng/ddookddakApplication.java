@@ -4,10 +4,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class TaejunengApplication {
+public class DdookddakApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TaejunengApplication.class, args);
+		SpringApplication.run(DdookddakApplication.class, args);
 	}
 
 }
+//test

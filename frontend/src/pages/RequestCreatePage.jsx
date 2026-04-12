@@ -68,7 +68,7 @@ function RequestCreatePage({ onGoHome }) {
     <div className="signup-page">
       <div className="signup-card">
         <div className="signup-header">
-          <h1 className="logo">FixFlow</h1>
+          <h1 className="logo">뚝딱</h1>
           <p className="subtitle">요청 등록 페이지</p>
         </div>
 

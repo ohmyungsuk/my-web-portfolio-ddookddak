@@ -24,11 +24,53 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
       });
   }, []);
 
+  const getStatusStyle = (status) => {
+    if (status === "요청 등록") {
+      return {
+        backgroundColor: "#e5e7eb",
+        color: "#374151",
+      };
+    }
+
+    if (status === "견적 협의중") {
+      return {
+        backgroundColor: "#ffedd5",
+        color: "#c2410c",
+      };
+    }
+
+    if (status === "작업 예정") {
+      return {
+        backgroundColor: "#dbeafe",
+        color: "#1d4ed8",
+      };
+    }
+
+    if (status === "진행중") {
+      return {
+        backgroundColor: "#dcfce7",
+        color: "#15803d",
+      };
+    }
+
+    if (status === "완료됨") {
+      return {
+        backgroundColor: "#bbf7d0",
+        color: "#166534",
+      };
+    }
+
+    return {
+      backgroundColor: "#f3f4f6",
+      color: "#111827",
+    };
+  };
+
   return (
     <div className="signup-page">
       <div className="signup-card" style={{ maxWidth: "800px" }}>
         <div className="signup-header">
-          <h1 className="logo">FixFlow</h1>
+          <h1 className="logo">뚝딱</h1>
           <p className="subtitle">내가 등록한 요청 목록</p>
         </div>
 
@@ -58,7 +100,23 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
                   <p>카테고리: {request.category}</p>
                   <p>장소: {request.location}</p>
                   <p>내용: {request.content}</p>
-                  <p>상태: {request.status}</p>
+
+                  <p>
+                    상태:{" "}
+                    <span
+                      style={{
+                        ...getStatusStyle(request.status),
+                        padding: "6px 12px",
+                        borderRadius: "999px",
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        display: "inline-block",
+                      }}
+                    >
+                      {request.status}
+                    </span>
+                  </p>
+
                   <p>
                     담당자:{" "}
                     {request.assignedUsername
@@ -70,11 +128,7 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
             </div>
           )}
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoHome}
-          >
+          <button type="button" className="signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
         </div>

@@ -13,7 +13,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
       <div className="signup-page">
         <div className="signup-card">
           <div className="signup-header">
-            <h1 className="logo">FixFlow</h1>
+            <h1 className="logo">뚝딱</h1>
             <p className="subtitle">요청 상세보기 페이지</p>
           </div>
 
@@ -33,6 +33,48 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
       </div>
     );
   }
+
+  const getStatusStyle = (status) => {
+    if (status === "요청 등록") {
+      return {
+        backgroundColor: "#e5e7eb",
+        color: "#374151",
+      };
+    }
+
+    if (status === "견적 협의중") {
+      return {
+        backgroundColor: "#ffedd5",
+        color: "#c2410c",
+      };
+    }
+
+    if (status === "작업 예정") {
+      return {
+        backgroundColor: "#dbeafe",
+        color: "#1d4ed8",
+      };
+    }
+
+    if (status === "진행중") {
+      return {
+        backgroundColor: "#dcfce7",
+        color: "#15803d",
+      };
+    }
+
+    if (status === "완료됨") {
+      return {
+        backgroundColor: "#bbf7d0",
+        color: "#166534",
+      };
+    }
+
+    return {
+      backgroundColor: "#f3f4f6",
+      color: "#111827",
+    };
+  };
 
   const isMyRequest = loginUser && detail.userId === loginUser.id;
 
@@ -95,13 +137,13 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
       const resultText = await response.text();
 
       if (response.ok && resultText.includes("성공")) {
-        const nextUsername = loginUser.username || `회원 ${loginUser.id}`;
+        const nextNickname = loginUser.nickname || `회원 ${loginUser.id}`;
 
         setDetail({
           ...detail,
           status: "견적 협의중",
           assignedUserId: loginUser.id,
-          assignedUsername: nextUsername,
+          assignedUsername: nextNickname,
         });
         setMessage("요청 수락 성공! 이제 견적 협의중 상태입니다.");
       } else {
@@ -129,7 +171,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
     <div className="signup-page">
       <div className="signup-card">
         <div className="signup-header">
-          <h1 className="logo">FixFlow</h1>
+          <h1 className="logo">뚝딱</h1>
           <p className="subtitle">요청 상세보기 페이지</p>
         </div>
 
@@ -141,6 +183,13 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
           <div className="input-group">
             <label>제목</label>
             <div className="input">{detail.title}</div>
+          </div>
+
+          <div className="input-group">
+            <label>작성자</label>
+            <div className="input">
+              {detail.writerNickname || "닉네임 없음"}
+            </div>
           </div>
 
           <div className="input-group">
@@ -172,7 +221,19 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
           <div className="input-group">
             <label>상태</label>
-            <div className="input">{detail.status}</div>
+            <div
+              style={{
+                ...getStatusStyle(detail.status),
+                borderRadius: "999px",
+                padding: "10px 14px",
+                fontSize: "14px",
+                fontWeight: "700",
+                display: "inline-block",
+                marginTop: "8px",
+              }}
+            >
+              {detail.status}
+            </div>
           </div>
 
           <div className="input-group">
@@ -234,5 +295,5 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
     </div>
   );
 }
-//
+
 export default RequestDetailPage;

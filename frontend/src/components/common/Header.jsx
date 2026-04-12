@@ -4,7 +4,7 @@ function Header() {
   return (
     <header className="header">
       <div className="inner header-inner">
-        <h1 className="logo">FixFlow</h1>
+        <h1 className="logo">뚝딱</h1>
 
         <nav className="nav">
           <Link to="/">홈</Link>

@@ -50,7 +50,7 @@ function LandingPage({ onGoLogin, onGoSignup, onGoCreate, isLoggedIn }) {
               letterSpacing: "-0.5px",
             }}
           >
-            FixFlow
+            뚝딱
           </div>
 
           <nav
@@ -149,7 +149,7 @@ function LandingPage({ onGoLogin, onGoSignup, onGoCreate, isLoggedIn }) {
               marginBottom: "34px",
             }}
           >
-            FixFlow는 시설, 장비, 환경 관련 문제를 간편하게 등록하고
+            뚝딱는 시설, 장비, 환경 관련 문제를 간편하게 등록하고
             <br />
             진행 상태를 확인할 수 있는 유지보수 요청 플랫폼입니다.
           </p>
@@ -394,7 +394,7 @@ function LandingPage({ onGoLogin, onGoSignup, onGoCreate, isLoggedIn }) {
             color: "#0f172a",
           }}
         >
-          FixFlow 소개
+          뚝딱 소개
         </h2>
 
         <p
@@ -407,8 +407,7 @@ function LandingPage({ onGoLogin, onGoSignup, onGoCreate, isLoggedIn }) {
           }}
         >
           요청 등록부터 담당자 배정, 처리 완료 확인까지
-          <br />
-          한 화면에서 쉽고 빠르게 관리할 수 있습니다.
+          <br />한 화면에서 쉽고 빠르게 관리할 수 있습니다.
         </p>
 
         <div

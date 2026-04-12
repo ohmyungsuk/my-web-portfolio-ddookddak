@@ -3,10 +3,10 @@ function IntroSection() {
     <section className="intro section">
       <div className="inner">
         <div className="section-title">
-          <h3>FixFlow 소개</h3>
+          <h3>뚝딱 소개</h3>
           <p>
-            요청 등록부터 확인, 처리 상태 관리까지 한 곳에서 할 수 있게
-            도와주는 서비스입니다.
+            요청 등록부터 확인, 처리 상태 관리까지 한 곳에서 할 수 있게 도와주는
+            서비스입니다.
           </p>
         </div>
 

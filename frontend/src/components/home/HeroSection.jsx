@@ -10,8 +10,8 @@ function HeroSection() {
             유지보수 요청을 접수하는 서비스
           </h2>
           <p className="hero-desc">
-            FixFlow는 시설, 장비, 환경 관련 문제를 간편하게 등록하고
-            관리할 수 있는 유지보수 요청 플랫폼입니다.
+            뚝딱는 시설, 장비, 환경 관련 문제를 간편하게 등록하고 관리할 수 있는
+            유지보수 요청 플랫폼입니다.
           </p>
 
           <div className="hero-buttons">

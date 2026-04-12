@@ -78,7 +78,7 @@ function Signup({ onGoLogin }) {
     <div className="signup-page">
       <div className="signup-card">
         <div className="signup-header">
-          <h1 className="logo">FixFlow</h1>
+          <h1 className="logo">뚝딱</h1>
           <p className="subtitle"></p>
         </div>
 
@@ -161,11 +161,7 @@ function Signup({ onGoLogin }) {
 
           {message && <p className="message">{message}</p>}
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoLogin}
-          >
+          <button type="button" className="signup-button" onClick={onGoLogin}>
             로그인으로 가기
           </button>
         </form>

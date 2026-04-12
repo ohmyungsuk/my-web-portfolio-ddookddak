@@ -13,7 +13,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
     }
 
     fetch(
-      `http://localhost:8080/requests/assigned?assignedUserId=${loginUser.id}`
+      `http://localhost:8080/requests/assigned?assignedUserId=${loginUser.id}`,
     )
       .then((response) => response.json())
       .then((data) => {
@@ -30,7 +30,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
       <div className="signup-page">
         <div className="signup-card" style={{ maxWidth: "800px" }}>
           <div className="signup-header">
-            <h1 className="logo">FixFlow</h1>
+            <h1 className="logo">뚝딱</h1>
             <p className="subtitle">내가 맡은 작업 목록</p>
           </div>
 
@@ -38,11 +38,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
             <h2>내가 맡은 작업</h2>
             <p className="message">로그인 정보가 없습니다.</p>
 
-            <button
-              type="button"
-              className="signup-button"
-              onClick={onGoHome}
-            >
+            <button type="button" className="signup-button" onClick={onGoHome}>
               메인으로 돌아가기
             </button>
           </div>
@@ -55,7 +51,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
     <div className="signup-page">
       <div className="signup-card" style={{ maxWidth: "800px" }}>
         <div className="signup-header">
-          <h1 className="logo">FixFlow</h1>
+          <h1 className="logo">뚝딱</h1>
           <p className="subtitle">내가 맡은 작업 목록</p>
         </div>
 
@@ -91,11 +87,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
             </div>
           )}
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoHome}
-          >
+          <button type="button" className="signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
         </div>
