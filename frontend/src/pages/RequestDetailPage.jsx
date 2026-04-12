@@ -21,19 +21,11 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
             <h2>요청 상세보기</h2>
             <p className="message">선택된 요청이 없습니다.</p>
 
-            <button
-              type="button"
-              className="signup-button"
-              onClick={onGoBack}
-            >
+            <button type="button" className="signup-button" onClick={onGoBack}>
               뒤로가기
             </button>
 
-            <button
-              type="button"
-              className="signup-button"
-              onClick={onGoHome}
-            >
+            <button type="button" className="signup-button" onClick={onGoHome}>
               메인으로 돌아가기
             </button>
           </div>
@@ -47,13 +39,49 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
   const canAccept =
     loginUser &&
     !isMyRequest &&
-    detail.status === "모집중" &&
+    detail.status === "요청 등록" &&
     !detail.assignedUserId;
+
+  const canSetPlanned =
+    loginUser &&
+    detail.assignedUserId === loginUser.id &&
+    detail.status === "견적 협의중";
+
+  const canStartWork =
+    loginUser &&
+    detail.assignedUserId === loginUser.id &&
+    detail.status === "작업 예정";
 
   const canComplete =
     loginUser &&
     detail.assignedUserId === loginUser.id &&
     detail.status === "진행중";
+
+  const updateStatus = async (nextStatus, successMessage) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/requests/status?id=${detail.id}&status=${encodeURIComponent(nextStatus)}`,
+        {
+          method: "PUT",
+        },
+      );
+
+      const resultText = await response.text();
+
+      if (response.ok && resultText.includes("성공")) {
+        setDetail({
+          ...detail,
+          status: nextStatus,
+        });
+        setMessage(successMessage);
+      } else {
+        setMessage(resultText);
+      }
+    } catch (error) {
+      console.error("상태 변경 실패:", error);
+      setMessage("상태 변경 중 오류가 발생했습니다.");
+    }
+  };
 
   const handleAccept = async () => {
     try {
@@ -61,7 +89,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
         `http://localhost:8080/requests/accept?requestId=${detail.id}&assignedUserId=${loginUser.id}`,
         {
           method: "PUT",
-        }
+        },
       );
 
       const resultText = await response.text();
@@ -71,11 +99,11 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
         setDetail({
           ...detail,
-          status: "진행중",
+          status: "견적 협의중",
           assignedUserId: loginUser.id,
           assignedUsername: nextUsername,
         });
-        setMessage("요청 수락 성공!");
+        setMessage("요청 수락 성공! 이제 견적 협의중 상태입니다.");
       } else {
         setMessage(resultText);
       }
@@ -85,30 +113,16 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
     }
   };
 
+  const handleSetPlanned = async () => {
+    await updateStatus("작업 예정", "작업 예정 상태로 변경되었습니다.");
+  };
+
+  const handleStartWork = async () => {
+    await updateStatus("진행중", "작업이 시작되었습니다.");
+  };
+
   const handleComplete = async () => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/requests/status?id=${detail.id}&status=완료됨`,
-        {
-          method: "PUT",
-        }
-      );
-
-      const resultText = await response.text();
-
-      if (response.ok && resultText.includes("성공")) {
-        setDetail({
-          ...detail,
-          status: "완료됨",
-        });
-        setMessage("작업 완료 처리 성공!");
-      } else {
-        setMessage(resultText);
-      }
-    } catch (error) {
-      console.error("완료 처리 실패:", error);
-      setMessage("완료 처리 중 오류가 발생했습니다.");
-    }
+    await updateStatus("완료됨", "작업 완료 처리 성공!");
   };
 
   return (
@@ -178,6 +192,26 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
             </button>
           )}
 
+          {canSetPlanned && (
+            <button
+              type="button"
+              className="signup-button"
+              onClick={handleSetPlanned}
+            >
+              작업 예정으로 변경
+            </button>
+          )}
+
+          {canStartWork && (
+            <button
+              type="button"
+              className="signup-button"
+              onClick={handleStartWork}
+            >
+              작업 시작하기
+            </button>
+          )}
+
           {canComplete && (
             <button
               type="button"
@@ -188,19 +222,11 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
             </button>
           )}
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoBack}
-          >
+          <button type="button" className="signup-button" onClick={onGoBack}>
             뒤로가기
           </button>
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoHome}
-          >
+          <button type="button" className="signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
         </div>

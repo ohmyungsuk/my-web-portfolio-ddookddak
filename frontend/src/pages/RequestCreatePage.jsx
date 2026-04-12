@@ -40,7 +40,7 @@ function RequestCreatePage({ onGoHome }) {
           category: category,
           location: location,
           content: content,
-          status: "모집중",
+          status: "요청 등록",
           assignedUserId: null,
         }),
       });
@@ -127,11 +127,7 @@ function RequestCreatePage({ onGoHome }) {
             {isLoading ? "등록 중..." : "요청 등록"}
           </button>
 
-          <button
-            type="button"
-            className="signup-button"
-            onClick={onGoHome}
-          >
+          <button type="button" className="signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
 

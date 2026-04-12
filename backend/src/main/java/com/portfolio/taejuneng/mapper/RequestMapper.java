@@ -44,7 +44,7 @@ public interface RequestMapper {
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.username AS assignedUsername,
+            u.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
         LEFT JOIN users u
@@ -64,7 +64,7 @@ public interface RequestMapper {
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.username AS assignedUsername,
+            u.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
         LEFT JOIN users u
@@ -84,7 +84,7 @@ public interface RequestMapper {
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.username AS assignedUsername,
+            u.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
         LEFT JOIN users u
@@ -103,7 +103,7 @@ public interface RequestMapper {
             r.content,
             r.status,
             r.assigned_user_id AS assignedUserId,
-            u.username AS assignedUsername,
+            u.nickname AS assignedUsername,
             r.created_at AS createdAt
         FROM requests r
         LEFT JOIN users u
@@ -117,12 +117,12 @@ public interface RequestMapper {
     SET status = #{status}
     WHERE id = #{id}
 """)
-    void updateStatus(@Param("id") Long id, @Param("status") String status);
+    void updateStatus(@Param("id") Long id, @Param("status") String statuㄹs);
 
     @Update("""
     UPDATE requests
     SET assigned_user_id = #{assignedUserId},
-        status = '진행중'
+        status = '견적 협의중'
     WHERE id = #{requestId}
       AND assigned_user_id IS NULL
 """)
