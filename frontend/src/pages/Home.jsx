@@ -1,4 +1,4 @@
-npfunction Home({
+function Home({
   onGoToCreate,
   onGoToMyRequests,
   onGoToAllRequests,

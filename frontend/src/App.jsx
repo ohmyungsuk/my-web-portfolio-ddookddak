@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Signup from "./pages/SignUp";
 import Home from "./pages/Home";
 import RequestCreatePage from "./pages/RequestCreatePage";
 import MyRequestsPage from "./pages/MyRequestsPage";
@@ -20,7 +20,7 @@ function App() {
       loginUser &&
       (currentPage === "landing" ||
         currentPage === "login" ||
-        currentPage === "signup")
+        currentPage === "Signup")
     ) {
       setCurrentPage("home");
     }
