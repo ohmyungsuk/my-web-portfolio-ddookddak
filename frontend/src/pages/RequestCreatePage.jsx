@@ -65,14 +65,14 @@ function RequestCreatePage({ onGoHome }) {
   };
 
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <div className="signup-header">
+    <div className="Signup-page">
+      <div className="Signup-card">
+        <div className="Signup-header">
           <h1 className="logo">뚝딱</h1>
           <p className="subtitle">요청 등록 페이지</p>
         </div>
 
-        <form className="signup-form" onSubmit={handleSubmit}>
+        <form className="Signup-form" onSubmit={handleSubmit}>
           <h2>요청 등록</h2>
 
           <div className="input-group">
@@ -123,11 +123,11 @@ function RequestCreatePage({ onGoHome }) {
             />
           </div>
 
-          <button type="submit" className="signup-button" disabled={isLoading}>
+          <button type="submit" className="Signup-button" disabled={isLoading}>
             {isLoading ? "등록 중..." : "요청 등록"}
           </button>
 
-          <button type="button" className="signup-button" onClick={onGoHome}>
+          <button type="button" className="Signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
 

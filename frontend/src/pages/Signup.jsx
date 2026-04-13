@@ -1,120 +1,92 @@
 import { useState } from "react";
-import "../index.css";
+import { supabase } from "../supabaseClient.js";
 
-function Signup({ onGoLogin }) {
-  const [userId, setUserId] = useState("");
+function Signup({ onSwitchToLogin }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordCheck, setPasswordCheck] = useState("");
-  const [name, setName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (
-      !userId ||
-      !password ||
-      !passwordCheck ||
-      !name ||
-      !nickname ||
-      !email ||
-      !phoneNumber
-    ) {
-      setMessage("모든 칸을 입력해주세요.");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!name.trim()) {
+      setErrorMessage("이름을 입력해주세요.");
+      return;
+    }
+
+    if (!email.trim()) {
+      setErrorMessage("이메일을 입력해주세요.");
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage("비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("비밀번호는 6글자 이상으로 입력해주세요.");
       return;
     }
 
     if (password !== passwordCheck) {
-      setMessage("비밀번호가 서로 다릅니다.");
+      setErrorMessage("비밀번호 확인이 일치하지 않습니다.");
       return;
     }
 
     try {
-      setIsLoading(true);
-      setMessage("");
+      setLoading(true);
 
-      const response = await fetch("http://localhost:8080/users/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { error } = await supabase.auth.Signup({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+          emailRedirectTo: window.location.origin,
         },
-        body: JSON.stringify({
-          username: userId,
-          password: password,
-          name: name,
-          nickname: nickname,
-          email: email,
-          phoneNumber: phoneNumber,
-        }),
       });
 
-      const data = await response.text();
-
-      if (response.ok) {
-        setMessage("회원가입 성공!");
-        setUserId("");
-        setPassword("");
-        setPasswordCheck("");
-        setName("");
-        setNickname("");
-        setEmail("");
-        setPhoneNumber("");
-      } else {
-        setMessage("회원가입 실패: " + data);
+      if (error) {
+        throw error;
       }
+
+      setSuccessMessage(
+        "회원가입 요청이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
+      );
+
+      setName("");
+      setEmail("");
+      setPassword("");
+      setPasswordCheck("");
     } catch (error) {
-      console.error(error);
-      setMessage("서버 연결 오류");
+      setErrorMessage(error.message || "회원가입 중 문제가 발생했습니다.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <div className="signup-header">
-          <h1 className="logo">뚝딱</h1>
-          <p className="subtitle"></p>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <p className="auth-badge">뚝딱</p>
+          <h1>회원가입</h1>
+          <p className="auth-desc">
+            새 계정을 만들고 유지보수 요청 서비스를 시작하세요.
+          </p>
         </div>
 
-        <form className="signup-form" onSubmit={handleSubmit}>
-          <h2>회원가입</h2>
-
-          <div className="input-group">
-            <label>아이디</label>
-            <input
-              type="text"
-              placeholder="아이디를 입력하세요"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            />
-          </div>
-
-          <div className="input-group">
-            <label>비밀번호</label>
-            <input
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <div className="input-group">
-            <label>비밀번호 확인</label>
-            <input
-              type="password"
-              placeholder="비밀번호를 다시 입력하세요"
-              value={passwordCheck}
-              onChange={(e) => setPasswordCheck(e.target.value)}
-            />
-          </div>
-
+        <form className="auth-form" onSubmit={handleSignup}>
           <div className="input-group">
             <label>이름</label>
             <input
@@ -126,45 +98,55 @@ function Signup({ onGoLogin }) {
           </div>
 
           <div className="input-group">
-            <label>닉네임</label>
-            <input
-              type="text"
-              placeholder="닉네임을 입력하세요"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-            />
-          </div>
-
-          <div className="input-group">
             <label>이메일</label>
             <input
               type="email"
-              placeholder="이메일을 입력하세요"
+              placeholder="example@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
           <div className="input-group">
-            <label>휴대폰번호</label>
+            <label>비밀번호</label>
             <input
-              type="text"
-              placeholder="휴대폰번호를 입력하세요"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              type="password"
+              placeholder="6글자 이상 입력"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
-          <button type="submit" className="signup-button" disabled={isLoading}>
-            {isLoading ? "가입 중..." : "가입하기"}
-          </button>
+          <div className="input-group">
+            <label>비밀번호 확인</label>
+            <input
+              type="password"
+              placeholder="비밀번호를 다시 입력"
+              value={passwordCheck}
+              onChange={(e) => setPasswordCheck(e.target.value)}
+            />
+          </div>
 
-          {message && <p className="message">{message}</p>}
+          {errorMessage && <div className="message error">{errorMessage}</div>}
+          {successMessage && (
+            <div className="message success">{successMessage}</div>
+          )}
 
-          <button type="button" className="signup-button" onClick={onGoLogin}>
-            로그인으로 가기
+          <button className="auth-button" type="submit" disabled={loading}>
+            {loading ? "가입 중..." : "회원가입"}
           </button>
         </form>
+
+        <div className="auth-footer">
+          <span>이미 계정이 있나요?</span>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => onSwitchToLogin && onSwitchToLogin()}
+          >
+            로그인으로 이동
+          </button>
+        </div>
       </div>
     </div>
   );

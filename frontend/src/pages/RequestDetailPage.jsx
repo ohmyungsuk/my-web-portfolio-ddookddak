@@ -10,22 +10,22 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
   if (!detail) {
     return (
-      <div className="signup-page">
-        <div className="signup-card">
-          <div className="signup-header">
+      <div className="Signup-page">
+        <div className="Signup-card">
+          <div className="Signup-header">
             <h1 className="logo">뚝딱</h1>
             <p className="subtitle">요청 상세보기 페이지</p>
           </div>
 
-          <div className="signup-form">
+          <div className="Signup-form">
             <h2>요청 상세보기</h2>
             <p className="message">선택된 요청이 없습니다.</p>
 
-            <button type="button" className="signup-button" onClick={onGoBack}>
+            <button type="button" className="Signup-button" onClick={onGoBack}>
               뒤로가기
             </button>
 
-            <button type="button" className="signup-button" onClick={onGoHome}>
+            <button type="button" className="Signup-button" onClick={onGoHome}>
               메인으로 돌아가기
             </button>
           </div>
@@ -168,14 +168,14 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
   };
 
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <div className="signup-header">
+    <div className="Signup-page">
+      <div className="Signup-card">
+        <div className="Signup-header">
           <h1 className="logo">뚝딱</h1>
           <p className="subtitle">요청 상세보기 페이지</p>
         </div>
 
-        <div className="signup-form">
+        <div className="Signup-form">
           <h2>요청 상세보기</h2>
 
           {message && <p className="message">{message}</p>}
@@ -246,7 +246,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
           {canAccept && (
             <button
               type="button"
-              className="signup-button"
+              className="Signup-button"
               onClick={handleAccept}
             >
               요청 수락하기
@@ -256,7 +256,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
           {canSetPlanned && (
             <button
               type="button"
-              className="signup-button"
+              className="Signup-button"
               onClick={handleSetPlanned}
             >
               작업 예정으로 변경
@@ -266,7 +266,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
           {canStartWork && (
             <button
               type="button"
-              className="signup-button"
+              className="Signup-button"
               onClick={handleStartWork}
             >
               작업 시작하기
@@ -276,18 +276,18 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
           {canComplete && (
             <button
               type="button"
-              className="signup-button"
+              className="Signup-button"
               onClick={handleComplete}
             >
               완료 처리하기
             </button>
           )}
 
-          <button type="button" className="signup-button" onClick={onGoBack}>
+          <button type="button" className="Signup-button" onClick={onGoBack}>
             뒤로가기
           </button>
 
-          <button type="button" className="signup-button" onClick={onGoHome}>
+          <button type="button" className="Signup-button" onClick={onGoHome}>
             메인으로 돌아가기
           </button>
         </div>

@@ -44,4 +44,19 @@ public interface UserMapper {
         WHERE username = #{username}
         """)
     UserSignupDto findByUsername(String username);
+
+    @Select("""
+        SELECT
+            id,
+            username,
+            password,
+            name,
+            nickname,
+            email,
+            phone_number AS phoneNumber,
+            role
+        FROM users
+        WHERE email = #{email}
+        """)
+    UserSignupDto findByEmail(String email);
 }

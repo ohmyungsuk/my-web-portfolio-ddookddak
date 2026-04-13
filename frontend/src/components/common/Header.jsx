@@ -10,7 +10,7 @@ function Header() {
           <Link to="/">홈</Link>
           <Link to="/">서비스 소개</Link>
           <Link to="/login">로그인</Link>
-          <Link to="/signup">회원가입</Link>
+          <Link to="/Signup">회원가입</Link>
           <Link to="/my-requests">내 요청 목록</Link>
         </nav>
       </div>

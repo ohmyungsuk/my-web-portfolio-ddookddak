@@ -1,69 +1,69 @@
 import { useState } from "react";
-import "../index.css";
+import { supabase } from "../supabaseClient.js";
 
-function Login() {
-  const [username, setUsername] = useState("");
+function Login({ onSwitchToSignup, onLoginSuccess }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
 
-    if (!username || !password) {
-      setMessage("아이디와 비밀번호를 입력해주세요.");
+    if (!email.trim()) {
+      setErrorMessage("이메일을 입력해주세요.");
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage("비밀번호를 입력해주세요.");
       return;
     }
 
     try {
-      setIsLoading(true);
-      setMessage("");
+      setLoading(true);
 
-      const response = await fetch("http://localhost:8080/users/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-        }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
+      if (error) {
+        throw error;
+      }
 
-      if (response.ok && data) {
-        localStorage.setItem("loginUser", JSON.stringify(data));
-        window.location.href = "/";
+      if (onLoginSuccess) {
+        onLoginSuccess(data);
       } else {
-        setMessage("아이디 또는 비밀번호가 올바르지 않습니다.");
+        alert("로그인 성공");
       }
     } catch (error) {
-      console.error(error);
-      setMessage("서버 연결 오류");
+      setErrorMessage(error.message || "로그인 중 문제가 발생했습니다.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <div className="signup-header">
-          <h1 className="logo">뚝딱</h1>
-          <p className="subtitle">깔끔한 요청 관리 시스템</p>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <p className="auth-badge">뚝딱</p>
+          <h1>로그인</h1>
+          <p className="auth-desc">
+            등록한 이메일과 비밀번호로 접속하세요.
+          </p>
         </div>
 
-        <form className="signup-form" onSubmit={handleLogin}>
-          <h2>로그인</h2>
-
+        <form className="auth-form" onSubmit={handleLogin}>
           <div className="input-group">
-            <label>아이디</label>
+            <label>이메일</label>
             <input
-              type="text"
-              placeholder="아이디를 입력하세요"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
@@ -77,12 +77,23 @@ function Login() {
             />
           </div>
 
-          <button type="submit" className="signup-button" disabled={isLoading}>
-            {isLoading ? "로그인 중..." : "로그인"}
-          </button>
+          {errorMessage && <div className="message error">{errorMessage}</div>}
 
-          {message && <p className="message">{message}</p>}
+          <button className="auth-button" type="submit" disabled={loading}>
+            {loading ? "로그인 중..." : "로그인"}
+          </button>
         </form>
+
+        <div className="auth-footer">
+          <span>아직 계정이 없나요?</span>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => onSwitchToSignup && onSwitchToSignup()}
+          >
+            회원가입으로 이동
+          </button>
+        </div>
       </div>
     </div>
   );

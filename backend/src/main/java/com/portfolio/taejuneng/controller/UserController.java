@@ -2,15 +2,14 @@ package com.portfolio.taejuneng.controller;
 
 import com.portfolio.taejuneng.dto.UserSignupDto;
 import com.portfolio.taejuneng.service.UserService;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @CrossOrigin(
-        origins = "http://localhost:5173",
+        origins = {
+                "http://localhost:5173",
+                "https://ohmyungsuk.github.io"
+        },
         methods = {
                 RequestMethod.GET,
                 RequestMethod.POST,
@@ -35,5 +34,10 @@ public class UserController {
     @PostMapping("/users/login")
     public UserSignupDto login(@RequestBody UserSignupDto dto) {
         return userService.login(dto);
+    }
+
+    @PostMapping("/users/supabase-sync")
+    public UserSignupDto supabaseSync(@RequestBody UserSignupDto dto) {
+        return userService.supabaseSync(dto);
     }
 }
