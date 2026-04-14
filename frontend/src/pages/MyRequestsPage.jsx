@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient.js";
 
 function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [requests, setRequests] = useState([]);
@@ -6,34 +7,37 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("loginUser");
-    const loginUser = savedUser ? JSON.parse(savedUser) : null;
+    const fetchMyRequests = async () => {
+      const savedUser = localStorage.getItem("loginUser");
+      const loginUser = savedUser ? JSON.parse(savedUser) : null;
 
-    if (!loginUser || !loginUser.id) {
-      setMessage(
-        "백엔드 사용자 연결이 아직 안 끝났습니다. 새로고침 후 다시 로그인해주세요."
-      );
-      setLoading(false);
-      return;
-    }
-
-    fetch(`http://localhost:8080/requests/my?userId=${loginUser.id}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`서버 응답 오류: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setRequests(Array.isArray(data) ? data : []);
-      })
-      .catch((error) => {
-        console.error("내 요청 목록 불러오기 실패:", error);
-        setMessage("내 요청 목록을 불러오지 못했습니다.");
-      })
-      .finally(() => {
+      if (!loginUser || !loginUser.id) {
+        setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
         setLoading(false);
-      });
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("requests")
+          .select("*")
+          .eq("user_id", loginUser.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        setRequests(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("내 요청 목록 불러오기 실패:", error);
+        setMessage(error.message || "내 요청 목록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyRequests();
   }, []);
 
   const getStatusStyle = (status) => {
@@ -120,8 +124,10 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
 
                   <p style={{ marginTop: "8px" }}>
                     담당자:{" "}
-                    {request.assignedUsername
-                      ? request.assignedUsername
+                    {request.assigned_username
+                      ? request.assigned_username
+                      : request.assigned_user_id
+                      ? "배정됨"
                       : "아직 없음"}
                   </p>
                 </div>

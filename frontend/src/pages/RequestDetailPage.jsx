@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { supabase } from "../supabaseClient.js";
 import "../index.css";
 
 function RequestDetailPage({ request, onGoBack, onGoHome }) {
   const [detail, setDetail] = useState(request);
   const [message, setMessage] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   const savedUser = localStorage.getItem("loginUser");
   const loginUser = savedUser ? JSON.parse(savedUser) : null;
@@ -36,136 +38,115 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
   const getStatusStyle = (status) => {
     if (status === "요청 등록") {
-      return {
-        backgroundColor: "#e5e7eb",
-        color: "#374151",
-      };
+      return { backgroundColor: "#e5e7eb", color: "#374151" };
     }
 
     if (status === "견적 협의중") {
-      return {
-        backgroundColor: "#ffedd5",
-        color: "#c2410c",
-      };
+      return { backgroundColor: "#ffedd5", color: "#c2410c" };
     }
 
     if (status === "작업 예정") {
-      return {
-        backgroundColor: "#dbeafe",
-        color: "#1d4ed8",
-      };
+      return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
     }
 
     if (status === "진행중") {
-      return {
-        backgroundColor: "#dcfce7",
-        color: "#15803d",
-      };
+      return { backgroundColor: "#dcfce7", color: "#15803d" };
     }
 
     if (status === "완료됨") {
-      return {
-        backgroundColor: "#bbf7d0",
-        color: "#166534",
-      };
+      return { backgroundColor: "#bbf7d0", color: "#166534" };
     }
 
-    return {
-      backgroundColor: "#f3f4f6",
-      color: "#111827",
-    };
+    return { backgroundColor: "#f3f4f6", color: "#111827" };
   };
 
-  const isMyRequest = loginUser && detail.userId === loginUser.id;
+  const isMyRequest = loginUser && detail.user_id === loginUser.id;
 
   const canAccept =
     loginUser &&
     !isMyRequest &&
     detail.status === "요청 등록" &&
-    !detail.assignedUserId;
+    !detail.assigned_user_id;
 
   const canSetPlanned =
     loginUser &&
-    detail.assignedUserId === loginUser.id &&
+    detail.assigned_user_id === loginUser.id &&
     detail.status === "견적 협의중";
 
   const canStartWork =
     loginUser &&
-    detail.assignedUserId === loginUser.id &&
+    detail.assigned_user_id === loginUser.id &&
     detail.status === "작업 예정";
 
   const canComplete =
     loginUser &&
-    detail.assignedUserId === loginUser.id &&
+    detail.assigned_user_id === loginUser.id &&
     detail.status === "진행중";
 
-  const updateStatus = async (nextStatus, successMessage) => {
+  const updateRequest = async (updateData, successMessage) => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/requests/status?id=${detail.id}&status=${encodeURIComponent(nextStatus)}`,
-        {
-          method: "PUT",
-        },
-      );
+      setActionLoading(true);
+      setMessage("");
 
-      const resultText = await response.text();
+      const { data, error } = await supabase
+        .from("requests")
+        .update(updateData)
+        .eq("id", detail.id)
+        .select()
+        .single();
 
-      if (response.ok && resultText.includes("성공")) {
-        setDetail({
-          ...detail,
-          status: nextStatus,
-        });
-        setMessage(successMessage);
-      } else {
-        setMessage(resultText);
+      if (error) {
+        throw error;
       }
+
+      setDetail(data);
+      setMessage(successMessage);
     } catch (error) {
-      console.error("상태 변경 실패:", error);
-      setMessage("상태 변경 중 오류가 발생했습니다.");
+      console.error("요청 변경 실패:", error);
+      setMessage(error.message || "요청 변경 중 오류가 발생했습니다.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleAccept = async () => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/requests/accept?requestId=${detail.id}&assignedUserId=${loginUser.id}`,
-        {
-          method: "PUT",
-        },
-      );
-
-      const resultText = await response.text();
-
-      if (response.ok && resultText.includes("성공")) {
-        const nextNickname = loginUser.nickname || `회원 ${loginUser.id}`;
-
-        setDetail({
-          ...detail,
-          status: "견적 협의중",
-          assignedUserId: loginUser.id,
-          assignedUsername: nextNickname,
-        });
-        setMessage("요청 수락 성공! 이제 견적 협의중 상태입니다.");
-      } else {
-        setMessage(resultText);
-      }
-    } catch (error) {
-      console.error("요청 수락 실패:", error);
-      setMessage("요청 수락 중 오류가 발생했습니다.");
-    }
+    await updateRequest(
+      {
+        status: "견적 협의중",
+        assigned_user_id: loginUser.id,
+      },
+      "요청 수락 성공! 이제 견적 협의중 상태입니다."
+    );
   };
 
   const handleSetPlanned = async () => {
-    await updateStatus("작업 예정", "작업 예정 상태로 변경되었습니다.");
+    await updateRequest(
+      { status: "작업 예정" },
+      "작업 예정 상태로 변경되었습니다."
+    );
   };
 
   const handleStartWork = async () => {
-    await updateStatus("진행중", "작업이 시작되었습니다.");
+    await updateRequest({ status: "진행중" }, "작업이 시작되었습니다.");
   };
 
   const handleComplete = async () => {
-    await updateStatus("완료됨", "작업 완료 처리 성공!");
+    await updateRequest({ status: "완료됨" }, "작업 완료 처리 성공!");
   };
+
+  const writerText = (() => {
+    if (detail.user_id === loginUser?.id) return "나";
+    if (detail.writer_name) return detail.writer_name;
+    if (detail.writer_nickname) return detail.writer_nickname;
+    return "작성자 정보 없음";
+  })();
+
+  const assignedText = (() => {
+    if (!detail.assigned_user_id) return "아직 없음";
+    if (detail.assigned_user_id === loginUser?.id) return "나";
+    if (detail.assigned_username) return detail.assigned_username;
+    return "배정됨";
+  })();
 
   return (
     <div className="Signup-page">
@@ -187,9 +168,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
           <div className="input-group">
             <label>작성자</label>
-            <div className="input">
-              {detail.writerNickname || "닉네임 없음"}
-            </div>
+            <div className="input">{writerText}</div>
           </div>
 
           <div className="input-group">
@@ -238,9 +217,7 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
 
           <div className="input-group">
             <label>담당자</label>
-            <div className="input">
-              {detail.assignedUsername ? detail.assignedUsername : "아직 없음"}
-            </div>
+            <div className="input">{assignedText}</div>
           </div>
 
           {canAccept && (
@@ -248,8 +225,9 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
               type="button"
               className="Signup-button"
               onClick={handleAccept}
+              disabled={actionLoading}
             >
-              요청 수락하기
+              {actionLoading ? "처리 중..." : "요청 수락하기"}
             </button>
           )}
 
@@ -258,8 +236,9 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
               type="button"
               className="Signup-button"
               onClick={handleSetPlanned}
+              disabled={actionLoading}
             >
-              작업 예정으로 변경
+              {actionLoading ? "처리 중..." : "작업 예정으로 변경"}
             </button>
           )}
 
@@ -268,8 +247,9 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
               type="button"
               className="Signup-button"
               onClick={handleStartWork}
+              disabled={actionLoading}
             >
-              작업 시작하기
+              {actionLoading ? "처리 중..." : "작업 시작하기"}
             </button>
           )}
 
@@ -278,8 +258,9 @@ function RequestDetailPage({ request, onGoBack, onGoHome }) {
               type="button"
               className="Signup-button"
               onClick={handleComplete}
+              disabled={actionLoading}
             >
-              완료 처리하기
+              {actionLoading ? "처리 중..." : "완료 처리하기"}
             </button>
           )}
 

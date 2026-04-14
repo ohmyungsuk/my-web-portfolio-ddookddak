@@ -1,37 +1,33 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient.js";
 
-function MyRequestsPage({ onGoHome, onClickRequest }) {
+function AllRequestsPage({ onGoHome, onClickRequest }) {
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("loginUser");
-    const loginUser = savedUser ? JSON.parse(savedUser) : null;
+    const fetchAllRequests = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("requests")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-    if (!loginUser) {
-      setMessage("로그인 정보가 없습니다.");
-      setLoading(false);
-      return;
-    }
-
-    fetch(`http://localhost:8080/requests/my?userId=${loginUser.id}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`서버 응답 오류: ${response.status}`);
+        if (error) {
+          throw error;
         }
-        return response.json();
-      })
-      .then((data) => {
+
         setRequests(Array.isArray(data) ? data : []);
-      })
-      .catch((error) => {
-        console.error("내 요청 목록 불러오기 실패:", error);
-        setMessage("내 요청 목록을 불러오지 못했습니다.");
-      })
-      .finally(() => {
+      } catch (error) {
+        console.error("전체 요청 목록 불러오기 실패:", error);
+        setMessage(error.message || "전체 요청 목록을 불러오지 못했습니다.");
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchAllRequests();
   }, []);
 
   const getStatusStyle = (status) => {
@@ -59,8 +55,8 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
       <div className="auth-card" style={{ maxWidth: "800px" }}>
         <div className="auth-header">
           <p className="auth-badge">뚝딱</p>
-          <h1>내 요청 목록</h1>
-          <p className="auth-desc">내가 등록한 요청 목록입니다.</p>
+          <h1>전체 요청 목록</h1>
+          <p className="auth-desc">등록된 모든 요청을 확인할 수 있습니다.</p>
         </div>
 
         <div className="auth-form">
@@ -76,7 +72,7 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
 
           {!loading && !message && requests.length === 0 && (
             <p style={{ textAlign: "center", color: "#374151" }}>
-              등록한 요청이 없습니다.
+              등록된 요청이 없습니다.
             </p>
           )}
 
@@ -118,8 +114,10 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
 
                   <p style={{ marginTop: "8px" }}>
                     담당자:{" "}
-                    {request.assignedUsername
-                      ? request.assignedUsername
+                    {request.assigned_username
+                      ? request.assigned_username
+                      : request.assigned_user_id
+                      ? "배정됨"
                       : "아직 없음"}
                   </p>
                 </div>
@@ -136,4 +134,4 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
   );
 }
 
-export default MyRequestsPage;
+export default AllRequestsPage;

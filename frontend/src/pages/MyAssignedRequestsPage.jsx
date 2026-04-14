@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient.js";
 
 function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
   const [requests, setRequests] = useState([]);
@@ -6,37 +7,58 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("loginUser");
-    const loginUser = savedUser ? JSON.parse(savedUser) : null;
+    const fetchAssignedRequests = async () => {
+      const savedUser = localStorage.getItem("loginUser");
+      const loginUser = savedUser ? JSON.parse(savedUser) : null;
 
-    if (!loginUser || !loginUser.id) {
-      setMessage(
-        "백엔드 사용자 연결이 아직 안 끝났습니다. 새로고침 후 다시 로그인해주세요."
-      );
-      setLoading(false);
-      return;
+      if (!loginUser || !loginUser.id) {
+        setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("requests")
+          .select("*")
+          .eq("assigned_user_id", loginUser.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        setRequests(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("내가 맡은 작업 목록 불러오기 실패:", error);
+        setMessage(error.message || "내가 맡은 작업 목록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignedRequests();
+  }, []);
+
+  const getStatusStyle = (status) => {
+    if (status === "요청 등록") {
+      return { backgroundColor: "#e5e7eb", color: "#374151" };
+    }
+    if (status === "견적 협의중") {
+      return { backgroundColor: "#ffedd5", color: "#c2410c" };
+    }
+    if (status === "작업 예정") {
+      return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
+    }
+    if (status === "진행중") {
+      return { backgroundColor: "#dcfce7", color: "#15803d" };
+    }
+    if (status === "완료됨") {
+      return { backgroundColor: "#bbf7d0", color: "#166534" };
     }
 
-    fetch(
-      `http://localhost:8080/requests/assigned?assignedUserId=${loginUser.id}`
-    )
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`서버 응답 오류: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setRequests(Array.isArray(data) ? data : []);
-      })
-      .catch((error) => {
-        console.error("내가 맡은 작업 목록 불러오기 실패:", error);
-        setMessage("내가 맡은 작업 목록을 불러오지 못했습니다.");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+    return { backgroundColor: "#f3f4f6", color: "#111827" };
+  };
 
   return (
     <div className="auth-page">
@@ -83,7 +105,22 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
                   <p>카테고리: {request.category}</p>
                   <p>장소: {request.location}</p>
                   <p>내용: {request.content}</p>
-                  <p>상태: {request.status}</p>
+
+                  <p style={{ marginTop: "8px" }}>
+                    상태:{" "}
+                    <span
+                      style={{
+                        ...getStatusStyle(request.status),
+                        padding: "6px 12px",
+                        borderRadius: "999px",
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        display: "inline-block",
+                      }}
+                    >
+                      {request.status}
+                    </span>
+                  </p>
                 </div>
               ))}
             </div>

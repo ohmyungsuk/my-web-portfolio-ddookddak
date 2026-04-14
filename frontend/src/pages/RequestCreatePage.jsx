@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../supabaseClient.js";
 import "../index.css";
 
 function RequestCreatePage({ onGoHome }) {
@@ -20,7 +21,7 @@ function RequestCreatePage({ onGoHome }) {
       return;
     }
 
-    if (!title || !category || !location || !content) {
+    if (!title.trim() || !category.trim() || !location.trim() || !content.trim()) {
       setMessage("모든 칸을 입력해주세요.");
       return;
     }
@@ -29,36 +30,30 @@ function RequestCreatePage({ onGoHome }) {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch("http://localhost:8080/requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: loginUser.id,
-          title: title,
-          category: category,
-          location: location,
-          content: content,
+      const { error } = await supabase.from("requests").insert([
+        {
+          user_id: loginUser.id,
+          title: title.trim(),
+          category: category.trim(),
+          location: location.trim(),
+          content: content.trim(),
           status: "요청 등록",
-          assignedUserId: null,
-        }),
-      });
+          assigned_user_id: null,
+        },
+      ]);
 
-      const data = await response.text();
-
-      if (response.ok) {
-        setMessage("요청 등록 성공!");
-        setTitle("");
-        setCategory("");
-        setLocation("");
-        setContent("");
-      } else {
-        setMessage("요청 등록 실패: " + data);
+      if (error) {
+        throw error;
       }
+
+      setMessage("요청 등록 성공!");
+      setTitle("");
+      setCategory("");
+      setLocation("");
+      setContent("");
     } catch (error) {
       console.error(error);
-      setMessage("서버 연결 오류");
+      setMessage(error.message || "요청 등록 중 문제가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }

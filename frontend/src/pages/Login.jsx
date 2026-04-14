@@ -25,7 +25,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
       setLoading(true);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 

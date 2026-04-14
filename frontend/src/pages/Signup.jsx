@@ -45,12 +45,12 @@ function Signup({ onSwitchToLogin }) {
     try {
       setLoading(true);
 
-      const { error } = await supabase.auth.Signup({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           data: {
-            name,
+            name: name.trim(),
           },
           emailRedirectTo: window.location.origin,
         },
@@ -61,8 +61,10 @@ function Signup({ onSwitchToLogin }) {
       }
 
       setSuccessMessage(
-        "회원가입 요청이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
+        "회원가입이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
       );
+
+      console.log("signup result:", data);
 
       setName("");
       setEmail("");
