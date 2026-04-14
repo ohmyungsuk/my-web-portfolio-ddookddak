@@ -63,11 +63,11 @@ function App() {
       localStorage.setItem("loginUser", JSON.stringify(loginUser));
 
       setCurrentPage((prev) => {
-        if (prev === "landing" || prev === "login" || prev === "signup") {
-          return "home";
-        }
-        return prev;
-      });
+      if (prev === "landing" || prev === "login" || prev === "signup") {
+        return "landing";
+      }
+      return prev;
+    });
 
       setAuthReady(true);
     };
@@ -123,7 +123,7 @@ function App() {
       return (
         <Login
           onSwitchToSignup={() => setCurrentPage("signup")}
-          onLoginSuccess={() => setCurrentPage("home")}
+          onLoginSuccess={() => setCurrentPage("landing")}
         />
       );
     }
@@ -143,67 +143,74 @@ function App() {
   }
 
   if (currentPage === "create") {
-    return <RequestCreatePage onGoHome={() => setCurrentPage("home")} />;
-  }
+  return <RequestCreatePage onGoHome={() => setCurrentPage("landing")} />;
+}
 
-  if (currentPage === "myRequests") {
-    return (
-      <MyRequestsPage
-        onGoHome={() => setCurrentPage("home")}
-        onClickRequest={(request) => {
-          setSelectedRequest(request);
-          setPreviousPage("myRequests");
-          setCurrentPage("requestDetail");
-        }}
-      />
-    );
-  }
-
-  if (currentPage === "allRequests") {
-    return (
-      <AllRequestsPage
-        onGoHome={() => setCurrentPage("home")}
-        onClickRequest={(request) => {
-          setSelectedRequest(request);
-          setPreviousPage("allRequests");
-          setCurrentPage("requestDetail");
-        }}
-      />
-    );
-  }
-
-  if (currentPage === "assignedRequests") {
-    return (
-      <MyAssignedRequestsPage
-        onGoHome={() => setCurrentPage("home")}
-        onClickRequest={(request) => {
-          setSelectedRequest(request);
-          setPreviousPage("assignedRequests");
-          setCurrentPage("requestDetail");
-        }}
-      />
-    );
-  }
-
-  if (currentPage === "requestDetail") {
-    return (
-      <RequestDetailPage
-        request={selectedRequest}
-        onGoBack={() => setCurrentPage(previousPage)}
-        onGoHome={() => setCurrentPage("home")}
-      />
-    );
-  }
-
+if (currentPage === "myRequests") {
   return (
-    <Home
-      onGoToCreate={() => setCurrentPage("create")}
-      onGoToMyRequests={() => setCurrentPage("myRequests")}
-      onGoToAllRequests={() => setCurrentPage("allRequests")}
-      onGoToAssignedRequests={() => setCurrentPage("assignedRequests")}
-      onLogout={handleLogout}
+    <MyRequestsPage
+      onGoHome={() => setCurrentPage("landing")}
+      onClickRequest={(request) => {
+        setSelectedRequest(request);
+        setPreviousPage("myRequests");
+        setCurrentPage("requestDetail");
+      }}
     />
   );
+}
+
+if (currentPage === "allRequests") {
+  return (
+    <AllRequestsPage
+      onGoHome={() => setCurrentPage("landing")}
+      onClickRequest={(request) => {
+        setSelectedRequest(request);
+        setPreviousPage("allRequests");
+        setCurrentPage("requestDetail");
+      }}
+    />
+  );
+}
+
+if (currentPage === "assignedRequests") {
+  return (
+    <MyAssignedRequestsPage
+      onGoHome={() => setCurrentPage("landing")}
+      onClickRequest={(request) => {
+        setSelectedRequest(request);
+        setPreviousPage("assignedRequests");
+        setCurrentPage("requestDetail");
+      }}
+    />
+  );
+}
+
+if (currentPage === "requestDetail") {
+  return (
+    <RequestDetailPage
+      request={selectedRequest}
+      onGoBack={() => setCurrentPage(previousPage)}
+      onGoHome={() => setCurrentPage("landing")}
+    />
+  );
+}
+
+const savedUser = localStorage.getItem("loginUser");
+const loginUser = savedUser ? JSON.parse(savedUser) : null;
+
+return (
+  <LandingPage
+    isLoggedIn={isLoggedIn}
+    loginUser={loginUser}
+    onGoLogin={() => setCurrentPage("login")}
+    onGoSignup={() => setCurrentPage("signup")}
+    onGoCreate={() => setCurrentPage("create")}
+    onGoMyRequests={() => setCurrentPage("myRequests")}
+    onGoAllRequests={() => setCurrentPage("allRequests")}
+    onGoAssignedRequests={() => setCurrentPage("assignedRequests")}
+    onLogout={handleLogout}
+  />
+);
 }
 
 export default App;
