@@ -190,8 +190,7 @@ function LandingPage({
         flexDirection: "column",
         background:
           "linear-gradient(180deg, #f8fbff 0%, #f1f5f9 48%, #f8fafc 100%)",
-        fontFamily:
-          "Pretendard, Apple SD Gothic Neo, Noto Sans KR, Arial, sans-serif",
+        
         color: "#0f172a",
       }}
     >
