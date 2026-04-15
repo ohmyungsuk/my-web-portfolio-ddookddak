@@ -455,7 +455,10 @@ function RequestDetailPage({ onGoHome }) {
     <div style={styles.shell}>
       <div style={styles.wrap}>
         <div style={styles.topbar}>
-          <div style={styles.brand}>
+          <div
+            style={{ ...styles.brand, cursor: "pointer" }}
+            onClick={() => navigate("/")}
+          >
             <div style={styles.brandMark}>ㄸ</div>
             <div style={styles.brandText}>뚝딱</div>
           </div>
