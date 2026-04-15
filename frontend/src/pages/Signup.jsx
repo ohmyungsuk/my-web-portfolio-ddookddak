@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
 function Signup({ onSwitchToLogin }) {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +48,7 @@ function Signup({ onSwitchToLogin }) {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -64,8 +67,6 @@ function Signup({ onSwitchToLogin }) {
         "회원가입이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
       );
 
-      console.log("signup result:", data);
-
       setName("");
       setEmail("");
       setPassword("");
@@ -77,11 +78,44 @@ function Signup({ onSwitchToLogin }) {
     }
   };
 
+  const brandStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+    marginBottom: "14px",
+  };
+
+  const brandMarkStyle = {
+    width: "40px",
+    height: "40px",
+    borderRadius: "14px",
+    background: "linear-gradient(135deg, #2563eb 0%, #6366f1 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontWeight: "900",
+    fontSize: "14px",
+    boxShadow: "0 12px 24px rgba(37, 99, 235, 0.18)",
+  };
+
+  const brandTextStyle = {
+    fontSize: "24px",
+    fontWeight: "900",
+    color: "#2563eb",
+    letterSpacing: "-0.6px",
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <p className="auth-badge">뚝딱</p>
+          <div style={brandStyle} onClick={() => navigate("/")}>
+            <div style={brandMarkStyle}>ㄸ</div>
+            <div style={brandTextStyle}>뚝딱</div>
+          </div>
+
           <h1>회원가입</h1>
           <p className="auth-desc">
             새 계정을 만들고 유지보수 요청 서비스를 시작하세요.
@@ -96,6 +130,7 @@ function Signup({ onSwitchToLogin }) {
               placeholder="이름을 입력하세요"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
             />
           </div>
 
@@ -106,6 +141,7 @@ function Signup({ onSwitchToLogin }) {
               placeholder="example@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
 
@@ -116,6 +152,7 @@ function Signup({ onSwitchToLogin }) {
               placeholder="6글자 이상 입력"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
 
@@ -126,6 +163,7 @@ function Signup({ onSwitchToLogin }) {
               placeholder="비밀번호를 다시 입력"
               value={passwordCheck}
               onChange={(e) => setPasswordCheck(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
 

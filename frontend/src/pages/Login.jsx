@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
 function Login({ onSwitchToSignup, onLoginSuccess }) {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,7 +39,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
       if (onLoginSuccess) {
         onLoginSuccess(data);
       } else {
-        alert("로그인 성공");
+        navigate("/");
       }
     } catch (error) {
       setErrorMessage(error.message || "로그인 중 문제가 발생했습니다.");
@@ -45,15 +48,46 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     }
   };
 
+  const brandStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+    marginBottom: "14px",
+  };
+
+  const brandMarkStyle = {
+    width: "40px",
+    height: "40px",
+    borderRadius: "14px",
+    background: "linear-gradient(135deg, #2563eb 0%, #6366f1 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontWeight: "900",
+    fontSize: "14px",
+    boxShadow: "0 12px 24px rgba(37, 99, 235, 0.18)",
+  };
+
+  const brandTextStyle = {
+    fontSize: "24px",
+    fontWeight: "900",
+    color: "#2563eb",
+    letterSpacing: "-0.6px",
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <p className="auth-badge">뚝딱</p>
+          <div style={brandStyle} onClick={() => navigate("/")}>
+            <div style={brandMarkStyle}>ㄸ</div>
+            <div style={brandTextStyle}>뚝딱</div>
+          </div>
+
           <h1>로그인</h1>
-          <p className="auth-desc">
-            등록한 이메일과 비밀번호로 접속하세요.
-          </p>
+          <p className="auth-desc">등록한 이메일과 비밀번호로 접속하세요.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleLogin}>
@@ -64,6 +98,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               placeholder="example@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
 
@@ -74,6 +109,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               placeholder="비밀번호를 입력하세요"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
             />
           </div>
 
