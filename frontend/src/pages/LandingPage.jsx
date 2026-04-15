@@ -17,7 +17,6 @@ function LandingPage({
   const profileRef = useRef(null);
 
   const isMobile = windowWidth <= 768;
-  const isTablet = windowWidth <= 1024;
 
   const displayName =
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
@@ -97,19 +96,7 @@ function LandingPage({
     fontWeight: "800",
     cursor: "pointer",
     whiteSpace: "nowrap",
-    boxShadow: "0 14px 28px rgba(37, 99, 235, 0.18)",
-  };
-
-  const chipButton = {
-    border: "1px solid #dbe4f2",
-    backgroundColor: "#ffffff",
-    color: "#334155",
-    borderRadius: "999px",
-    padding: "9px 13px",
-    fontSize: "13px",
-    fontWeight: "700",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
+    boxShadow: "0 14px 28px rgba(37, 99, 235, 0.16)",
   };
 
   const categoryItems = [
@@ -199,7 +186,6 @@ function LandingPage({
         color: "#111827",
       }}
     >
-      {/* 헤더 */}
       <header
         style={{
           position: "sticky",
@@ -248,7 +234,7 @@ function LandingPage({
                   color: "#ffffff",
                   fontWeight: "900",
                   fontSize: isMobile ? "14px" : "15px",
-                  boxShadow: "0 10px 22px rgba(37, 99, 235, 0.18)",
+                  boxShadow: "0 10px 22px rgba(37, 99, 235, 0.16)",
                 }}
               >
                 ㄸ
@@ -256,10 +242,10 @@ function LandingPage({
 
               <div
                 style={{
-                  fontSize: isMobile ? "22px" : "24px",
+                  fontSize: isMobile ? "21px" : "22px",
                   fontWeight: "900",
                   color: "#2563eb",
-                  letterSpacing: "-0.7px",
+                  letterSpacing: "-0.5px",
                 }}
               >
                 뚝딱
@@ -557,6 +543,7 @@ function LandingPage({
                     border: "1px solid #dbe4f2",
                     backgroundColor: "#ffffff",
                     cursor: "pointer",
+                    fontSize: "15px",
                   }}
                 >
                   ☰
@@ -608,7 +595,6 @@ function LandingPage({
         </div>
       </header>
 
-      {/* 메인 검색 영역 */}
       <section
         style={{
           maxWidth: "1200px",
@@ -624,14 +610,15 @@ function LandingPage({
         >
           <h1
             style={{
-              margin: "0 0 16px 0",
-              fontSize: isMobile ? "30px" : "48px",
-              lineHeight: "1.2",
-              letterSpacing: isMobile ? "-1px" : "-1.8px",
-              fontWeight: "900",
+              margin: "0 0 14px 0",
+              fontSize: isMobile ? "30px" : "clamp(34px, 4vw, 52px)",
+              lineHeight: "1.18",
+              letterSpacing: isMobile ? "-0.8px" : "-1.4px",
+              fontWeight: "800",
               color: "#0f172a",
             }}
           >
+          
             어떤 유지보수 서비스가
             <br />
             필요하신가요?
@@ -640,7 +627,7 @@ function LandingPage({
           <p
             style={{
               margin: 0,
-              fontSize: isMobile ? "14px" : "16px",
+              fontSize: isMobile ? "14px" : "15px",
               lineHeight: "1.85",
               color: "#64748b",
             }}
@@ -663,7 +650,7 @@ function LandingPage({
         >
           <div
             style={{
-              height: "58px",
+              height: "56px",
               borderRadius: "16px",
               backgroundColor: "#ffffff",
               border: "1px solid #e2e8f0",
@@ -673,7 +660,7 @@ function LandingPage({
               padding: "0 18px",
               color: "#94a3b8",
               fontSize: "14px",
-              fontWeight: "600",
+              fontWeight: "500",
               textAlign: "left",
             }}
           >
@@ -685,7 +672,7 @@ function LandingPage({
             onClick={onGoCreate}
             style={{
               ...primaryButton,
-              height: "58px",
+              height: "56px",
               borderRadius: "16px",
               width: isMobile ? "100%" : "auto",
               padding: "0 22px",
@@ -741,7 +728,7 @@ function LandingPage({
 
               <span
                 style={{
-                  fontSize: "13px",
+                  fontSize: "14px",
                   fontWeight: "700",
                   color: "#334155",
                 }}
@@ -753,7 +740,6 @@ function LandingPage({
         </div>
       </section>
 
-      {/* 많이 찾는 요청 */}
       <section
         style={{
           maxWidth: "1200px",
@@ -813,10 +799,10 @@ function LandingPage({
 
                   <div
                     style={{
-                      fontSize: "24px",
-                      lineHeight: "1.35",
-                      fontWeight: "900",
-                      letterSpacing: "-0.5px",
+                      fontSize: "18px",
+                      lineHeight: "1.4",
+                      fontWeight: "800",
+                      letterSpacing: "-0.4px",
                       color: "#0f172a",
                       marginBottom: "8px",
                     }}
@@ -881,7 +867,6 @@ function LandingPage({
         </div>
       </section>
 
-      {/* 서비스 소개 */}
       <section
         id="service-intro"
         style={{
@@ -935,10 +920,11 @@ function LandingPage({
               <h3
                 style={{
                   margin: "0 0 10px 0",
-                  fontSize: "22px",
-                  fontWeight: "900",
+                  fontSize: "18px",
+                  fontWeight: "800",
                   letterSpacing: "-0.3px",
                   color: "#0f172a",
+                  lineHeight: "1.4",
                 }}
               >
                 {item.title}
@@ -959,7 +945,6 @@ function LandingPage({
         </div>
       </section>
 
-      {/* 커뮤니티 */}
       <section
         id="community-preview"
         style={{
@@ -1030,10 +1015,11 @@ function LandingPage({
               <h3
                 style={{
                   margin: "0 0 10px 0",
-                  fontSize: "22px",
-                  fontWeight: "900",
+                  fontSize: "18px",
+                  fontWeight: "800",
                   letterSpacing: "-0.3px",
                   color: "#0f172a",
+                  lineHeight: "1.4",
                 }}
               >
                 {item.title}
@@ -1054,7 +1040,6 @@ function LandingPage({
         </div>
       </section>
 
-      {/* 푸터 */}
       <footer
         style={{
           borderTop: "1px solid #e7edf5",
@@ -1105,10 +1090,10 @@ function LandingPage({
 
                 <div
                   style={{
-                    fontSize: "22px",
+                    fontSize: "21px",
                     fontWeight: "900",
                     color: "#2563eb",
-                    letterSpacing: "-0.6px",
+                    letterSpacing: "-0.5px",
                   }}
                 >
                   뚝딱
@@ -1178,10 +1163,11 @@ function SectionHeader({ title, desc, isMobile, noMargin = false }) {
       <h2
         style={{
           margin: "0 0 10px 0",
-          fontSize: isMobile ? "28px" : "34px",
-          fontWeight: "900",
-          letterSpacing: "-1px",
+          fontSize: isMobile ? "26px" : "30px",
+          fontWeight: "800",
+          letterSpacing: "-0.8px",
           color: "#0f172a",
+          lineHeight: "1.25",
         }}
       >
         {title}
@@ -1191,7 +1177,7 @@ function SectionHeader({ title, desc, isMobile, noMargin = false }) {
         style={{
           margin: 0,
           fontSize: "15px",
-          lineHeight: "1.85",
+          lineHeight: "1.8",
           color: "#64748b",
           maxWidth: "680px",
         }}

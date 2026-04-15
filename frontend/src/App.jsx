@@ -16,6 +16,8 @@ import MyRequestsPage from "./pages/MyRequestsPage";
 import AllRequestsPage from "./pages/AllRequestsPage";
 import MyAssignedRequestsPage from "./pages/MyAssignedRequestsPage";
 import RequestDetailPage from "./pages/RequestDetailPage";
+import OAuthCallback from "./pages/OAuthCallback";
+
 
 function App() {
   const [session, setSession] = useState(null);
@@ -169,6 +171,8 @@ function App() {
           )
         }
       />
+
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
 
       <Route
         path="/requests/new"
