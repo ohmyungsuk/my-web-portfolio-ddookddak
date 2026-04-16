@@ -32,6 +32,7 @@ function MyPage({
   const [myRequestCount, setMyRequestCount] = useState(0);
   const [assignedCount, setAssignedCount] = useState(0);
   const [inProgressCount, setInProgressCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
   const [statsLoading, setStatsLoading] = useState(false);
 
   const displayName =
@@ -81,6 +82,7 @@ function MyPage({
           { count: myCount, error: myError },
           { count: assignedCnt, error: assignedError },
           { count: progressCnt, error: progressError },
+          { count: completedCnt, error: completedError },
         ] = await Promise.all([
           supabase
             .from("requests")
@@ -97,17 +99,25 @@ function MyPage({
             .select("*", { count: "exact", head: true })
             .eq("assigned_user_id", loginUser.id)
             .in("status", ["진행중", "작업 예정", "협의중"]),
+
+          supabase
+            .from("requests")
+            .select("*", { count: "exact", head: true })
+            .eq("assigned_user_id", loginUser.id)
+            .in("status", ["완료", "작업완료", "처리완료"]),
         ]);
 
         if (myError) throw myError;
         if (assignedError) throw assignedError;
         if (progressError) throw progressError;
+        if (completedError) throw completedError;
 
         if (!isMounted) return;
 
         setMyRequestCount(myCount || 0);
         setAssignedCount(assignedCnt || 0);
         setInProgressCount(progressCnt || 0);
+        setCompletedCount(completedCnt || 0);
       } catch (error) {
         console.error("마이페이지 통계 불러오기 실패:", error);
       } finally {
@@ -260,22 +270,29 @@ function MyPage({
         buttonText: "바로가기",
         onClick: onGoAllRequests,
       },
+      {
+        title: "완료 요청",
+        desc: "완료 처리된 작업 흐름을 다시 확인합니다.",
+        buttonText: "맡은 작업 보기",
+        onClick: onGoAssignedRequests,
+      },
     ],
     [onGoMyRequests, onGoAssignedRequests, onGoAllRequests]
   );
 
   const pageStyle = {
     minHeight: "100vh",
-    background: "#f7f9fc",
+    background:
+      "linear-gradient(180deg, #f8fbff 0%, #f4f7fb 52%, #f8fafc 100%)",
     color: "#111827",
     fontFamily:
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
   const wrapStyle = {
-    maxWidth: "1200px",
+    maxWidth: "1240px",
     margin: "0 auto",
-    padding: "28px 24px 80px",
+    padding: "28px 24px 88px",
   };
 
   const topbarStyle = {
@@ -283,7 +300,7 @@ function MyPage({
     alignItems: "center",
     justifyContent: "space-between",
     gap: "20px",
-    marginBottom: "20px",
+    marginBottom: "18px",
   };
 
   const brandStyle = {
@@ -319,10 +336,11 @@ function MyPage({
     backgroundColor: "#ffffff",
     color: "#1e293b",
     borderRadius: "14px",
-    padding: "14px 20px",
+    padding: "13px 18px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
+    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.03)",
   };
 
   const tabWrapStyle = {
@@ -330,7 +348,7 @@ function MyPage({
     alignItems: "center",
     gap: "28px",
     borderBottom: "1px solid #e7edf5",
-    marginBottom: "26px",
+    marginBottom: "24px",
     padding: "0 4px",
   };
 
@@ -338,7 +356,7 @@ function MyPage({
     border: "none",
     background: "none",
     padding: "0 0 14px 0",
-    fontSize: "17px",
+    fontSize: "16px",
     fontWeight: activeTab === key ? "800" : "700",
     color: activeTab === key ? "#2F80ED" : "#1f2937",
     cursor: "pointer",
@@ -348,7 +366,7 @@ function MyPage({
 
   const contentGridStyle = {
     display: "grid",
-    gridTemplateColumns: "300px 1fr",
+    gridTemplateColumns: "320px 1fr",
     gap: "24px",
     alignItems: "start",
   };
@@ -356,20 +374,20 @@ function MyPage({
   const cardStyle = {
     backgroundColor: "#ffffff",
     border: "1px solid #e5eaf0",
-    borderRadius: "24px",
-    boxShadow: "0 14px 30px rgba(15, 23, 42, 0.04)",
+    borderRadius: "26px",
+    boxShadow: "0 16px 34px rgba(15, 23, 42, 0.04)",
   };
 
   const leftCardStyle = {
     ...cardStyle,
-    padding: "28px 24px",
+    padding: "30px 24px",
     position: "sticky",
-    top: "100px",
+    top: "96px",
   };
 
   const avatarStyle = {
-    width: "96px",
-    height: "96px",
+    width: "100px",
+    height: "100px",
     borderRadius: "50%",
     background: "linear-gradient(135deg, #6EC1FF 0%, #35A2FF 100%)",
     color: "#ffffff",
@@ -379,7 +397,7 @@ function MyPage({
     fontSize: "34px",
     fontWeight: "900",
     margin: "0 auto 18px",
-    boxShadow: "0 16px 30px rgba(53, 162, 255, 0.18)",
+    boxShadow: "0 18px 34px rgba(53, 162, 255, 0.18)",
   };
 
   const profileNameStyle = {
@@ -414,15 +432,19 @@ function MyPage({
 
   const statRowStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(4, 1fr)",
     gap: "10px",
-    marginTop: "22px",
+    marginTop: "24px",
     paddingTop: "18px",
     borderTop: "1px solid #edf2f7",
   };
 
   const statBoxStyle = {
     textAlign: "center",
+    background: "#fbfdff",
+    border: "1px solid #edf2f7",
+    borderRadius: "16px",
+    padding: "14px 8px",
   };
 
   const statNumStyle = {
@@ -440,7 +462,7 @@ function MyPage({
 
   const sectionStyle = {
     ...cardStyle,
-    padding: "28px",
+    padding: "30px",
     marginBottom: "18px",
   };
 
@@ -470,6 +492,10 @@ function MyPage({
     borderRadius: "20px",
     padding: "22px",
     backgroundColor: "#fbfdff",
+    minHeight: "170px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   };
 
   const menuTitleStyle = {
@@ -509,7 +535,7 @@ function MyPage({
     padding: "18px 20px",
     backgroundColor: "#ffffff",
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: "16px",
   };
@@ -687,6 +713,13 @@ function MyPage({
                 </div>
                 <div style={statLabelStyle}>진행중</div>
               </div>
+
+              <div style={statBoxStyle}>
+                <div style={statNumStyle}>
+                  {statsLoading ? "-" : completedCount}
+                </div>
+                <div style={statLabelStyle}>완료됨</div>
+              </div>
             </div>
           </div>
 
@@ -814,8 +847,11 @@ function MyPage({
                 <div style={menuGridStyle}>
                   {activityCards.map((card) => (
                     <div key={card.title} style={menuCardStyle}>
-                      <div style={menuTitleStyle}>{card.title}</div>
-                      <div style={menuDescStyle}>{card.desc}</div>
+                      <div>
+                        <div style={menuTitleStyle}>{card.title}</div>
+                        <div style={menuDescStyle}>{card.desc}</div>
+                      </div>
+
                       <button
                         type="button"
                         style={primaryBtnStyle}
