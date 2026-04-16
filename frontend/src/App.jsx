@@ -1,3 +1,4 @@
+import MyPage from "./pages/MyPage";
 import { useEffect, useMemo, useState } from "react";
 import {
   Navigate,
@@ -85,6 +86,7 @@ function App() {
       "/requests/my",
       "/requests/all",
       "/requests/assigned",
+      "/mypage",
     ];
 
     const isDetailPage = location.pathname.startsWith("/requests/");
@@ -128,22 +130,40 @@ function App() {
 
   return (
     <Routes>
+
+      <Route
+        path="/mypage"
+        element={
+          <RequireAuth isLoggedIn={isLoggedIn}>
+            <MyPage
+              loginUser={loginUser}
+              onGoHome={() => navigate("/")}
+              onGoMyRequests={() => navigate("/requests/my")}
+              onGoAllRequests={() => navigate("/requests/all")}
+              onGoAssignedRequests={() => navigate("/requests/assigned")}
+              onLogout={handleLogout}
+            />
+          </RequireAuth>
+        }
+      />
+
       <Route
         path="/"
         element={
           <LandingPage
-            isLoggedIn={isLoggedIn}
-            loginUser={loginUser}
-            onGoLogin={() => navigate("/login")}
-            onGoSignup={() => navigate("/signup")}
-            onGoCreate={() =>
-              isLoggedIn ? navigate("/requests/new") : navigate("/login")
-            }
-            onGoMyRequests={() => navigate("/requests/my")}
-            onGoAllRequests={() => navigate("/requests/all")}
-            onGoAssignedRequests={() => navigate("/requests/assigned")}
-            onLogout={handleLogout}
-          />
+          isLoggedIn={isLoggedIn}
+          loginUser={loginUser}
+          onGoLogin={() => navigate("/login")}
+          onGoSignup={() => navigate("/signup")}
+          onGoCreate={() =>
+            isLoggedIn ? navigate("/requests/new") : navigate("/login")
+          }
+          onGoMyPage={() => navigate("/mypage")}
+          onGoMyRequests={() => navigate("/requests/my")}
+          onGoAllRequests={() => navigate("/requests/all")}
+          onGoAssignedRequests={() => navigate("/requests/assigned")}
+          onLogout={handleLogout}
+        />
         }
       />
 

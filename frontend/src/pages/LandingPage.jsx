@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-function LandingPage({
+  function LandingPage({
   onGoLogin,
   onGoSignup,
   onGoCreate,
+  onGoMyPage,
   onGoMyRequests,
   onGoAllRequests,
   onGoAssignedRequests,
@@ -11,6 +12,7 @@ function LandingPage({
   isLoggedIn,
   loginUser,
 }) {
+
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -460,6 +462,9 @@ function LandingPage({
                         padding: "10px",
                       }}
                     >
+                      <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
+                        마이페이지
+                      </DropdownButton>
                       <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
                         내 요청 목록
                       </DropdownButton>
