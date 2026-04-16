@@ -130,18 +130,18 @@ function Signup({ onSwitchToLogin }) {
   };
 
   const brandMarkStyle = {
-    width: "36px",
-    height: "36px",
-    borderRadius: "12px",
-    background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#ffffff",
-    fontWeight: "900",
-    fontSize: "13px",
-    boxShadow: "0 10px 20px rgba(59, 130, 246, 0.16)",
-  };
+  width: "36px",
+  height: "36px",
+  borderRadius: "12px",
+  background: "#EAF4FF",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#2F80ED",
+  fontWeight: "900",
+  fontSize: "13px",
+  boxShadow: "0 10px 20px rgba(77, 163, 255, 0.10)",
+};
 
   const brandTextStyle = {
     fontSize: "21px",

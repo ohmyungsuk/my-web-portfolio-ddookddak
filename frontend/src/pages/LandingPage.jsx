@@ -66,37 +66,45 @@ function LandingPage({
   const topMenuButton = {
     background: "none",
     border: "none",
-    padding: 0,
-    fontSize: "15px",
-    fontWeight: "700",
-    color: "#111827",
+    padding: "0",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#2f3438",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    letterSpacing: "-0.2px",
+    fontFamily:
+      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
   const ghostButton = {
-    border: "1px solid #dbe4f2",
+    border: "1px solid #e5e7eb",
     backgroundColor: "#ffffff",
-    color: "#1e293b",
-    borderRadius: "12px",
-    padding: isMobile ? "10px 13px" : "11px 16px",
+    color: "#2f3438",
+    borderRadius: "10px",
+    padding: isMobile ? "10px 12px" : "10px 14px",
     fontSize: "14px",
-    fontWeight: "700",
+    fontWeight: "600",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    fontFamily:
+      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
   const primaryButton = {
     border: "none",
-    background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)",
+    background: "#35a2ff",
     color: "#ffffff",
-    borderRadius: "12px",
-    padding: isMobile ? "11px 14px" : "12px 18px",
-    fontSize: "14px",
-    fontWeight: "800",
+    borderRadius: "6px",
+    padding: isMobile ? "10px 14px" : "0 18px",
+    height: isMobile ? "40px" : "38px",
+    fontSize: "13px",
+    fontWeight: "700",
     cursor: "pointer",
     whiteSpace: "nowrap",
-    boxShadow: "0 14px 28px rgba(37, 99, 235, 0.16)",
+    boxShadow: "none",
+    fontFamily:
+      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
   const categoryItems = [
@@ -191,74 +199,88 @@ function LandingPage({
           position: "sticky",
           top: 0,
           zIndex: 50,
-          backgroundColor: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(14px)",
-          borderBottom: "1px solid #e7edf5",
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid #ededed",
+          fontFamily:
+            '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
         <div
           style={{
-            maxWidth: "1200px",
+            maxWidth: "1320px",
             margin: "0 auto",
-            padding: isMobile ? "14px 16px" : "16px 24px",
+            padding: isMobile ? "0 20px" : "0 64px",
+            boxSizing: "border-box",
           }}
         >
           <div
             style={{
+              height: isMobile ? "60px" : "78px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: "16px",
+              gap: "28px",
             }}
           >
             <div
-              onClick={goTop}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                cursor: "pointer",
-                flexShrink: 0,
+                gap: isMobile ? "16px" : "40px",
+                minWidth: 0,
+                flex: 1,
               }}
             >
-              <div
+              <button
+                type="button"
+                onClick={goTop}
                 style={{
-                  width: isMobile ? "38px" : "42px",
-                  height: isMobile ? "38px" : "42px",
-                  borderRadius: "14px",
-                  background:
-                    "linear-gradient(135deg, #2563eb 0%, #6366f1 100%)",
+                  border: "none",
+                  background: "none",
+                  padding: 0,
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ffffff",
-                  fontWeight: "900",
-                  fontSize: isMobile ? "14px" : "15px",
-                  boxShadow: "0 10px 22px rgba(37, 99, 235, 0.16)",
+                  gap: "12px",
+                  cursor: "pointer",
+                  flexShrink: 0,
                 }}
               >
-                ㄸ
-              </div>
+                <div
+                  style={{
+                    width: isMobile ? "36px" : "42px",
+                    height: isMobile ? "36px" : "42px",
+                    borderRadius: "14px",
+                    background: "#4DA3FF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#ffffff",
+                    fontWeight: "800",
+                    fontSize: "14px",
+                  }}
+                >
+                  ㄸ
+                </div>
 
-              <div
-                style={{
-                  fontSize: isMobile ? "21px" : "22px",
-                  fontWeight: "900",
-                  color: "#2563eb",
-                  letterSpacing: "-0.5px",
-                }}
-              >
-                뚝딱
-              </div>
-            </div>
+                <span
+                  style={{
+                    fontSize: isMobile ? "22px" : "23px",
+                    fontWeight: "800",
+                    color: "#2F80ED",
+                    letterSpacing: "-0.5px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  뚝딱
+                </span>
+              </button>
 
-            {!isMobile && (
-              <>
+              {!isMobile && (
                 <nav
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "28px",
+                    gap: "32px",
                   }}
                 >
                   <button type="button" style={topMenuButton} onClick={goTop}>
@@ -279,154 +301,199 @@ function LandingPage({
                     커뮤니티
                   </button>
                 </nav>
+              )}
+            </div>
 
-                {!isLoggedIn ? (
-                  <div
+            {!isMobile && !isLoggedIn && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "22px",
+                  flexShrink: 0,
+                  paddingLeft: "16px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={onGoLogin}
+                  style={{
+                    border: "none",
+                    background: "none",
+                    padding: 0,
+                    color: "#2f3438",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    fontFamily:
+                      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  }}
+                >
+                  로그인
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGoSignup}
+                  style={{
+                    border: "none",
+                    background: "none",
+                    padding: 0,
+                    color: "#2f3438",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    fontFamily:
+                      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  }}
+                >
+                  회원가입
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGoCreate}
+                  style={{
+                    ...primaryButton,
+                    padding: "0 20px",
+                    minWidth: "118px",
+                  }}
+                >
+                  요청 등록
+                </button>
+              </div>
+            )}
+
+            {!isMobile && isLoggedIn && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "18px",
+                  flexShrink: 0,
+                  paddingLeft: "16px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label="알림"
+                  title="알림"
+                >
+                  <svg
+                    width="21"
+                    height="21"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4.8 17.2C4.48 17.52 4.71 18 5.16 18H18.84C19.29 18 19.52 17.52 19.2 17.2L18 16Z"
+                      fill="#2f3438"
+                    />
+                  </svg>
+                </button>
+
+                <div style={{ position: "relative" }} ref={profileRef}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileOpen((prev) => !prev)}
                     style={{
+                      border: "none",
+                      background: "none",
+                      padding: 0,
                       display: "flex",
                       alignItems: "center",
-                      gap: "12px",
+                      gap: "8px",
+                      cursor: "pointer",
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={onGoLogin}
+                    <div
                       style={{
-                        background: "none",
-                        border: "none",
-                        color: "#111827",
-                        fontSize: "14px",
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        background: "#f1f5f9",
+                        color: "#2563eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         fontWeight: "700",
-                        cursor: "pointer",
+                        fontSize: "14px",
                       }}
                     >
-                      로그인
-                    </button>
-
-                    <span style={{ color: "#cbd5e1" }}>/</span>
-
-                    <button
-                      type="button"
-                      onClick={onGoSignup}
-                      style={primaryButton}
-                    >
-                      회원가입
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={onGoCreate}
-                      style={primaryButton}
-                    >
-                      요청 등록
-                    </button>
-
-                    <div style={{ position: "relative" }} ref={profileRef}>
-                      <button
-                        type="button"
-                        onClick={() => setProfileOpen((prev) => !prev)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          border: "1px solid #dbe4f2",
-                          backgroundColor: "#ffffff",
-                          borderRadius: "999px",
-                          padding: "7px 12px 7px 8px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "34px",
-                            height: "34px",
-                            borderRadius: "50%",
-                            background:
-                              "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
-                            color: "#ffffff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: "800",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {String(displayName).slice(0, 1)}
-                        </div>
-
-                        <div style={{ textAlign: "left", lineHeight: 1.2 }}>
-                          <div
-                            style={{
-                              fontSize: "13px",
-                              fontWeight: "800",
-                              color: "#111827",
-                            }}
-                          >
-                            {displayName}님
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#94a3b8",
-                              marginTop: "2px",
-                            }}
-                          >
-                            내 메뉴
-                          </div>
-                        </div>
-
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            color: "#64748b",
-                          }}
-                        >
-                          ▾
-                        </span>
-                      </button>
-
-                      {profileOpen && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "56px",
-                            right: 0,
-                            width: "220px",
-                            backgroundColor: "#ffffff",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: "18px",
-                            boxShadow: "0 20px 40px rgba(15, 23, 42, 0.12)",
-                            padding: "10px",
-                          }}
-                        >
-                          <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
-                            내 요청 목록
-                          </DropdownButton>
-                          <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
-                            전체 요청 보기
-                          </DropdownButton>
-                          <DropdownButton
-                            onClick={() => closeAndRun(onGoAssignedRequests)}
-                          >
-                            맡은 작업 보기
-                          </DropdownButton>
-                          <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
-                            로그아웃
-                          </DropdownButton>
-                        </div>
-                      )}
+                      {String(displayName).slice(0, 1)}
                     </div>
-                  </div>
-                )}
-              </>
+
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "#8a8f94",
+                      }}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  {profileOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "52px",
+                        right: 0,
+                        width: "220px",
+                        backgroundColor: "#ffffff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "14px",
+                        boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                        padding: "10px",
+                      }}
+                    >
+                      <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
+                        내 요청 목록
+                      </DropdownButton>
+                      <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
+                        전체 요청 보기
+                      </DropdownButton>
+                      <DropdownButton
+                        onClick={() => closeAndRun(onGoAssignedRequests)}
+                      >
+                        맡은 작업 보기
+                      </DropdownButton>
+                      <DropdownButton
+                        onClick={() => closeAndRun(onLogout)}
+                        danger
+                      >
+                        로그아웃
+                      </DropdownButton>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onGoCreate}
+                  style={{
+                    ...primaryButton,
+                    padding: "0 20px",
+                    minWidth: "118px",
+                    height: "38px",
+                  }}
+                >
+                  요청 등록
+                </button>
+              </div>
             )}
 
             {isMobile && (
@@ -435,20 +502,39 @@ function LandingPage({
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
+                  flexShrink: 0,
                 }}
               >
                 {isLoggedIn ? (
                   <>
                     <button
                       type="button"
-                      onClick={onGoCreate}
+                      onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
                       style={{
-                        ...primaryButton,
-                        padding: "10px 12px",
-                        fontSize: "13px",
+                        width: "24px",
+                        height: "24px",
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
+                      aria-label="알림"
                     >
-                      요청
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4.8 17.2C4.48 17.52 4.71 18 5.16 18H18.84C19.29 18 19.52 17.52 19.2 17.2L18 16Z"
+                          fill="#2f3438"
+                        />
+                      </svg>
                     </button>
 
                     <div style={{ position: "relative" }} ref={profileRef}>
@@ -456,55 +542,43 @@ function LandingPage({
                         type="button"
                         onClick={() => setProfileOpen((prev) => !prev)}
                         style={{
-                          width: "40px",
-                          height: "40px",
+                          width: "34px",
+                          height: "34px",
                           borderRadius: "50%",
-                          border: "1px solid #dbe4f2",
-                          backgroundColor: "#ffffff",
+                          border: "none",
+                          background: "#f1f5f9",
+                          color: "#2563eb",
                           cursor: "pointer",
                           padding: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "12px",
                         }}
                       >
-                        <div
-                          style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "50%",
-                            background:
-                              "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
-                            color: "#ffffff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: "800",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {String(displayName).slice(0, 1)}
-                        </div>
+                        {String(displayName).slice(0, 1)}
                       </button>
 
                       {profileOpen && (
                         <div
                           style={{
                             position: "absolute",
-                            top: "50px",
+                            top: "42px",
                             right: 0,
                             width: "210px",
                             backgroundColor: "#ffffff",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: "18px",
-                            boxShadow: "0 20px 40px rgba(15, 23, 42, 0.12)",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "14px",
+                            boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
                             padding: "10px",
                           }}
                         >
-                          <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
+                          <DropdownButton
+                            onClick={() => closeAndRun(onGoMyRequests)}
+                          >
                             내 요청 목록
                           </DropdownButton>
-                          <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
+                          <DropdownButton
+                            onClick={() => closeAndRun(onGoAllRequests)}
+                          >
                             전체 요청 보기
                           </DropdownButton>
                           <DropdownButton
@@ -512,86 +586,84 @@ function LandingPage({
                           >
                             맡은 작업 보기
                           </DropdownButton>
-                          <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
+                          <DropdownButton
+                            onClick={() => closeAndRun(onLogout)}
+                            danger
+                          >
                             로그아웃
                           </DropdownButton>
                         </div>
                       )}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={onGoCreate}
+                      style={{
+                        ...primaryButton,
+                        padding: "0 12px",
+                        height: "36px",
+                        fontSize: "13px",
+                      }}
+                    >
+                      요청
+                    </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={onGoLogin}
-                    style={{
-                      ...ghostButton,
-                      padding: "9px 12px",
-                      fontSize: "13px",
-                    }}
-                  >
-                    로그인
-                  </button>
-                )}
+                  <>
+                    <button
+                      type="button"
+                      onClick={onGoLogin}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        color: "#2f3438",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        fontFamily:
+                          '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      로그인
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen((prev) => !prev)}
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "14px",
-                    border: "1px solid #dbe4f2",
-                    backgroundColor: "#ffffff",
-                    cursor: "pointer",
-                    fontSize: "15px",
-                  }}
-                >
-                  ☰
-                </button>
+                    <button
+                      type="button"
+                      onClick={onGoSignup}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        color: "#2f3438",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        fontFamily:
+                          '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      회원가입
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onGoCreate}
+                      style={{
+                        ...primaryButton,
+                        padding: "0 12px",
+                        height: "36px",
+                        fontSize: "13px",
+                      }}
+                    >
+                      요청
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
-
-          {isMobile && mobileMenuOpen && (
-            <div
-              style={{
-                marginTop: "14px",
-                borderTop: "1px solid #eef2f7",
-                paddingTop: "14px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-              }}
-            >
-              <button type="button" style={topMenuButton} onClick={goTop}>
-                홈
-              </button>
-              <button
-                type="button"
-                style={topMenuButton}
-                onClick={() => moveToSection("service-intro")}
-              >
-                서비스 소개
-              </button>
-              <button
-                type="button"
-                style={topMenuButton}
-                onClick={() => moveToSection("community-preview")}
-              >
-                커뮤니티
-              </button>
-
-              {!isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={() => closeAndRun(onGoSignup)}
-                  style={primaryButton}
-                >
-                  회원가입
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </header>
 
@@ -618,7 +690,6 @@ function LandingPage({
               color: "#0f172a",
             }}
           >
-          
             어떤 유지보수 서비스가
             <br />
             필요하신가요?
@@ -872,12 +943,12 @@ function LandingPage({
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: isMobile ? "0 16px 30px" : "0 24px 44px",
+          padding: isMobile ? "0 16px 32px" : "0 24px 46px",
         }}
       >
         <SectionHeader
-          title="서비스 이용 흐름"
-          desc="처음 이용하는 사람도 어렵지 않게 접수부터 완료까지 확인할 수 있습니다."
+          title="서비스 소개"
+          desc="요청 등록부터 작업 수락, 상태 확인까지 이어지는 흐름을 간단하게 사용할 수 있습니다."
           isMobile={isMobile}
         />
 
@@ -903,15 +974,15 @@ function LandingPage({
                 style={{
                   width: "44px",
                   height: "44px",
-                  borderRadius: "16px",
-                  backgroundColor: "#eef4ff",
-                  color: "#2563eb",
+                  borderRadius: "14px",
+                  background: "#4DA3FF",
+                  color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontWeight: "900",
                   fontSize: "13px",
-                  marginBottom: "16px",
+                  fontWeight: "900",
+                  marginBottom: "18px",
                 }}
               >
                 {item.step}
@@ -1075,8 +1146,7 @@ function LandingPage({
                     width: "38px",
                     height: "38px",
                     borderRadius: "12px",
-                    background:
-                      "linear-gradient(135deg, #2563eb 0%, #6366f1 100%)",
+                    background: "#4DA3FF",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1092,7 +1162,7 @@ function LandingPage({
                   style={{
                     fontSize: "21px",
                     fontWeight: "900",
-                    color: "#2563eb",
+                    color: "#2F80ED",
                     letterSpacing: "-0.5px",
                   }}
                 >
@@ -1109,8 +1179,8 @@ function LandingPage({
                   maxWidth: "360px",
                 }}
               >
-                유지보수 요청을 더 간단하고 빠르게 접수하고
-                상태를 체계적으로 관리하기 위한 서비스 플랫폼
+                유지보수 요청을 더 간단하고 빠르게 접수하고 상태를 체계적으로
+                관리하기 위한 서비스 플랫폼
               </p>
             </div>
 
