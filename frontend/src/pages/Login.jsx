@@ -98,23 +98,23 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     marginBottom: "12px",
   };
 
-      const brandMarkStyle = {
-    width: "36px",
-    height: "36px",
-    borderRadius: "12px",
-    background: "#EAF4FF",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#2F80ED",
-    fontWeight: "900",
-    fontSize: "13px",
-    boxShadow: "0 10px 20px rgba(77, 163, 255, 0.10)",
-  };
+    const brandMarkStyle = {
+      width: "36px",
+      height: "36px",
+      borderRadius: "12px",
+      background: "#4DA3FF",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#ffffff",
+      fontWeight: "900",
+      fontSize: "13px",
+      boxShadow: "0 10px 20px rgba(77, 163, 255, 0.18)",
+    };
 
-  const brandTextStyle = {
+    const brandTextStyle = {
     fontSize: "21px",
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#2F80ED",
     letterSpacing: "-0.4px",
   };

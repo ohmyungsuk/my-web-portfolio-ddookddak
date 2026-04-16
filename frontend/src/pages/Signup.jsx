@@ -129,24 +129,24 @@ function Signup({ onSwitchToLogin }) {
     marginBottom: "12px",
   };
 
-  const brandMarkStyle = {
+ const brandMarkStyle = {
   width: "36px",
   height: "36px",
   borderRadius: "12px",
-  background: "#EAF4FF",
+  background: "#4DA3FF",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#2F80ED",
+  color: "#ffffff",
   fontWeight: "900",
   fontSize: "13px",
-  boxShadow: "0 10px 20px rgba(77, 163, 255, 0.10)",
+  boxShadow: "0 10px 20px rgba(77, 163, 255, 0.18)",
 };
 
   const brandTextStyle = {
     fontSize: "21px",
-    fontWeight: "800",
-    color: "#2563eb",
+    fontWeight: "900",
+    color: "#2F80ED",
     letterSpacing: "-0.4px",
   };
 
