@@ -15,13 +15,7 @@ function Signup({ onSwitchToLogin }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const isLocalhost =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1";
-
-  const redirectTo = isLocalhost
-    ? "http://localhost:5173/#/oauth/callback"
-    : "https://ohmyungsuk.github.io/my-web-portfolio-ddookddak/#/oauth/callback";
+  const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
   const handleOAuthSignup = async (provider) => {
     try {

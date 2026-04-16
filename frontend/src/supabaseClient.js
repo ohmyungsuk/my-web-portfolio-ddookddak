@@ -11,4 +11,10 @@ if (!supabaseKey) {
   throw new Error("VITE_SUPABASE_PUBLISHABLE_KEY 값이 없습니다.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
