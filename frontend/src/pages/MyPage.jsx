@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../supabaseClient.js";
 
 function MyPage({
   loginUser,
@@ -10,11 +11,234 @@ function MyPage({
 }) {
   const [activeTab, setActiveTab] = useState("profile");
 
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(
+    loginUser?.name || loginUser?.username || ""
+  );
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+
+  const [authProvider, setAuthProvider] = useState("email");
+
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawConfirmText, setWithdrawConfirmText] = useState("");
+  const [withdrawMessage, setWithdrawMessage] = useState("");
+
+  const [myRequestCount, setMyRequestCount] = useState(0);
+  const [assignedCount, setAssignedCount] = useState(0);
+  const [inProgressCount, setInProgressCount] = useState(0);
+  const [statsLoading, setStatsLoading] = useState(false);
+
   const displayName =
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
 
   const emailText = loginUser?.email || "이메일 정보 없음";
   const initial = String(displayName).slice(0, 1).toUpperCase();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProvider = async () => {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("로그인 방식 확인 실패:", error);
+        return;
+      }
+
+      if (!isMounted) return;
+
+      const provider =
+        data?.user?.app_metadata?.provider ||
+        data?.user?.app_metadata?.providers?.[0] ||
+        "email";
+
+      setAuthProvider(provider);
+    };
+
+    loadProvider();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStats = async () => {
+      if (!loginUser?.id) return;
+
+      try {
+        setStatsLoading(true);
+
+        const [
+          { count: myCount, error: myError },
+          { count: assignedCnt, error: assignedError },
+          { count: progressCnt, error: progressError },
+        ] = await Promise.all([
+          supabase
+            .from("requests")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", loginUser.id),
+
+          supabase
+            .from("requests")
+            .select("*", { count: "exact", head: true })
+            .eq("assigned_user_id", loginUser.id),
+
+          supabase
+            .from("requests")
+            .select("*", { count: "exact", head: true })
+            .eq("assigned_user_id", loginUser.id)
+            .in("status", ["진행중", "작업 예정", "협의중"]),
+        ]);
+
+        if (myError) throw myError;
+        if (assignedError) throw assignedError;
+        if (progressError) throw progressError;
+
+        if (!isMounted) return;
+
+        setMyRequestCount(myCount || 0);
+        setAssignedCount(assignedCnt || 0);
+        setInProgressCount(progressCnt || 0);
+      } catch (error) {
+        console.error("마이페이지 통계 불러오기 실패:", error);
+      } finally {
+        if (isMounted) {
+          setStatsLoading(false);
+        }
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loginUser?.id]);
+
+  const handleStartEdit = () => {
+    setSaveMessage("");
+    setEditName(loginUser?.name || loginUser?.username || "");
+    setActiveTab("profile");
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEdit = () => {
+    setSaveMessage("");
+    setEditName(loginUser?.name || loginUser?.username || "");
+    setIsEditingProfile(false);
+  };
+
+  const handleSaveProfile = async () => {
+    const trimmedName = editName.trim();
+
+    if (!trimmedName) {
+      setSaveMessage("이름을 입력해주세요.");
+      return;
+    }
+
+    if (!loginUser?.id) {
+      setSaveMessage("로그인 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    try {
+      setSaveLoading(true);
+      setSaveMessage("");
+
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          name: trimmedName,
+        },
+      });
+
+      if (error) throw error;
+
+      const updatedUser = data?.user;
+
+      const nextLoginUser = {
+        id: updatedUser?.id || loginUser.id,
+        supabaseUserId:
+          updatedUser?.id || loginUser.supabaseUserId || loginUser.id,
+        email: updatedUser?.email || loginUser.email,
+        name: trimmedName,
+        username: trimmedName,
+      };
+
+      localStorage.setItem("loginUser", JSON.stringify(nextLoginUser));
+
+      setSaveMessage("내 정보가 수정되었습니다.");
+      setIsEditingProfile(false);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error("내 정보 수정 실패:", error);
+      setSaveMessage(error.message || "내 정보 수정 중 문제가 발생했습니다.");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || !newPasswordConfirm) {
+      setPasswordMessage("새 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordMessage("비밀번호는 6자 이상이어야 합니다.");
+      return;
+    }
+
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordMessage("비밀번호가 서로 일치하지 않습니다.");
+      return;
+    }
+
+    try {
+      setSaveLoading(true);
+      setPasswordMessage("");
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      setPasswordMessage("비밀번호가 변경되었습니다.");
+      setNewPassword("");
+      setNewPasswordConfirm("");
+      setPasswordOpen(false);
+    } catch (error) {
+      console.error("비밀번호 변경 실패:", error);
+      setPasswordMessage(
+        error.message || "비밀번호 변경 중 문제가 발생했습니다."
+      );
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleWithdrawClick = () => {
+    if (withdrawConfirmText.trim() !== "탈퇴") {
+      setWithdrawMessage("'탈퇴'를 정확히 입력해주세요.");
+      return;
+    }
+
+    setWithdrawMessage(
+      "회원탈퇴 실제 기능은 마지막 단계에서 연결할 예정입니다. 지금은 확인 절차까지만 준비했습니다."
+    );
+  };
 
   const activityCards = useMemo(
     () => [
@@ -118,7 +342,8 @@ function MyPage({
     fontWeight: activeTab === key ? "800" : "700",
     color: activeTab === key ? "#2F80ED" : "#1f2937",
     cursor: "pointer",
-    borderBottom: activeTab === key ? "3px solid #35A2FF" : "3px solid transparent",
+    borderBottom:
+      activeTab === key ? "3px solid #35A2FF" : "3px solid transparent",
   });
 
   const contentGridStyle = {
@@ -314,6 +539,80 @@ function MyPage({
     minWidth: "110px",
   };
 
+  const inputStyle = {
+    width: "100%",
+    height: "52px",
+    borderRadius: "14px",
+    border: "1px solid #dbe4f2",
+    backgroundColor: "#ffffff",
+    padding: "0 16px",
+    fontSize: "15px",
+    color: "#0f172a",
+    boxSizing: "border-box",
+    outline: "none",
+  };
+
+  const labelStyle = {
+    fontSize: "13px",
+    color: "#94a3b8",
+    fontWeight: "700",
+    marginBottom: "8px",
+  };
+
+  const rowStyle = {
+    marginBottom: "16px",
+  };
+
+  const saveRowStyle = {
+    display: "flex",
+    gap: "10px",
+    marginTop: "18px",
+    flexWrap: "wrap",
+  };
+
+  const passwordInputWrapStyle = {
+    display: "grid",
+    gap: "12px",
+    marginTop: "16px",
+  };
+
+  const withdrawBoxStyle = {
+    marginTop: "16px",
+    padding: "16px",
+    borderRadius: "16px",
+    backgroundColor: "#fff7f7",
+    border: "1px solid #ffe1e1",
+  };
+
+  const withdrawInputStyle = {
+    ...inputStyle,
+    marginTop: "12px",
+  };
+
+  const withdrawGuideStyle = {
+    fontSize: "13px",
+    color: "#b91c1c",
+    lineHeight: "1.7",
+  };
+
+  const softBtnStyle = {
+    border: "1px solid #dbe4f2",
+    background: "#ffffff",
+    color: "#334155",
+    borderRadius: "12px",
+    padding: "12px 16px",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+  };
+
+  const messageStyle = {
+    marginTop: "12px",
+    fontSize: "14px",
+    fontWeight: "700",
+    color: saveMessage.includes("수정") ? "#15803d" : "#ef4444",
+  };
+
   return (
     <div style={pageStyle}>
       <div style={wrapStyle}>
@@ -362,23 +661,31 @@ function MyPage({
             <button
               type="button"
               style={outlineBtnStyle}
-              onClick={() => alert("정보 수정 기능은 다음 단계에서 연결합니다.")}
+              onClick={handleStartEdit}
             >
               정보 수정
             </button>
 
             <div style={statRowStyle}>
               <div style={statBoxStyle}>
-                <div style={statNumStyle}>0</div>
+                <div style={statNumStyle}>
+                  {statsLoading ? "-" : myRequestCount}
+                </div>
                 <div style={statLabelStyle}>내 요청</div>
               </div>
+
               <div style={statBoxStyle}>
-                <div style={statNumStyle}>0</div>
+                <div style={statNumStyle}>
+                  {statsLoading ? "-" : assignedCount}
+                </div>
                 <div style={statLabelStyle}>맡은 작업</div>
               </div>
+
               <div style={statBoxStyle}>
-                <div style={statNumStyle}>0</div>
-                <div style={statLabelStyle}>설정</div>
+                <div style={statNumStyle}>
+                  {statsLoading ? "-" : inProgressCount}
+                </div>
+                <div style={statLabelStyle}>진행중</div>
               </div>
             </div>
           </div>
@@ -388,60 +695,111 @@ function MyPage({
               <div style={sectionStyle}>
                 <h2 style={sectionTitleStyle}>프로필</h2>
                 <p style={sectionDescStyle}>
-                  내 계정 정보와 자주 쓰는 메뉴를 한곳에서 정리해봤어요.
+                  이름은 바로 수정할 수 있고, 이메일은 현재 로그인 계정 정보로
+                  보여줍니다.
                 </p>
 
-                <div
-                  style={{
-                    border: "1px solid #e7edf5",
-                    borderRadius: "22px",
-                    backgroundColor: "#fbfdff",
-                    padding: "24px",
-                  }}
-                >
+                {!isEditingProfile ? (
                   <div
                     style={{
-                      fontSize: "13px",
-                      color: "#94a3b8",
-                      fontWeight: "700",
-                      marginBottom: "6px",
+                      border: "1px solid #e7edf5",
+                      borderRadius: "22px",
+                      backgroundColor: "#fbfdff",
+                      padding: "24px",
                     }}
                   >
-                    이름
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "22px",
-                      color: "#0f172a",
-                      fontWeight: "900",
-                      marginBottom: "18px",
-                      letterSpacing: "-0.5px",
-                    }}
-                  >
-                    {displayName}
-                  </div>
+                    <div style={{ ...labelStyle, marginBottom: "6px" }}>
+                      이름
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "22px",
+                        color: "#0f172a",
+                        fontWeight: "900",
+                        marginBottom: "18px",
+                        letterSpacing: "-0.5px",
+                      }}
+                    >
+                      {displayName}
+                    </div>
 
+                    <div style={{ ...labelStyle, marginBottom: "6px" }}>
+                      이메일
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        color: "#0f172a",
+                        fontWeight: "700",
+                        lineHeight: "1.8",
+                      }}
+                    >
+                      {emailText}
+                    </div>
+
+                    {saveMessage ? (
+                      <div style={messageStyle}>{saveMessage}</div>
+                    ) : null}
+                  </div>
+                ) : (
                   <div
                     style={{
-                      fontSize: "13px",
-                      color: "#94a3b8",
-                      fontWeight: "700",
-                      marginBottom: "6px",
+                      border: "1px solid #e7edf5",
+                      borderRadius: "22px",
+                      backgroundColor: "#fbfdff",
+                      padding: "24px",
                     }}
                   >
-                    이메일
+                    <div style={rowStyle}>
+                      <div style={labelStyle}>이름</div>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="이름을 입력해주세요"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div style={rowStyle}>
+                      <div style={labelStyle}>이메일</div>
+                      <input
+                        type="text"
+                        value={emailText}
+                        readOnly
+                        style={{
+                          ...inputStyle,
+                          backgroundColor: "#f8fafc",
+                          color: "#64748b",
+                        }}
+                      />
+                    </div>
+
+                    <div style={saveRowStyle}>
+                      <button
+                        type="button"
+                        style={primaryBtnStyle}
+                        onClick={handleSaveProfile}
+                        disabled={saveLoading}
+                      >
+                        {saveLoading ? "저장 중..." : "저장하기"}
+                      </button>
+
+                      <button
+                        type="button"
+                        style={softBtnStyle}
+                        onClick={handleCancelEdit}
+                        disabled={saveLoading}
+                      >
+                        취소
+                      </button>
+                    </div>
+
+                    {saveMessage ? (
+                      <div style={messageStyle}>{saveMessage}</div>
+                    ) : null}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      color: "#0f172a",
-                      fontWeight: "700",
-                      lineHeight: "1.8",
-                    }}
-                  >
-                    {emailText}
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -449,7 +807,8 @@ function MyPage({
               <div style={sectionStyle}>
                 <h2 style={sectionTitleStyle}>내 활동</h2>
                 <p style={sectionDescStyle}>
-                  요청 등록, 맡은 작업, 전체 요청 보기를 빠르게 이동할 수 있어요.
+                  요청 등록, 맡은 작업, 전체 요청 보기를 빠르게 이동할 수
+                  있어요.
                 </p>
 
                 <div style={menuGridStyle}>
@@ -482,34 +841,196 @@ function MyPage({
                     <div>
                       <div style={settingTitleStyle}>내 정보 수정</div>
                       <div style={settingTextStyle}>
-                        이름, 이메일, 비밀번호 변경 같은 기능을 여기에 연결할 수 있어요.
+                        현재는 이름 수정부터 먼저 지원합니다.
                       </div>
                     </div>
 
                     <button
                       type="button"
                       style={outlineBtnStyle}
-                      onClick={() => alert("정보 수정 기능은 다음 단계에서 연결합니다.")}
+                      onClick={handleStartEdit}
                     >
-                      준비중
+                      수정하기
                     </button>
                   </div>
 
                   <div style={settingItemStyle}>
-                    <div>
-                      <div style={settingTitleStyle}>회원 탈퇴</div>
-                      <div style={settingTextStyle}>
-                        탈퇴 기능은 신중하게 연결해야 해서 마지막 단계에서 붙이는 걸 추천해요.
-                      </div>
+                    <div style={{ width: "100%" }}>
+                      <div style={settingTitleStyle}>비밀번호 변경</div>
+
+                      {authProvider === "email" ? (
+                        <>
+                          <div style={settingTextStyle}>
+                            로그인에 사용하는 비밀번호를 새 비밀번호로 바꿉니다.
+                          </div>
+
+                          {passwordOpen && (
+                            <div style={passwordInputWrapStyle}>
+                              <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="새 비밀번호 입력"
+                                style={inputStyle}
+                              />
+
+                              <input
+                                type="password"
+                                value={newPasswordConfirm}
+                                onChange={(e) =>
+                                  setNewPasswordConfirm(e.target.value)
+                                }
+                                placeholder="새 비밀번호 다시 입력"
+                                style={inputStyle}
+                              />
+
+                              <div style={saveRowStyle}>
+                                <button
+                                  type="button"
+                                  style={primaryBtnStyle}
+                                  onClick={handleChangePassword}
+                                  disabled={saveLoading}
+                                >
+                                  {saveLoading ? "변경 중..." : "비밀번호 저장"}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  style={softBtnStyle}
+                                  onClick={() => {
+                                    setPasswordOpen(false);
+                                    setNewPassword("");
+                                    setNewPasswordConfirm("");
+                                    setPasswordMessage("");
+                                  }}
+                                  disabled={saveLoading}
+                                >
+                                  취소
+                                </button>
+                              </div>
+
+                              {passwordMessage ? (
+                                <div
+                                  style={{
+                                    ...messageStyle,
+                                    marginTop: "4px",
+                                  }}
+                                >
+                                  {passwordMessage}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={settingTextStyle}>
+                          소셜 로그인 계정은 비밀번호를 여기서 변경하지
+                          않습니다.
+                          <br />
+                          해당 서비스에서 계정 정보를 관리해주세요.
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      style={dangerBtnStyle}
-                      onClick={() => alert("회원 탈퇴 기능은 아직 연결 전입니다.")}
-                    >
-                      회원탈퇴
-                    </button>
+                    {authProvider === "email" && !passwordOpen && (
+                      <button
+                        type="button"
+                        style={outlineBtnStyle}
+                        onClick={() => {
+                          setPasswordOpen(true);
+                          setPasswordMessage("");
+                        }}
+                      >
+                        변경하기
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={settingItemStyle}>
+                    <div style={{ width: "100%" }}>
+                      <div style={settingTitleStyle}>회원 탈퇴</div>
+
+                      {authProvider === "email" ? (
+                        <div style={settingTextStyle}>
+                          이메일 로그인 계정은 탈퇴 전에 본인 확인 절차를 거친 뒤
+                          삭제하도록 연결할 예정입니다.
+                        </div>
+                      ) : (
+                        <div style={settingTextStyle}>
+                          소셜 로그인 계정도 탈퇴는 가능하지만, 연결된 로그인
+                          방식까지 같이 확인해서 처리해야 합니다.
+                        </div>
+                      )}
+
+                      {withdrawOpen && (
+                        <div style={withdrawBoxStyle}>
+                          <div style={withdrawGuideStyle}>
+                            정말 탈퇴하려면 아래 입력칸에 <strong>탈퇴</strong>를
+                            그대로 입력해주세요.
+                          </div>
+
+                          <input
+                            type="text"
+                            value={withdrawConfirmText}
+                            onChange={(e) =>
+                              setWithdrawConfirmText(e.target.value)
+                            }
+                            placeholder="탈퇴 입력"
+                            style={withdrawInputStyle}
+                          />
+
+                          <div style={saveRowStyle}>
+                            <button
+                              type="button"
+                              style={dangerBtnStyle}
+                              onClick={handleWithdrawClick}
+                            >
+                              탈퇴 진행
+                            </button>
+
+                            <button
+                              type="button"
+                              style={softBtnStyle}
+                              onClick={() => {
+                                setWithdrawOpen(false);
+                                setWithdrawConfirmText("");
+                                setWithdrawMessage("");
+                              }}
+                            >
+                              취소
+                            </button>
+                          </div>
+
+                          {withdrawMessage ? (
+                            <div
+                              style={{
+                                ...messageStyle,
+                                marginTop: "8px",
+                                color: withdrawMessage.includes("마지막 단계")
+                                  ? "#b45309"
+                                  : "#ef4444",
+                              }}
+                            >
+                              {withdrawMessage}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+
+                    {!withdrawOpen && (
+                      <button
+                        type="button"
+                        style={dangerBtnStyle}
+                        onClick={() => {
+                          setWithdrawOpen(true);
+                          setWithdrawConfirmText("");
+                          setWithdrawMessage("");
+                        }}
+                      >
+                        회원탈퇴
+                      </button>
+                    )}
                   </div>
 
                   <div style={settingItemStyle}>
@@ -520,7 +1041,11 @@ function MyPage({
                       </div>
                     </div>
 
-                    <button type="button" style={dangerBtnStyle} onClick={onLogout}>
+                    <button
+                      type="button"
+                      style={dangerBtnStyle}
+                      onClick={onLogout}
+                    >
                       로그아웃
                     </button>
                   </div>
