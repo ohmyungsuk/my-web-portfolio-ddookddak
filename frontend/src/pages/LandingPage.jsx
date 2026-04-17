@@ -448,41 +448,41 @@ import { useEffect, useRef, useState } from "react";
                     </span>
                   </button>
 
-                  {profileOpen && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "42px",
-                        right: 0,
-                        width: "210px",
-                        backgroundColor: "#ffffff",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "14px",
-                        boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
-                        padding: "10px",
-                      }}
-                    >
-                      <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
-                        마이페이지
-                      </DropdownButton>
+                 {profileOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "42px",
+                      right: 0,
+                      width: "210px",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "14px",
+                      boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                      padding: "10px",
+                    }}
+                  >
+                    <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
+                      마이페이지
+                    </DropdownButton>
 
-                      <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
-                        내 요청 목록
-                      </DropdownButton>
+                    <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
+                      내 요청 목록
+                    </DropdownButton>
 
-                      <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
-                        전체 요청 보기
-                      </DropdownButton>
+                    <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
+                      전체 요청 보기
+                    </DropdownButton>
 
-                      <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
-                        맡은 작업 보기
-                      </DropdownButton>
+                    <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
+                      맡은 작업 보기
+                    </DropdownButton>
 
-                      <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
-                        로그아웃
-                      </DropdownButton>
-                    </div>
-                  )}
+                    <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
+                      로그아웃
+                    </DropdownButton>
+                  </div>
+                )}
                 </div>
 
                 <button
