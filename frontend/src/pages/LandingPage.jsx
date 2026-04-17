@@ -452,9 +452,9 @@ import { useEffect, useRef, useState } from "react";
                     <div
                       style={{
                         position: "absolute",
-                        top: "52px",
+                        top: "42px",
                         right: 0,
-                        width: "220px",
+                        width: "210px",
                         backgroundColor: "#ffffff",
                         border: "1px solid #e5e7eb",
                         borderRadius: "14px",
@@ -465,21 +465,20 @@ import { useEffect, useRef, useState } from "react";
                       <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
                         마이페이지
                       </DropdownButton>
+
                       <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
                         내 요청 목록
                       </DropdownButton>
+
                       <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
                         전체 요청 보기
                       </DropdownButton>
-                      <DropdownButton
-                        onClick={() => closeAndRun(onGoAssignedRequests)}
-                      >
+
+                      <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
                         맡은 작업 보기
                       </DropdownButton>
-                      <DropdownButton
-                        onClick={() => closeAndRun(onLogout)}
-                        danger
-                      >
+
+                      <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
                         로그아웃
                       </DropdownButton>
                     </div>

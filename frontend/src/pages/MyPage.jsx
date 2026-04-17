@@ -35,11 +35,22 @@ function MyPage({
   const [completedCount, setCompletedCount] = useState(0);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
   const displayName =
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
 
   const emailText = loginUser?.email || "이메일 정보 없음";
   const initial = String(displayName).slice(0, 1).toUpperCase();
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -292,14 +303,15 @@ function MyPage({
   const wrapStyle = {
     maxWidth: "1240px",
     margin: "0 auto",
-    padding: "28px 24px 88px",
+    padding: isMobile ? "20px 14px 72px" : "28px 24px 88px",
   };
 
   const topbarStyle = {
     display: "flex",
-    alignItems: "center",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "center",
     justifyContent: "space-between",
-    gap: "20px",
+    gap: isMobile ? "14px" : "20px",
     marginBottom: "18px",
   };
 
@@ -311,8 +323,8 @@ function MyPage({
   };
 
   const brandMarkStyle = {
-    width: "40px",
-    height: "40px",
+    width: isMobile ? "36px" : "40px",
+    height: isMobile ? "36px" : "40px",
     borderRadius: "14px",
     background: "#4DA3FF",
     display: "flex",
@@ -320,12 +332,12 @@ function MyPage({
     justifyContent: "center",
     color: "#ffffff",
     fontWeight: "900",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     boxShadow: "0 12px 24px rgba(77, 163, 255, 0.18)",
   };
 
   const brandTextStyle = {
-    fontSize: "24px",
+    fontSize: isMobile ? "22px" : "24px",
     fontWeight: "900",
     color: "#2F80ED",
     letterSpacing: "-0.5px",
@@ -336,27 +348,30 @@ function MyPage({
     backgroundColor: "#ffffff",
     color: "#1e293b",
     borderRadius: "14px",
-    padding: "13px 18px",
+    padding: isMobile ? "12px 14px" : "13px 18px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
     boxShadow: "0 6px 18px rgba(15, 23, 42, 0.03)",
+    width: isMobile ? "100%" : "auto",
   };
 
   const tabWrapStyle = {
     display: "flex",
     alignItems: "center",
-    gap: "28px",
+    gap: isMobile ? "14px" : "28px",
     borderBottom: "1px solid #e7edf5",
-    marginBottom: "24px",
+    marginBottom: "20px",
     padding: "0 4px",
+    overflowX: "auto",
   };
 
   const getTabStyle = (key) => ({
     border: "none",
     background: "none",
     padding: "0 0 14px 0",
-    fontSize: "16px",
+    fontSize: isMobile ? "14px" : "16px",
+    whiteSpace: "nowrap",
     fontWeight: activeTab === key ? "800" : "700",
     color: activeTab === key ? "#2F80ED" : "#1f2937",
     cursor: "pointer",
@@ -366,7 +381,7 @@ function MyPage({
 
   const contentGridStyle = {
     display: "grid",
-    gridTemplateColumns: "320px 1fr",
+    gridTemplateColumns: isMobile ? "1fr" : "320px 1fr",
     gap: "24px",
     alignItems: "start",
   };
@@ -374,27 +389,27 @@ function MyPage({
   const cardStyle = {
     backgroundColor: "#ffffff",
     border: "1px solid #e5eaf0",
-    borderRadius: "26px",
+    borderRadius: isMobile ? "20px" : "26px",
     boxShadow: "0 16px 34px rgba(15, 23, 42, 0.04)",
   };
 
   const leftCardStyle = {
     ...cardStyle,
-    padding: "30px 24px",
-    position: "sticky",
-    top: "96px",
+    padding: isMobile ? "22px 18px" : "30px 24px",
+    position: isMobile ? "static" : "sticky",
+    top: isMobile ? "auto" : "96px",
   };
 
   const avatarStyle = {
-    width: "100px",
-    height: "100px",
+    width: isMobile ? "84px" : "100px",
+    height: isMobile ? "84px" : "100px",
     borderRadius: "50%",
     background: "linear-gradient(135deg, #6EC1FF 0%, #35A2FF 100%)",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "34px",
+    fontSize: isMobile ? "28px" : "34px",
     fontWeight: "900",
     margin: "0 auto 18px",
     boxShadow: "0 18px 34px rgba(53, 162, 255, 0.18)",
@@ -402,11 +417,12 @@ function MyPage({
 
   const profileNameStyle = {
     textAlign: "center",
-    fontSize: "28px",
+    fontSize: isMobile ? "22px" : "28px",
     fontWeight: "900",
     color: "#0f172a",
     letterSpacing: "-0.8px",
     marginBottom: "8px",
+    wordBreak: "break-word",
   };
 
   const profileMailStyle = {
@@ -432,7 +448,7 @@ function MyPage({
 
   const statRowStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
     gap: "10px",
     marginTop: "24px",
     paddingTop: "18px",
@@ -448,7 +464,7 @@ function MyPage({
   };
 
   const statNumStyle = {
-    fontSize: "20px",
+    fontSize: isMobile ? "18px" : "20px",
     fontWeight: "900",
     color: "#0f172a",
     marginBottom: "4px",
@@ -462,12 +478,12 @@ function MyPage({
 
   const sectionStyle = {
     ...cardStyle,
-    padding: "30px",
+    padding: isMobile ? "22px 16px" : "30px",
     marginBottom: "18px",
   };
 
   const sectionTitleStyle = {
-    fontSize: "28px",
+    fontSize: isMobile ? "22px" : "28px",
     fontWeight: "900",
     color: "#0f172a",
     letterSpacing: "-0.8px",
@@ -483,23 +499,24 @@ function MyPage({
 
   const menuGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
     gap: "16px",
   };
 
   const menuCardStyle = {
     border: "1px solid #e7edf5",
     borderRadius: "20px",
-    padding: "22px",
+    padding: isMobile ? "18px" : "22px",
     backgroundColor: "#fbfdff",
-    minHeight: "170px",
+    minHeight: isMobile ? "auto" : "170px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    gap: "14px",
   };
 
   const menuTitleStyle = {
-    fontSize: "20px",
+    fontSize: isMobile ? "18px" : "20px",
     fontWeight: "900",
     color: "#0f172a",
     marginBottom: "8px",
@@ -522,6 +539,7 @@ function MyPage({
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
   };
 
   const settingListStyle = {
@@ -532,16 +550,17 @@ function MyPage({
   const settingItemStyle = {
     border: "1px solid #e7edf5",
     borderRadius: "18px",
-    padding: "18px 20px",
+    padding: isMobile ? "16px" : "18px 20px",
     backgroundColor: "#ffffff",
     display: "flex",
-    alignItems: "flex-start",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "flex-start",
     justifyContent: "space-between",
     gap: "16px",
   };
 
   const settingTitleStyle = {
-    fontSize: "17px",
+    fontSize: isMobile ? "16px" : "17px",
     fontWeight: "800",
     color: "#0f172a",
     marginBottom: "4px",
@@ -562,7 +581,8 @@ function MyPage({
     fontSize: "14px",
     fontWeight: "800",
     cursor: "pointer",
-    minWidth: "110px",
+    minWidth: isMobile ? "100%" : "110px",
+    width: isMobile ? "100%" : "auto",
   };
 
   const inputStyle = {
@@ -630,6 +650,7 @@ function MyPage({
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
   };
 
   const messageStyle = {
@@ -738,7 +759,7 @@ function MyPage({
                       border: "1px solid #e7edf5",
                       borderRadius: "22px",
                       backgroundColor: "#fbfdff",
-                      padding: "24px",
+                      padding: isMobile ? "18px" : "24px",
                     }}
                   >
                     <div style={{ ...labelStyle, marginBottom: "6px" }}>
@@ -746,11 +767,12 @@ function MyPage({
                     </div>
                     <div
                       style={{
-                        fontSize: "22px",
+                        fontSize: isMobile ? "18px" : "22px",
                         color: "#0f172a",
                         fontWeight: "900",
                         marginBottom: "18px",
                         letterSpacing: "-0.5px",
+                        wordBreak: "break-word",
                       }}
                     >
                       {displayName}
@@ -761,10 +783,11 @@ function MyPage({
                     </div>
                     <div
                       style={{
-                        fontSize: "16px",
+                        fontSize: isMobile ? "14px" : "16px",
                         color: "#0f172a",
                         fontWeight: "700",
                         lineHeight: "1.8",
+                        wordBreak: "break-all",
                       }}
                     >
                       {emailText}
@@ -780,7 +803,7 @@ function MyPage({
                       border: "1px solid #e7edf5",
                       borderRadius: "22px",
                       backgroundColor: "#fbfdff",
-                      padding: "24px",
+                      padding: isMobile ? "18px" : "24px",
                     }}
                   >
                     <div style={rowStyle}>
