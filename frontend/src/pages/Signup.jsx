@@ -5,6 +5,13 @@ import { supabase } from "../supabaseClient.js";
 function Signup({ onSwitchToLogin }) {
   const navigate = useNavigate();
 
+  const BRAND_COLOR = "#2F80ED";
+  const BRAND_HOVER = "#1F6FD6";
+  const BRAND_SOFT = "#F8FBFF";
+  const BUTTON_BORDER = "#D7E2F0";
+  const TEXT_DARK = "#0F172A";
+  const TEXT_MUTED = "#64748B";
+
   const [mode, setMode] = useState("choice");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -109,6 +116,9 @@ function Signup({ onSwitchToLogin }) {
     alignItems: "center",
     justifyContent: "center",
     padding: "24px 16px",
+    boxSizing: "border-box",
+    fontFamily:
+      '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
   const cardStyle = {
@@ -119,6 +129,7 @@ function Signup({ onSwitchToLogin }) {
     padding: "30px 28px 24px",
     boxShadow: "0 12px 40px rgba(15, 23, 42, 0.08)",
     border: "1px solid #edf1f6",
+    boxSizing: "border-box",
   };
 
   const brandWrapStyle = {
@@ -129,24 +140,25 @@ function Signup({ onSwitchToLogin }) {
     marginBottom: "12px",
   };
 
- const brandMarkStyle = {
-  width: "36px",
-  height: "36px",
-  borderRadius: "12px",
-  background: "#4DA3FF",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#ffffff",
-  fontWeight: "900",
-  fontSize: "13px",
-  boxShadow: "0 10px 20px rgba(77, 163, 255, 0.18)",
-};
+  const brandMarkStyle = {
+    width: "36px",
+    height: "36px",
+    borderRadius: "12px",
+    background: BRAND_COLOR,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontWeight: "900",
+    fontSize: "13px",
+    boxShadow: "0 10px 20px rgba(47, 128, 237, 0.18)",
+    flexShrink: 0,
+  };
 
   const brandTextStyle = {
     fontSize: "21px",
     fontWeight: "900",
-    color: "#2F80ED",
+    color: BRAND_COLOR,
     letterSpacing: "-0.4px",
   };
 
@@ -159,7 +171,7 @@ function Signup({ onSwitchToLogin }) {
     margin: "0 0 10px",
     fontSize: "18px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: TEXT_DARK,
     letterSpacing: "-0.3px",
     lineHeight: 1.35,
   };
@@ -167,7 +179,7 @@ function Signup({ onSwitchToLogin }) {
   const descStyle = {
     margin: 0,
     fontSize: "14px",
-    color: "#64748b",
+    color: TEXT_MUTED,
     lineHeight: "1.6",
   };
 
@@ -189,19 +201,24 @@ function Signup({ onSwitchToLogin }) {
     justifyContent: "center",
     gap: "10px",
     boxSizing: "border-box",
-    transition: "all 0.2s ease",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
+    appearance: "none",
+    WebkitAppearance: "none",
+    transition:
+      "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
   };
 
   const emailButtonStyle = {
     ...buttonBaseStyle,
-    border: "1px solid #cfd8e6",
-    background: "#f8fbff",
-    color: "#2563eb",
+    border: `1px solid ${BUTTON_BORDER}`,
+    background: BRAND_SOFT,
+    color: BRAND_COLOR,
   };
 
   const googleButtonStyle = {
     ...buttonBaseStyle,
-    border: "1px solid #d1d5db",
+    border: `1px solid ${BUTTON_BORDER}`,
     background: "#ffffff",
     color: "#111827",
   };
@@ -222,26 +239,27 @@ function Signup({ onSwitchToLogin }) {
     flexShrink: 0,
   };
 
-  const infoBoxStyle = {
+  const errorBoxStyle = {
+    marginTop: "4px",
     padding: "12px 14px",
     borderRadius: "12px",
+    background: "#fff1f2",
+    color: "#be123c",
     fontSize: "13px",
     lineHeight: "1.5",
   };
 
-  const errorBoxStyle = {
-    ...infoBoxStyle,
-    background: "#fff1f2",
-    color: "#be123c",
-  };
-
   const successBoxStyle = {
-    ...infoBoxStyle,
-    background: "#ecfdf3",
-    color: "#047857",
+    marginTop: "4px",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    background: "#ecfdf5",
+    color: "#15803d",
+    fontSize: "13px",
+    lineHeight: "1.5",
   };
 
-  const formStyle = {
+  const emailFormStyle = {
     display: "flex",
     flexDirection: "column",
     gap: "14px",
@@ -264,6 +282,8 @@ function Signup({ onSwitchToLogin }) {
     fontSize: "14px",
     boxSizing: "border-box",
     outline: "none",
+    color: TEXT_DARK,
+    backgroundColor: "#ffffff",
   };
 
   const submitButtonStyle = {
@@ -271,31 +291,36 @@ function Signup({ onSwitchToLogin }) {
     height: "50px",
     border: "none",
     borderRadius: "14px",
-    background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+    background: "linear-gradient(135deg, #2F80ED 0%, #1C63E0 100%)",
     color: "#ffffff",
     fontSize: "15px",
     fontWeight: "800",
     cursor: "pointer",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
+    boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
   };
 
   const secondaryButtonStyle = {
     width: "100%",
     height: "48px",
     borderRadius: "14px",
-    border: "1px solid #dbe4f2",
+    border: `1px solid ${BUTTON_BORDER}`,
     background: "#ffffff",
     color: "#1e293b",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
     boxSizing: "border-box",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const footerStyle = {
     marginTop: "18px",
     textAlign: "center",
     fontSize: "14px",
-    color: "#64748b",
+    color: TEXT_MUTED,
   };
 
   const footerLinkStyle = {
@@ -306,6 +331,8 @@ function Signup({ onSwitchToLogin }) {
     fontWeight: "700",
     cursor: "pointer",
     padding: 0,
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   return (
@@ -330,20 +357,29 @@ function Signup({ onSwitchToLogin }) {
 
         {mode === "choice" ? (
           <div className="auth-form" style={choiceFormStyle}>
-            <button
-              type="button"
-              style={emailButtonStyle}
+            <HoverButton
               onClick={() => setMode("email")}
               disabled={loading}
+              style={emailButtonStyle}
+              hoverStyle={{
+                borderColor: "#BFD7FF",
+                color: BRAND_COLOR,
+                backgroundColor: "#F8FBFF",
+              }}
             >
               이메일로 회원가입
-            </button>
+            </HoverButton>
 
-            <button
-              type="button"
+            <HoverButton
               onClick={() => handleOAuthSignup("google")}
               disabled={loading}
               style={googleButtonStyle}
+              hoverStyle={{
+                borderColor: "#BFD7FF",
+                backgroundColor: "#F8FBFF",
+                transform: "translateY(-1px)",
+                boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
+              }}
             >
               <span style={iconBoxStyle}>
                 <svg
@@ -371,13 +407,17 @@ function Signup({ onSwitchToLogin }) {
                 </svg>
               </span>
               <span>Google로 계속하기</span>
-            </button>
+            </HoverButton>
 
-            <button
-              type="button"
+            <HoverButton
               onClick={() => handleOAuthSignup("kakao")}
               disabled={loading}
               style={kakaoButtonStyle}
+              hoverStyle={{
+                transform: "translateY(-1px)",
+                boxShadow: "0 12px 24px rgba(15, 23, 42, 0.08)",
+                filter: "brightness(0.98)",
+              }}
             >
               <span style={iconBoxStyle}>
                 <svg
@@ -395,7 +435,7 @@ function Signup({ onSwitchToLogin }) {
                 </svg>
               </span>
               <span>카카오로 계속하기</span>
-            </button>
+            </HoverButton>
 
             {errorMessage && (
               <div className="message error" style={errorBoxStyle}>
@@ -404,7 +444,7 @@ function Signup({ onSwitchToLogin }) {
             )}
           </div>
         ) : (
-          <form className="auth-form" onSubmit={handleSignup} style={formStyle}>
+          <form className="auth-form" onSubmit={handleSignup} style={emailFormStyle}>
             <div className="input-group">
               <label style={labelStyle}>이름</label>
               <input
@@ -412,7 +452,6 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="이름을 입력하세요"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
                 style={inputStyle}
               />
             </div>
@@ -433,7 +472,7 @@ function Signup({ onSwitchToLogin }) {
               <label style={labelStyle}>비밀번호</label>
               <input
                 type="password"
-                placeholder="6글자 이상 입력"
+                placeholder="비밀번호를 입력하세요"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -465,38 +504,83 @@ function Signup({ onSwitchToLogin }) {
               </div>
             )}
 
-            <button
-              className="auth-button"
+            <HoverButton
               type="submit"
               disabled={loading}
               style={submitButtonStyle}
+              hoverStyle={{
+                backgroundColor: BRAND_HOVER,
+                transform: "translateY(-1px)",
+                boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+              }}
             >
-              {loading ? "가입 중..." : "이메일로 회원가입"}
-            </button>
+              {loading ? "회원가입 중..." : "이메일 회원가입"}
+            </HoverButton>
 
-            <button
-              type="button"
-              style={secondaryButtonStyle}
+            <HoverButton
               onClick={() => setMode("choice")}
+              style={secondaryButtonStyle}
+              hoverStyle={{
+                borderColor: "#BFD7FF",
+                color: BRAND_COLOR,
+                backgroundColor: "#F8FBFF",
+              }}
             >
               다른 방법 선택
-            </button>
+            </HoverButton>
           </form>
         )}
 
         <div className="auth-footer" style={footerStyle}>
           <span>이미 계정이 있나요?</span>{" "}
-          <button
-            type="button"
-            className="text-button"
+          <HoverButton
             onClick={() => onSwitchToLogin && onSwitchToLogin()}
             style={footerLinkStyle}
+            hoverStyle={{
+              color: BRAND_HOVER,
+            }}
           >
             로그인으로 이동
-          </button>
+          </HoverButton>
         </div>
       </div>
     </div>
+  );
+}
+
+function HoverButton({
+  children,
+  onClick,
+  style,
+  hoverStyle = {},
+  disabled = false,
+  type = "button",
+}) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      onBlur={() => setIsHover(false)}
+      style={{
+        outline: "none",
+        boxShadow: "none",
+        WebkitTapHighlightColor: "transparent",
+        transition:
+          "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
+        ...style,
+        ...(isHover && !disabled ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -65,7 +65,7 @@ function Header() {
                 width: "42px",
                 height: "42px",
                 borderRadius: "14px",
-                background: "linear-gradient(135deg, #4f6df5, #3b82f6)",
+                background: "linear-gradient(135deg, #2F80ED, #1C63E0)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -82,7 +82,7 @@ function Header() {
               style={{
                 fontSize: "30px",
                 fontWeight: "800",
-                color: "#2563eb",
+                color: "#2F80ED",
                 letterSpacing: "-0.5px",
                 lineHeight: 1,
               }}
@@ -186,7 +186,7 @@ function Header() {
             onClick={handleGoToCreate}
             style={{
               border: "none",
-              background: "linear-gradient(135deg, #4f6df5, #3b82f6)",
+              background: "linear-gradient(135deg, #2F80ED, #1C63E0)",
               color: "#ffffff",
               height: "48px",
               padding: "0 22px",
@@ -221,7 +221,7 @@ function Header() {
                 width: "36px",
                 height: "36px",
                 borderRadius: "9999px",
-                background: "linear-gradient(135deg, #4f6df5, #6d5dfc)",
+                background: "linear-gradient(135deg, #2F80ED, #1C63E0)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

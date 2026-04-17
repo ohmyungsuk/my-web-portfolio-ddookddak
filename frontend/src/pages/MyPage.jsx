@@ -9,6 +9,13 @@ function MyPage({
   onGoAssignedRequests,
   onLogout,
 }) {
+  const BRAND_COLOR = "#2F80ED";
+  const BRAND_HOVER = "#1F6FD6";
+  const BUTTON_BORDER = "#D7E2F0";
+  const CARD_BORDER = "#E5EDF6";
+  const TEXT_DARK = "#0F172A";
+  const TEXT_MUTED = "#64748B";
+
   const [activeTab, setActiveTab] = useState("profile");
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -326,25 +333,25 @@ function MyPage({
     width: isMobile ? "36px" : "40px",
     height: isMobile ? "36px" : "40px",
     borderRadius: "14px",
-    background: "#4DA3FF",
+    background: BRAND_COLOR,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "#ffffff",
     fontWeight: "900",
     fontSize: isMobile ? "13px" : "14px",
-    boxShadow: "0 12px 24px rgba(77, 163, 255, 0.18)",
+    boxShadow: "0 12px 24px rgba(47, 128, 237, 0.18)",
   };
 
   const brandTextStyle = {
     fontSize: isMobile ? "22px" : "24px",
     fontWeight: "900",
-    color: "#2F80ED",
+    color: BRAND_COLOR,
     letterSpacing: "-0.5px",
   };
 
   const homeBtnStyle = {
-    border: "1px solid #dbe4f2",
+    border: `1px solid ${BUTTON_BORDER}`,
     backgroundColor: "#ffffff",
     color: "#1e293b",
     borderRadius: "14px",
@@ -354,6 +361,8 @@ function MyPage({
     cursor: "pointer",
     boxShadow: "0 6px 18px rgba(15, 23, 42, 0.03)",
     width: isMobile ? "100%" : "auto",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const tabWrapStyle = {
@@ -373,10 +382,11 @@ function MyPage({
     fontSize: isMobile ? "14px" : "16px",
     whiteSpace: "nowrap",
     fontWeight: activeTab === key ? "800" : "700",
-    color: activeTab === key ? "#2F80ED" : "#1f2937",
+    color: activeTab === key ? BRAND_COLOR : "#1f2937",
     cursor: "pointer",
+    outline: "none",
     borderBottom:
-      activeTab === key ? "3px solid #35A2FF" : "3px solid transparent",
+      activeTab === key ? `3px solid ${BRAND_COLOR}` : "3px solid transparent",
   });
 
   const contentGridStyle = {
@@ -388,7 +398,7 @@ function MyPage({
 
   const cardStyle = {
     backgroundColor: "#ffffff",
-    border: "1px solid #e5eaf0",
+    border: `1px solid ${CARD_BORDER}`,
     borderRadius: isMobile ? "20px" : "26px",
     boxShadow: "0 16px 34px rgba(15, 23, 42, 0.04)",
   };
@@ -404,7 +414,7 @@ function MyPage({
     width: isMobile ? "84px" : "100px",
     height: isMobile ? "84px" : "100px",
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #6EC1FF 0%, #35A2FF 100%)",
+    background: "linear-gradient(135deg, #5B9DFF 0%, #2F80ED 100%)",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
@@ -419,7 +429,7 @@ function MyPage({
     textAlign: "center",
     fontSize: isMobile ? "22px" : "28px",
     fontWeight: "900",
-    color: "#0f172a",
+    color: TEXT_DARK,
     letterSpacing: "-0.8px",
     marginBottom: "8px",
     wordBreak: "break-word",
@@ -428,7 +438,7 @@ function MyPage({
   const profileMailStyle = {
     textAlign: "center",
     fontSize: "14px",
-    color: "#64748b",
+    color: TEXT_MUTED,
     lineHeight: "1.7",
     marginBottom: "18px",
     wordBreak: "break-all",
@@ -436,7 +446,7 @@ function MyPage({
 
   const outlineBtnStyle = {
     width: "100%",
-    border: "1px solid #dbe4f2",
+    border: `1px solid ${BUTTON_BORDER}`,
     backgroundColor: "#ffffff",
     color: "#334155",
     borderRadius: "12px",
@@ -444,6 +454,8 @@ function MyPage({
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const statRowStyle = {
@@ -466,7 +478,7 @@ function MyPage({
   const statNumStyle = {
     fontSize: isMobile ? "18px" : "20px",
     fontWeight: "900",
-    color: "#0f172a",
+    color: TEXT_DARK,
     marginBottom: "4px",
   };
 
@@ -485,14 +497,14 @@ function MyPage({
   const sectionTitleStyle = {
     fontSize: isMobile ? "22px" : "28px",
     fontWeight: "900",
-    color: "#0f172a",
+    color: TEXT_DARK,
     letterSpacing: "-0.8px",
     margin: "0 0 8px 0",
   };
 
   const sectionDescStyle = {
     fontSize: "14px",
-    color: "#64748b",
+    color: TEXT_MUTED,
     lineHeight: "1.8",
     margin: "0 0 22px 0",
   };
@@ -518,7 +530,7 @@ function MyPage({
   const menuTitleStyle = {
     fontSize: isMobile ? "18px" : "20px",
     fontWeight: "900",
-    color: "#0f172a",
+    color: TEXT_DARK,
     marginBottom: "8px",
     letterSpacing: "-0.5px",
   };
@@ -526,20 +538,22 @@ function MyPage({
   const menuDescStyle = {
     fontSize: "14px",
     lineHeight: "1.8",
-    color: "#64748b",
+    color: TEXT_MUTED,
     marginBottom: "16px",
   };
 
   const primaryBtnStyle = {
     border: "none",
-    background: "#35A2FF",
+    background: BRAND_COLOR,
     color: "#ffffff",
     borderRadius: "12px",
     padding: "12px 16px",
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
+    boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
   };
 
   const settingListStyle = {
@@ -562,13 +576,13 @@ function MyPage({
   const settingTitleStyle = {
     fontSize: isMobile ? "16px" : "17px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: TEXT_DARK,
     marginBottom: "4px",
   };
 
   const settingTextStyle = {
     fontSize: "14px",
-    color: "#64748b",
+    color: TEXT_MUTED,
     lineHeight: "1.7",
   };
 
@@ -582,7 +596,8 @@ function MyPage({
     fontWeight: "800",
     cursor: "pointer",
     minWidth: isMobile ? "100%" : "110px",
-    width: isMobile ? "100%" : "auto",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const inputStyle = {
@@ -593,7 +608,7 @@ function MyPage({
     backgroundColor: "#ffffff",
     padding: "0 16px",
     fontSize: "15px",
-    color: "#0f172a",
+    color: TEXT_DARK,
     boxSizing: "border-box",
     outline: "none",
   };
@@ -642,7 +657,7 @@ function MyPage({
   };
 
   const softBtnStyle = {
-    border: "1px solid #dbe4f2",
+    border: `1px solid ${BUTTON_BORDER}`,
     background: "#ffffff",
     color: "#334155",
     borderRadius: "12px",
@@ -650,7 +665,8 @@ function MyPage({
     fontSize: "14px",
     fontWeight: "700",
     cursor: "pointer",
-    width: isMobile ? "100%" : "auto",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const messageStyle = {
@@ -669,9 +685,17 @@ function MyPage({
             <div style={brandTextStyle}>뚝딱</div>
           </div>
 
-          <button type="button" style={homeBtnStyle} onClick={onGoHome}>
+          <HoverButton
+            onClick={onGoHome}
+            style={homeBtnStyle}
+            hoverStyle={{
+              borderColor: "#BFD7FF",
+              color: BRAND_COLOR,
+              backgroundColor: "#F8FBFF",
+            }}
+          >
             메인으로 돌아가기
-          </button>
+          </HoverButton>
         </div>
 
         <div style={tabWrapStyle}>
@@ -679,6 +703,7 @@ function MyPage({
             type="button"
             style={getTabStyle("profile")}
             onClick={() => setActiveTab("profile")}
+            onMouseDown={(e) => e.currentTarget.blur()}
           >
             프로필
           </button>
@@ -686,6 +711,7 @@ function MyPage({
             type="button"
             style={getTabStyle("activity")}
             onClick={() => setActiveTab("activity")}
+            onMouseDown={(e) => e.currentTarget.blur()}
           >
             내 활동
           </button>
@@ -693,6 +719,7 @@ function MyPage({
             type="button"
             style={getTabStyle("setting")}
             onClick={() => setActiveTab("setting")}
+            onMouseDown={(e) => e.currentTarget.blur()}
           >
             설정
           </button>
@@ -705,13 +732,17 @@ function MyPage({
             <div style={profileNameStyle}>{displayName}</div>
             <div style={profileMailStyle}>{emailText}</div>
 
-            <button
-              type="button"
-              style={outlineBtnStyle}
+            <HoverButton
               onClick={handleStartEdit}
+              style={outlineBtnStyle}
+              hoverStyle={{
+                borderColor: "#BFD7FF",
+                color: BRAND_COLOR,
+                backgroundColor: "#F8FBFF",
+              }}
             >
               정보 수정
-            </button>
+            </HoverButton>
 
             <div style={statRowStyle}>
               <div style={statBoxStyle}>
@@ -768,7 +799,7 @@ function MyPage({
                     <div
                       style={{
                         fontSize: isMobile ? "18px" : "22px",
-                        color: "#0f172a",
+                        color: TEXT_DARK,
                         fontWeight: "900",
                         marginBottom: "18px",
                         letterSpacing: "-0.5px",
@@ -784,7 +815,7 @@ function MyPage({
                     <div
                       style={{
                         fontSize: isMobile ? "14px" : "16px",
-                        color: "#0f172a",
+                        color: TEXT_DARK,
                         fontWeight: "700",
                         lineHeight: "1.8",
                         wordBreak: "break-all",
@@ -793,9 +824,7 @@ function MyPage({
                       {emailText}
                     </div>
 
-                    {saveMessage ? (
-                      <div style={messageStyle}>{saveMessage}</div>
-                    ) : null}
+                    {saveMessage ? <div style={messageStyle}>{saveMessage}</div> : null}
                   </div>
                 ) : (
                   <div
@@ -826,34 +855,40 @@ function MyPage({
                         style={{
                           ...inputStyle,
                           backgroundColor: "#f8fafc",
-                          color: "#64748b",
+                          color: TEXT_MUTED,
                         }}
                       />
                     </div>
 
                     <div style={saveRowStyle}>
-                      <button
-                        type="button"
-                        style={primaryBtnStyle}
+                      <HoverButton
                         onClick={handleSaveProfile}
                         disabled={saveLoading}
+                        style={primaryBtnStyle}
+                        hoverStyle={{
+                          background: BRAND_HOVER,
+                          transform: isMobile ? "none" : "translateY(-1px)",
+                          boxShadow: "0 12px 26px rgba(31, 111, 214, 0.22)",
+                        }}
                       >
                         {saveLoading ? "저장 중..." : "저장하기"}
-                      </button>
+                      </HoverButton>
 
-                      <button
-                        type="button"
-                        style={softBtnStyle}
+                      <HoverButton
                         onClick={handleCancelEdit}
                         disabled={saveLoading}
+                        style={softBtnStyle}
+                        hoverStyle={{
+                          borderColor: "#BFD7FF",
+                          color: BRAND_COLOR,
+                          backgroundColor: "#F8FBFF",
+                        }}
                       >
                         취소
-                      </button>
+                      </HoverButton>
                     </div>
 
-                    {saveMessage ? (
-                      <div style={messageStyle}>{saveMessage}</div>
-                    ) : null}
+                    {saveMessage ? <div style={messageStyle}>{saveMessage}</div> : null}
                   </div>
                 )}
               </div>
@@ -875,13 +910,20 @@ function MyPage({
                         <div style={menuDescStyle}>{card.desc}</div>
                       </div>
 
-                      <button
-                        type="button"
-                        style={primaryBtnStyle}
+                      <HoverButton
                         onClick={card.onClick}
+                        style={{
+                          ...primaryBtnStyle,
+                          width: isMobile ? "100%" : "auto",
+                        }}
+                        hoverStyle={{
+                          background: BRAND_HOVER,
+                          transform: isMobile ? "none" : "translateY(-1px)",
+                          boxShadow: "0 12px 26px rgba(31, 111, 214, 0.22)",
+                        }}
                       >
                         {card.buttonText}
-                      </button>
+                      </HoverButton>
                     </div>
                   ))}
                 </div>
@@ -904,13 +946,17 @@ function MyPage({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      style={outlineBtnStyle}
+                    <HoverButton
                       onClick={handleStartEdit}
+                      style={outlineBtnStyle}
+                      hoverStyle={{
+                        borderColor: "#BFD7FF",
+                        color: BRAND_COLOR,
+                        backgroundColor: "#F8FBFF",
+                      }}
                     >
                       수정하기
-                    </button>
+                    </HoverButton>
                   </div>
 
                   <div style={settingItemStyle}>
@@ -944,18 +990,21 @@ function MyPage({
                               />
 
                               <div style={saveRowStyle}>
-                                <button
-                                  type="button"
-                                  style={primaryBtnStyle}
+                                <HoverButton
                                   onClick={handleChangePassword}
                                   disabled={saveLoading}
+                                  style={primaryBtnStyle}
+                                  hoverStyle={{
+                                    background: BRAND_HOVER,
+                                    transform: isMobile ? "none" : "translateY(-1px)",
+                                    boxShadow:
+                                      "0 12px 26px rgba(31, 111, 214, 0.22)",
+                                  }}
                                 >
                                   {saveLoading ? "변경 중..." : "비밀번호 저장"}
-                                </button>
+                                </HoverButton>
 
-                                <button
-                                  type="button"
-                                  style={softBtnStyle}
+                                <HoverButton
                                   onClick={() => {
                                     setPasswordOpen(false);
                                     setNewPassword("");
@@ -963,9 +1012,15 @@ function MyPage({
                                     setPasswordMessage("");
                                   }}
                                   disabled={saveLoading}
+                                  style={softBtnStyle}
+                                  hoverStyle={{
+                                    borderColor: "#BFD7FF",
+                                    color: BRAND_COLOR,
+                                    backgroundColor: "#F8FBFF",
+                                  }}
                                 >
                                   취소
-                                </button>
+                                </HoverButton>
                               </div>
 
                               {passwordMessage ? (
@@ -992,16 +1047,20 @@ function MyPage({
                     </div>
 
                     {authProvider === "email" && !passwordOpen && (
-                      <button
-                        type="button"
-                        style={outlineBtnStyle}
+                      <HoverButton
                         onClick={() => {
                           setPasswordOpen(true);
                           setPasswordMessage("");
                         }}
+                        style={outlineBtnStyle}
+                        hoverStyle={{
+                          borderColor: "#BFD7FF",
+                          color: BRAND_COLOR,
+                          backgroundColor: "#F8FBFF",
+                        }}
                       >
                         변경하기
-                      </button>
+                      </HoverButton>
                     )}
                   </div>
 
@@ -1039,25 +1098,32 @@ function MyPage({
                           />
 
                           <div style={saveRowStyle}>
-                            <button
-                              type="button"
-                              style={dangerBtnStyle}
+                            <HoverButton
                               onClick={handleWithdrawClick}
+                              style={dangerBtnStyle}
+                              hoverStyle={{
+                                background: "#FFECEC",
+                                color: "#DC2626",
+                              }}
                             >
                               탈퇴 진행
-                            </button>
+                            </HoverButton>
 
-                            <button
-                              type="button"
-                              style={softBtnStyle}
+                            <HoverButton
                               onClick={() => {
                                 setWithdrawOpen(false);
                                 setWithdrawConfirmText("");
                                 setWithdrawMessage("");
                               }}
+                              style={softBtnStyle}
+                              hoverStyle={{
+                                borderColor: "#BFD7FF",
+                                color: BRAND_COLOR,
+                                backgroundColor: "#F8FBFF",
+                              }}
                             >
                               취소
-                            </button>
+                            </HoverButton>
                           </div>
 
                           {withdrawMessage ? (
@@ -1078,17 +1144,20 @@ function MyPage({
                     </div>
 
                     {!withdrawOpen && (
-                      <button
-                        type="button"
-                        style={dangerBtnStyle}
+                      <HoverButton
                         onClick={() => {
                           setWithdrawOpen(true);
                           setWithdrawConfirmText("");
                           setWithdrawMessage("");
                         }}
+                        style={dangerBtnStyle}
+                        hoverStyle={{
+                          background: "#FFECEC",
+                          color: "#DC2626",
+                        }}
                       >
                         회원탈퇴
-                      </button>
+                      </HoverButton>
                     )}
                   </div>
 
@@ -1100,13 +1169,16 @@ function MyPage({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      style={dangerBtnStyle}
+                    <HoverButton
                       onClick={onLogout}
+                      style={dangerBtnStyle}
+                      hoverStyle={{
+                        background: "#FFECEC",
+                        color: "#DC2626",
+                      }}
                     >
                       로그아웃
-                    </button>
+                    </HoverButton>
                   </div>
                 </div>
               </div>
@@ -1115,6 +1187,42 @@ function MyPage({
         </div>
       </div>
     </div>
+  );
+}
+
+function HoverButton({
+  children,
+  onClick,
+  style,
+  hoverStyle = {},
+  disabled = false,
+  type = "button",
+}) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      onBlur={() => setIsHover(false)}
+      style={{
+        outline: "none",
+        boxShadow: "none",
+        WebkitTapHighlightColor: "transparent",
+        transition:
+          "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
+        ...style,
+        ...(isHover && !disabled ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
