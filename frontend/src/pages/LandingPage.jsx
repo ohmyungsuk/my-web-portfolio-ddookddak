@@ -575,25 +575,23 @@ import { useEffect, useRef, useState } from "react";
                             padding: "10px",
                           }}
                         >
-                          <DropdownButton
-                            onClick={() => closeAndRun(onGoMyRequests)}
-                          >
+                          <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
+                            마이페이지
+                          </DropdownButton>
+
+                          <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
                             내 요청 목록
                           </DropdownButton>
-                          <DropdownButton
-                            onClick={() => closeAndRun(onGoAllRequests)}
-                          >
+
+                          <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
                             전체 요청 보기
                           </DropdownButton>
-                          <DropdownButton
-                            onClick={() => closeAndRun(onGoAssignedRequests)}
-                          >
+
+                          <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
                             맡은 작업 보기
                           </DropdownButton>
-                          <DropdownButton
-                            onClick={() => closeAndRun(onLogout)}
-                            danger
-                          >
+
+                          <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
                             로그아웃
                           </DropdownButton>
                         </div>
