@@ -17,8 +17,11 @@ function RequestDetailPage({ onGoHome }) {
   const loginUser = savedUser ? JSON.parse(savedUser) : null;
 
   const fromPath = location.state?.from || "/requests/all";
-
   const isMobile = useMemo(() => window.innerWidth <= 900, []);
+
+  const BRAND_COLOR = "#2F80ED";
+  const BRAND_HOVER = "#1F6FD6";
+  const BRAND_SOFT = "#F8FBFF";
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -189,23 +192,23 @@ function RequestDetailPage({ onGoHome }) {
       width: "40px",
       height: "40px",
       borderRadius: "14px",
-      background: "#2F80ED",
+      background: BRAND_COLOR,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       color: "#ffffff",
       fontWeight: "900",
       fontSize: "14px",
-      boxShadow: "0 12px 24px rgba(77, 163, 255, 0.18)",
+      boxShadow: "0 12px 24px rgba(47, 128, 237, 0.18)",
     },
     brandText: {
       fontSize: "24px",
       fontWeight: "900",
-      color: "#2F80ED",
+      color: BRAND_COLOR,
       letterSpacing: "-0.6px",
     },
     backBtn: {
-      border: "1px solid #dbe4f2",
+      border: "none",
       background: "#ffffff",
       color: "#1e293b",
       borderRadius: "14px",
@@ -213,6 +216,9 @@ function RequestDetailPage({ onGoHome }) {
       fontSize: "14px",
       fontWeight: "700",
       cursor: "pointer",
+      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+      outline: "none",
+      WebkitTapHighlightColor: "transparent",
     },
     grid: {
       display: "grid",
@@ -235,7 +241,7 @@ function RequestDetailPage({ onGoHome }) {
       padding: "9px 14px",
       borderRadius: "999px",
       background: "#eef4ff",
-      color: "#2F80ED",
+      color: BRAND_COLOR,
       fontSize: "12px",
       fontWeight: "800",
       marginBottom: "16px",
@@ -333,6 +339,8 @@ function RequestDetailPage({ onGoHome }) {
       fontWeight: "800",
       cursor: "pointer",
       boxShadow: "0 14px 28px rgba(47, 128, 237, 0.18)",
+      outline: "none",
+      WebkitTapHighlightColor: "transparent",
     },
     actionRow: {
       display: "flex",
@@ -344,13 +352,16 @@ function RequestDetailPage({ onGoHome }) {
       flex: isMobile ? "1 1 100%" : "0 0 auto",
       minWidth: isMobile ? "100%" : "180px",
       height: "52px",
-      border: "1px solid #dbe4f2",
+      border: "none",
       borderRadius: "16px",
       background: "#ffffff",
       color: "#475569",
       fontSize: "15px",
       fontWeight: "700",
       cursor: "pointer",
+      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+      outline: "none",
+      WebkitTapHighlightColor: "transparent",
     },
     homeBtn: {
       flex: isMobile ? "1 1 100%" : "0 0 auto",
@@ -363,6 +374,9 @@ function RequestDetailPage({ onGoHome }) {
       fontSize: "15px",
       fontWeight: "800",
       cursor: "pointer",
+      boxShadow: "0 14px 28px rgba(47, 128, 237, 0.18)",
+      outline: "none",
+      WebkitTapHighlightColor: "transparent",
     },
     sideHero: {
       borderRadius: "24px",
@@ -371,7 +385,12 @@ function RequestDetailPage({ onGoHome }) {
       color: "#ffffff",
       boxShadow: "0 20px 38px rgba(47, 128, 237, 0.18)",
     },
-    sideHeroLabel: { margin: 0, fontSize: "13px", fontWeight: "800", opacity: 0.88 },
+    sideHeroLabel: {
+      margin: 0,
+      fontSize: "13px",
+      fontWeight: "800",
+      opacity: 0.88,
+    },
     sideHeroBig: {
       display: "block",
       marginTop: "10px",
@@ -393,7 +412,12 @@ function RequestDetailPage({ onGoHome }) {
       padding: "18px",
       background: "rgba(255,255,255,0.94)",
     },
-    sideSoftLabel: { margin: 0, fontSize: "13px", color: "#64748b", fontWeight: "800" },
+    sideSoftLabel: {
+      margin: 0,
+      fontSize: "13px",
+      color: "#64748b",
+      fontWeight: "800",
+    },
     sideSoftTitle: {
       display: "block",
       marginTop: "8px",
@@ -438,12 +462,30 @@ function RequestDetailPage({ onGoHome }) {
             )}
 
             <div style={styles.actionRow}>
-              <button type="button" style={styles.subtleBtn} onClick={handleBack}>
+              <HoverButton
+                onClick={handleBack}
+                style={styles.subtleBtn}
+                hoverStyle={{
+                  backgroundColor: BRAND_SOFT,
+                  color: BRAND_COLOR,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+                }}
+              >
                 뒤로가기
-              </button>
-              <button type="button" style={styles.homeBtn} onClick={onGoHome}>
+              </HoverButton>
+
+              <HoverButton
+                onClick={onGoHome}
+                style={styles.homeBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                }}
+              >
                 메인으로 돌아가기
-              </button>
+              </HoverButton>
             </div>
           </div>
         </div>
@@ -463,9 +505,18 @@ function RequestDetailPage({ onGoHome }) {
             <div style={styles.brandText}>뚝딱</div>
           </div>
 
-          <button type="button" style={styles.backBtn} onClick={handleBack}>
+          <HoverButton
+            onClick={handleBack}
+            style={styles.backBtn}
+            hoverStyle={{
+              backgroundColor: BRAND_SOFT,
+              color: BRAND_COLOR,
+              transform: isMobile ? "none" : "translateY(-1px)",
+              boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+            }}
+          >
             뒤로가기
-          </button>
+          </HoverButton>
         </div>
 
         <div style={styles.grid}>
@@ -530,58 +581,91 @@ function RequestDetailPage({ onGoHome }) {
 
             <div style={styles.actionStack}>
               {canAccept && (
-                <button
-                  type="button"
-                  style={styles.primaryAction}
+                <HoverButton
                   onClick={handleAccept}
                   disabled={actionLoading}
+                  style={styles.primaryAction}
+                  hoverStyle={{
+                    background: BRAND_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                  }}
                 >
                   {actionLoading ? "처리 중..." : "요청 수락하기"}
-                </button>
+                </HoverButton>
               )}
 
               {canSetPlanned && (
-                <button
-                  type="button"
-                  style={styles.primaryAction}
+                <HoverButton
                   onClick={handleSetPlanned}
                   disabled={actionLoading}
+                  style={styles.primaryAction}
+                  hoverStyle={{
+                    background: BRAND_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                  }}
                 >
                   {actionLoading ? "처리 중..." : "작업 예정으로 변경"}
-                </button>
+                </HoverButton>
               )}
 
               {canStartWork && (
-                <button
-                  type="button"
-                  style={styles.primaryAction}
+                <HoverButton
                   onClick={handleStartWork}
                   disabled={actionLoading}
+                  style={styles.primaryAction}
+                  hoverStyle={{
+                    background: BRAND_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                  }}
                 >
                   {actionLoading ? "처리 중..." : "작업 시작하기"}
-                </button>
+                </HoverButton>
               )}
 
               {canComplete && (
-                <button
-                  type="button"
-                  style={styles.primaryAction}
+                <HoverButton
                   onClick={handleComplete}
                   disabled={actionLoading}
+                  style={styles.primaryAction}
+                  hoverStyle={{
+                    background: BRAND_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                  }}
                 >
                   {actionLoading ? "처리 중..." : "완료 처리하기"}
-                </button>
+                </HoverButton>
               )}
             </div>
 
             <div style={styles.actionRow}>
-              <button type="button" style={styles.subtleBtn} onClick={handleBack}>
+              <HoverButton
+                onClick={handleBack}
+                style={styles.subtleBtn}
+                hoverStyle={{
+                  backgroundColor: BRAND_SOFT,
+                  color: BRAND_COLOR,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+                }}
+              >
                 뒤로가기
-              </button>
+              </HoverButton>
 
-              <button type="button" style={styles.homeBtn} onClick={onGoHome}>
+              <HoverButton
+                onClick={onGoHome}
+                style={styles.homeBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                }}
+              >
                 메인으로 돌아가기
-              </button>
+              </HoverButton>
             </div>
           </div>
 
@@ -623,6 +707,41 @@ function RequestDetailPage({ onGoHome }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function HoverButton({
+  children,
+  onClick,
+  style,
+  hoverStyle = {},
+  disabled = false,
+  type = "button",
+}) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      onBlur={() => setIsHover(false)}
+      style={{
+        outline: "none",
+        WebkitTapHighlightColor: "transparent",
+        transition:
+          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
+        ...style,
+        ...(isHover && !disabled ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

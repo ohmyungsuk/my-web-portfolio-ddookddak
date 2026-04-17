@@ -350,20 +350,20 @@ function MyPage({
     letterSpacing: "-0.5px",
   };
 
-  const homeBtnStyle = {
-    border: `1px solid ${BUTTON_BORDER}`,
-    backgroundColor: "#ffffff",
-    color: "#1e293b",
-    borderRadius: "14px",
-    padding: isMobile ? "12px 14px" : "13px 18px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.03)",
-    width: isMobile ? "100%" : "auto",
-    outline: "none",
-    WebkitTapHighlightColor: "transparent",
-  };
+ const homeBtnStyle = {
+  border: "none",
+  backgroundColor: "#ffffff",
+  color: "#1e293b",
+  borderRadius: "14px",
+  padding: isMobile ? "12px 14px" : "13px 18px",
+  fontSize: "14px",
+  fontWeight: "700",
+  cursor: "pointer",
+  boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+  width: isMobile ? "100%" : "auto",
+  outline: "none",
+  WebkitTapHighlightColor: "transparent",
+};
 
   const tabWrapStyle = {
     display: "flex",
@@ -445,18 +445,19 @@ function MyPage({
   };
 
   const outlineBtnStyle = {
-    width: "100%",
-    border: `1px solid ${BUTTON_BORDER}`,
-    backgroundColor: "#ffffff",
-    color: "#334155",
-    borderRadius: "12px",
-    padding: "12px 14px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    outline: "none",
-    WebkitTapHighlightColor: "transparent",
-  };
+  width: "100%",
+  border: "none",
+  backgroundColor: "#ffffff",
+  color: "#334155",
+  borderRadius: "12px",
+  padding: "12px 14px",
+  fontSize: "14px",
+  fontWeight: "700",
+  cursor: "pointer",
+  outline: "none",
+  WebkitTapHighlightColor: "transparent",
+  boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+};
 
   const statRowStyle = {
     display: "grid",
@@ -657,17 +658,18 @@ function MyPage({
   };
 
   const softBtnStyle = {
-    border: `1px solid ${BUTTON_BORDER}`,
-    background: "#ffffff",
-    color: "#334155",
-    borderRadius: "12px",
-    padding: "12px 16px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    outline: "none",
-    WebkitTapHighlightColor: "transparent",
-  };
+  border: "none",
+  background: "#ffffff",
+  color: "#334155",
+  borderRadius: "12px",
+  padding: "12px 16px",
+  fontSize: "14px",
+  fontWeight: "700",
+  cursor: "pointer",
+  outline: "none",
+  WebkitTapHighlightColor: "transparent",
+  boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+};
 
   const messageStyle = {
     marginTop: "12px",
@@ -689,9 +691,10 @@ function MyPage({
             onClick={onGoHome}
             style={homeBtnStyle}
             hoverStyle={{
-              borderColor: "#BFD7FF",
               color: BRAND_COLOR,
               backgroundColor: "#F8FBFF",
+              boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+              transform: isMobile ? "none" : "translateY(-1px)",
             }}
           >
             메인으로 돌아가기

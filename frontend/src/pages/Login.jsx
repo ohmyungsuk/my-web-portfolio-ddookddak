@@ -8,7 +8,6 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   const BRAND_COLOR = "#2F80ED";
   const BRAND_HOVER = "#1F6FD6";
   const BRAND_SOFT = "#F8FBFF";
-  const BUTTON_BORDER = "#D7E2F0";
   const TEXT_DARK = "#0F172A";
   const TEXT_MUTED = "#64748B";
 
@@ -175,28 +174,31 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     appearance: "none",
     WebkitAppearance: "none",
     transition:
-      "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
+      "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
   };
 
-  const emailButtonStyle = {
+  const emailActionButtonStyle = {
     ...buttonBaseStyle,
-    border: `1px solid ${BUTTON_BORDER}`,
-    background: BRAND_SOFT,
+    border: "none",
+    background: "#ffffff",
     color: BRAND_COLOR,
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
   };
 
   const googleButtonStyle = {
     ...buttonBaseStyle,
-    border: `1px solid ${BUTTON_BORDER}`,
+    border: "none",
     background: "#ffffff",
     color: "#111827",
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
   };
 
   const kakaoButtonStyle = {
     ...buttonBaseStyle,
-    border: "1px solid #f2d600",
+    border: "none",
     background: "#FEE500",
     color: "#191919",
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.05)",
   };
 
   const iconBoxStyle = {
@@ -264,7 +266,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     width: "100%",
     height: "48px",
     borderRadius: "14px",
-    border: `1px solid ${BUTTON_BORDER}`,
+    border: "none",
     background: "#ffffff",
     color: "#1e293b",
     fontSize: "14px",
@@ -273,6 +275,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     boxSizing: "border-box",
     outline: "none",
     WebkitTapHighlightColor: "transparent",
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
   };
 
   const footerStyle = {
@@ -295,9 +298,9 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   };
 
   return (
-    <div className="auth-page" style={pageStyle}>
-      <div className="auth-card" style={cardStyle}>
-        <div className="auth-header" style={headerStyle}>
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <div style={headerStyle}>
           <div style={brandWrapStyle} onClick={() => navigate("/")}>
             <div style={brandMarkStyle}>ㄸ</div>
             <div style={brandTextStyle}>뚝딱</div>
@@ -307,7 +310,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
             {mode === "choice" ? "로그인 방법 선택" : "이메일 로그인"}
           </h1>
 
-          <p className="auth-desc" style={descStyle}>
+          <p style={descStyle}>
             {mode === "choice"
               ? "원하는 로그인 방식을 선택해주세요."
               : "등록한 이메일과 비밀번호로 접속하세요."}
@@ -315,15 +318,16 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
         </div>
 
         {mode === "choice" ? (
-          <div className="auth-form" style={choiceFormStyle}>
+          <div style={choiceFormStyle}>
             <HoverButton
               onClick={() => setMode("email")}
               disabled={loading}
-              style={emailButtonStyle}
+              style={emailActionButtonStyle}
               hoverStyle={{
-                borderColor: "#BFD7FF",
-                color: BRAND_COLOR,
-                backgroundColor: "#F8FBFF",
+                background: BRAND_HOVER,
+                color: "#ffffff",
+                transform: "translateY(-1px)",
+                boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}
             >
               이메일로 로그인
@@ -334,10 +338,10 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               disabled={loading}
               style={googleButtonStyle}
               hoverStyle={{
-                borderColor: "#BFD7FF",
-                backgroundColor: "#F8FBFF",
+                backgroundColor: BRAND_SOFT,
+                color: BRAND_COLOR,
                 transform: "translateY(-1px)",
-                boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
+                boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
               }}
             >
               <span style={iconBoxStyle}>
@@ -396,15 +400,11 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               <span>카카오로 계속하기</span>
             </HoverButton>
 
-            {errorMessage && (
-              <div className="message error" style={errorBoxStyle}>
-                {errorMessage}
-              </div>
-            )}
+            {errorMessage && <div style={errorBoxStyle}>{errorMessage}</div>}
           </div>
         ) : (
-          <form className="auth-form" onSubmit={handleLogin} style={emailFormStyle}>
-            <div className="input-group">
+          <form onSubmit={handleLogin} style={emailFormStyle}>
+            <div>
               <label style={labelStyle}>이메일</label>
               <input
                 type="email"
@@ -416,7 +416,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               />
             </div>
 
-            <div className="input-group">
+            <div>
               <label style={labelStyle}>비밀번호</label>
               <input
                 type="password"
@@ -428,11 +428,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               />
             </div>
 
-            {errorMessage && (
-              <div className="message error" style={errorBoxStyle}>
-                {errorMessage}
-              </div>
-            )}
+            {errorMessage && <div style={errorBoxStyle}>{errorMessage}</div>}
 
             <HoverButton
               type="submit"
@@ -451,9 +447,10 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               onClick={() => setMode("choice")}
               style={secondaryButtonStyle}
               hoverStyle={{
-                borderColor: "#BFD7FF",
+                backgroundColor: BRAND_SOFT,
                 color: BRAND_COLOR,
-                backgroundColor: "#F8FBFF",
+                transform: "translateY(-1px)",
+                boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
               }}
             >
               다른 방법 선택
@@ -461,7 +458,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
           </form>
         )}
 
-        <div className="auth-footer" style={footerStyle}>
+        <div style={footerStyle}>
           <span>아직 계정이 없나요?</span>{" "}
           <HoverButton
             onClick={() => onSwitchToSignup && onSwitchToSignup()}
@@ -501,10 +498,9 @@ function HoverButton({
       onBlur={() => setIsHover(false)}
       style={{
         outline: "none",
-        boxShadow: "none",
         WebkitTapHighlightColor: "transparent",
         transition:
-          "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
+          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
         ...style,
         ...(isHover && !disabled ? hoverStyle : {}),
       }}
