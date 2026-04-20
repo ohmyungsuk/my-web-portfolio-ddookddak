@@ -9,10 +9,11 @@ import {
 } from "react-router-dom";
 import { supabase } from "./supabaseClient.js";
 
+import Header from "./components/common/Header";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import RequestCreatePage from "./pages/RequestCreatePage";
+import RequestCreateFlow from "./pages/RequestCreateFlow";
 import MyRequestsPage from "./pages/MyRequestsPage";
 import AllRequestsPage from "./pages/AllRequestsPage";
 import MyAssignedRequestsPage from "./pages/MyAssignedRequestsPage";
@@ -128,8 +129,26 @@ function App() {
     );
   }
 
+  const hideHeader = ["/login", "/signup"].includes(location.pathname);
+
   return (
-    <Routes>
+    <>
+      {!hideHeader && (
+        <Header
+          isLoggedIn={isLoggedIn}
+          loginUser={loginUser}
+          onGoHome={() => navigate("/")}
+          onGoLogin={() => navigate("/login")}
+          onGoSignup={() => navigate("/signup")}
+          onGoCreate={() => (isLoggedIn ? navigate("/requests/new") : navigate("/login"))}
+          onGoMyPage={() => navigate("/mypage")}
+          onGoMyRequests={() => navigate("/requests/my")}
+          onGoAllRequests={() => navigate("/requests/all")}
+          onGoAssignedRequests={() => navigate("/requests/assigned")}
+          onLogout={handleLogout}
+        />
+      )}
+      <Routes>
 
       <Route
         path="/mypage"
@@ -198,7 +217,7 @@ function App() {
         path="/requests/new"
         element={
           <RequireAuth isLoggedIn={isLoggedIn}>
-            <RequestCreatePage onGoHome={() => navigate("/")} />
+            <RequestCreateFlow />
           </RequireAuth>
         }
       />
@@ -262,6 +281,7 @@ function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 

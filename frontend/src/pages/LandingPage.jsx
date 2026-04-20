@@ -213,13 +213,16 @@ function LandingPage({
     <div
       style={{
         minHeight: "100vh",
+        paddingTop: isMobile ? "60px" : "78px",
         background: PAGE_BG,
         color: "#111827",
       }}
     >
       <header
         style={{
-          position: "sticky",
+          position: "fixed",
+          left: 0,
+          right: 0,
           top: 0,
           zIndex: 50,
           backgroundColor: "#ffffff",

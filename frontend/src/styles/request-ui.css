@@ -1,0 +1,113 @@
+.app-btn {
+  border: none;
+  outline: none;
+  border-radius: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.app-btn--full {
+  width: 100%;
+}
+
+/* size */
+.app-btn--sm {
+  height: 42px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.app-btn--md {
+  height: 50px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+
+.app-btn--lg {
+  height: 56px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+/* primary = 파란 버튼 */
+.app-btn--primary {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
+}
+
+/* secondary = 하얀 버튼 */
+.app-btn--secondary {
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+/* disabled */
+.app-btn--disabled,
+.app-btn:disabled {
+  background: #dbe2ea !important;
+  color: #94a3b8 !important;
+  border-color: #dbe2ea !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* hover는 마우스 환경에서만 */
+@media (hover: hover) and (pointer: fine) {
+  .app-btn--primary:hover {
+    background: #2f76ea;
+    box-shadow: 0 12px 24px rgba(59, 130, 246, 0.24);
+    transform: translateY(-1px);
+  }
+
+  .app-btn--secondary:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+    border-color: #dbe4f0;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+    transform: translateY(-1px);
+  }
+}
+
+/* 클릭감 */
+.app-btn:active {
+  transform: translateY(0);
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .app-btn--sm,
+  .app-btn--md,
+  .app-btn--lg {
+    width: 100%;
+  }
+
+  .app-btn--sm {
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .app-btn--md {
+    height: 48px;
+    font-size: 15px;
+  }
+
+  .app-btn--lg {
+    height: 52px;
+    font-size: 15px;
+  }
+}
