@@ -180,9 +180,9 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   const emailActionButtonStyle = {
     ...buttonBaseStyle,
     border: "none",
-    background: "#ffffff",
-    color: BRAND_COLOR,
-    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+    background: "linear-gradient(135deg, #2F80ED 0%, #1C63E0 100%)",
+    color: "#ffffff",
+    boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
   };
 
   const googleButtonStyle = {
@@ -324,8 +324,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               disabled={loading}
               style={emailActionButtonStyle}
               hoverStyle={{
-                background: BRAND_HOVER,
-                color: "#ffffff",
+                filter: "brightness(0.92)",
                 transform: "translateY(-1px)",
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}
@@ -435,7 +434,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               disabled={loading}
               style={submitButtonStyle}
               hoverStyle={{
-                backgroundColor: BRAND_HOVER,
+                filter: "brightness(0.92)",
                 transform: "translateY(-1px)",
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}

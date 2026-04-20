@@ -211,9 +211,9 @@ function Signup({ onSwitchToLogin }) {
   const emailButtonStyle = {
     ...buttonBaseStyle,
     border: "none",
-    background: "#ffffff",
-    color: BRAND_COLOR,
-    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
+    background: "linear-gradient(135deg, #2F80ED 0%, #1C63E0 100%)",
+    color: "#ffffff",
+    boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
   };
 
   const googleButtonStyle = {
@@ -365,9 +365,8 @@ function Signup({ onSwitchToLogin }) {
               disabled={loading}
               style={emailButtonStyle}
               hoverStyle={{
-                color: BRAND_COLOR,
-                backgroundColor: BRAND_SOFT,
-                boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+                filter: "brightness(0.92)",
+                boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                 transform: "translateY(-1px)",
               }}
             >
@@ -499,7 +498,7 @@ function Signup({ onSwitchToLogin }) {
               disabled={loading}
               style={submitButtonStyle}
               hoverStyle={{
-                backgroundColor: BRAND_HOVER,
+                filter: "brightness(0.92)",
                 transform: "translateY(-1px)",
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}

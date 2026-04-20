@@ -479,7 +479,6 @@ function RequestDetailPage({ onGoHome }) {
                 onClick={onGoHome}
                 style={styles.homeBtn}
                 hoverStyle={{
-                  background: BRAND_HOVER,
                   transform: isMobile ? "none" : "translateY(-1px)",
                   boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                 }}
@@ -586,7 +585,6 @@ function RequestDetailPage({ onGoHome }) {
                   disabled={actionLoading}
                   style={styles.primaryAction}
                   hoverStyle={{
-                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
                     boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                   }}
@@ -601,7 +599,6 @@ function RequestDetailPage({ onGoHome }) {
                   disabled={actionLoading}
                   style={styles.primaryAction}
                   hoverStyle={{
-                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
                     boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                   }}
@@ -616,7 +613,6 @@ function RequestDetailPage({ onGoHome }) {
                   disabled={actionLoading}
                   style={styles.primaryAction}
                   hoverStyle={{
-                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
                     boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                   }}
@@ -631,7 +627,6 @@ function RequestDetailPage({ onGoHome }) {
                   disabled={actionLoading}
                   style={styles.primaryAction}
                   hoverStyle={{
-                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
                     boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                   }}
@@ -659,7 +654,6 @@ function RequestDetailPage({ onGoHome }) {
                 onClick={onGoHome}
                 style={styles.homeBtn}
                 hoverStyle={{
-                  background: BRAND_HOVER,
                   transform: isMobile ? "none" : "translateY(-1px)",
                   boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
                 }}
@@ -713,6 +707,7 @@ function RequestDetailPage({ onGoHome }) {
 function HoverButton({
   children,
   onClick,
+  className = "button-hover",
   style,
   hoverStyle = {},
   disabled = false,
@@ -723,6 +718,7 @@ function HoverButton({
   return (
     <button
       type={type}
+      className={className}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setIsHover(true)}

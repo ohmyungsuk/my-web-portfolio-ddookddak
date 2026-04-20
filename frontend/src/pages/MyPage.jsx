@@ -869,7 +869,6 @@ function MyPage({
                         disabled={saveLoading}
                         style={primaryBtnStyle}
                         hoverStyle={{
-                          background: BRAND_HOVER,
                           transform: isMobile ? "none" : "translateY(-1px)",
                           boxShadow: "0 12px 26px rgba(31, 111, 214, 0.22)",
                         }}
@@ -920,7 +919,6 @@ function MyPage({
                           width: isMobile ? "100%" : "auto",
                         }}
                         hoverStyle={{
-                          background: BRAND_HOVER,
                           transform: isMobile ? "none" : "translateY(-1px)",
                           boxShadow: "0 12px 26px rgba(31, 111, 214, 0.22)",
                         }}
@@ -998,7 +996,6 @@ function MyPage({
                                   disabled={saveLoading}
                                   style={primaryBtnStyle}
                                   hoverStyle={{
-                                    background: BRAND_HOVER,
                                     transform: isMobile ? "none" : "translateY(-1px)",
                                     boxShadow:
                                       "0 12px 26px rgba(31, 111, 214, 0.22)",
@@ -1196,6 +1193,7 @@ function MyPage({
 function HoverButton({
   children,
   onClick,
+  className = "button-hover",
   style,
   hoverStyle = {},
   disabled = false,
@@ -1206,6 +1204,7 @@ function HoverButton({
   return (
     <button
       type={type}
+      className={className}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setIsHover(true)}

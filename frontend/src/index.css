@@ -272,6 +272,23 @@ button {
 
 .auth-button:hover {
   transform: translateY(-1px);
+  filter: brightness(0.92);
+}
+
+.button-hover {
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.button-hover:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(0.92);
+  box-shadow: 0 12px 26px rgba(31, 111, 214, 0.22);
+}
+
+.button-hover:disabled {
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
 }
 
 .auth-button:disabled {

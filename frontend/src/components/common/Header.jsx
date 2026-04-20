@@ -151,6 +151,7 @@ function Header() {
         >
           <button
             type="button"
+            className="button-hover"
             onClick={handleGoToNotifications}
             style={{
               width: "42px",
@@ -183,6 +184,7 @@ function Header() {
 
           <button
             type="button"
+            className="button-hover"
             onClick={handleGoToCreate}
             style={{
               border: "none",
@@ -203,6 +205,7 @@ function Header() {
 
           <button
             type="button"
+            className="button-hover"
             onClick={handleGoToProfile}
             style={{
               height: "50px",

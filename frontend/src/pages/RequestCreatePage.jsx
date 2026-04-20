@@ -440,11 +440,11 @@ function RequestCreatePage({ onGoHome }) {
               )}
 
               <div style={styles.actionRow}>
-                <button type="submit" style={styles.submitBtn} disabled={isLoading}>
+                <button type="submit" className="button-hover" style={styles.submitBtn} disabled={isLoading}>
                   {isLoading ? "등록 중..." : "요청 등록하기"}
                 </button>
 
-                <button type="button" style={styles.subtleBtn} onClick={onGoHome}>
+                <button type="button" className="button-hover" style={styles.subtleBtn} onClick={onGoHome}>
                   취소하고 돌아가기
                 </button>
               </div>

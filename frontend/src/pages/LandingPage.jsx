@@ -387,6 +387,7 @@ function LandingPage({
 
                 <button
                   type="button"
+                  className="button-hover"
                   onClick={onGoCreate}
                   onMouseEnter={() => setHoveredPrimaryButton("header-create")}
                   onMouseLeave={() => setHoveredPrimaryButton("")}
@@ -395,10 +396,7 @@ function LandingPage({
                     ...primaryButton,
                     padding: "0 20px",
                     minWidth: "118px",
-                    background:
-                      hoveredPrimaryButton === "header-create"
-                        ? BRAND_HOVER
-                        : BRAND_COLOR,
+                    background: BRAND_COLOR,
                     transform:
                       hoveredPrimaryButton === "header-create"
                         ? "translateY(-1px)"
@@ -542,6 +540,7 @@ function LandingPage({
 
                 <button
                   type="button"
+                  className="button-hover"
                   onClick={onGoCreate}
                   onMouseEnter={() => setHoveredPrimaryButton("login-create")}
                   onMouseLeave={() => setHoveredPrimaryButton("")}
@@ -550,10 +549,7 @@ function LandingPage({
                     ...primaryButton,
                     padding: "0 20px",
                     minWidth: "118px",
-                    background:
-                      hoveredPrimaryButton === "login-create"
-                        ? BRAND_HOVER
-                        : BRAND_COLOR,
+                    background: BRAND_COLOR,
                     transform:
                       hoveredPrimaryButton === "login-create"
                         ? "translateY(-1px)"
@@ -811,6 +807,7 @@ function LandingPage({
 
           <button
             type="button"
+            className="button-hover"
             onClick={onGoCreate}
             onMouseEnter={() => setHoveredPrimaryButton("hero-create")}
             onMouseLeave={() => setHoveredPrimaryButton("")}
@@ -821,10 +818,7 @@ function LandingPage({
               borderRadius: "16px",
               width: isMobile ? "100%" : "auto",
               padding: "0 22px",
-              background:
-                hoveredPrimaryButton === "hero-create"
-                  ? BRAND_HOVER
-                  : BRAND_COLOR,
+              background: BRAND_COLOR,
               transform:
                 hoveredPrimaryButton === "hero-create" && !isMobile
                   ? "translateY(-1px)"

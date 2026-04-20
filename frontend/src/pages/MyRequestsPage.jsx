@@ -89,7 +89,7 @@ function MyRequestsPage({ onGoHome, onClickRequest }) {
             <div style={styles.brandText}>뚝딱</div>
           </div>
 
-          <button type="button" style={styles.backBtn} onClick={onGoHome}>
+          <button type="button" className="button-hover" style={styles.backBtn} onClick={onGoHome}>
             메인으로 돌아가기
           </button>
         </div>
