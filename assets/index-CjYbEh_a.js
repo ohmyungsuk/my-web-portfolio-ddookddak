@@ -95,17 +95,19 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       cursor: grabbing;
     }
 
-        .dd-icon-pill {
+    .dd-icon-pill {
       position: relative;
-      display: inline-flex;
+      display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 10px;
       width: 98px;
       min-width: 98px;
-      min-height: 96px;
-      padding: 12px 8px;
+      max-width: 98px;
+      height: 112px;
+      min-height: 112px;
+      padding: 14px 8px 12px;
       border-radius: 24px;
       border: 1px solid rgba(216, 227, 243, 0.9);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.58) 100%);
@@ -122,13 +124,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         inset 0 1px 0 rgba(255, 255, 255, 0.7),
         0 8px 20px rgba(15, 23, 42, 0.05);
       text-align: center;
-      white-space: normal;
       overflow: hidden;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       flex: 0 0 auto;
       scroll-snap-align: start;
-    }
+    }   
+
 
     .dd-icon-pill:hover {
       background: #ffffff;
@@ -142,15 +144,30 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
 
     .dd-icon-symbol {
-      width: 34px;
-      height: 34px;
-      border-radius: 14px;
+      --icon-color: #2563eb;
+      --icon-bg: #eff6ff;
+      position: relative;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      border-radius: 16px;
       display: grid;
       place-items: center;
-      font-size: 16px;
-      background: #ffffff;
-      color: #2563eb;
-      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+      font-size: 18px;
+      color: var(--icon-color);
+      background:
+        radial-gradient(circle at 30% 24%, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.72) 26%, rgba(255,255,255,0.08) 27%),
+        linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.16) 100%),
+        var(--icon-bg);
+      border: 1px solid rgba(255,255,255,0.65);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.78),
+        inset 0 -10px 18px rgba(255,255,255,0.12),
+        0 10px 22px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow: hidden;
     }
 
     .dd-icon-pill span:last-child {
@@ -874,9 +891,37 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   .dd-icon-symbol {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     border-radius: 14px;
     font-size: 16px;
   }
+
+  .dd-icon-label {
+    min-height: 32px;
+    max-height: 32px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+    .dd-icon-label {
+      display: -webkit-box;
+      width: 100%;
+      min-height: 34px;
+      max-height: 34px;
+      line-height: 1.3;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      word-break: keep-all;
+      white-space: normal;
+      overflow: hidden;
+      text-align: center;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      position: relative;
+      z-index: 1;
+    }
 
   .dd-flow-main {
     padding: 24px 14px 56px;
