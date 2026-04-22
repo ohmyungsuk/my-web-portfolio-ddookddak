@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -589,6 +589,39 @@ export default function RequestCreateFlow() {
   const [draftOption, setDraftOption] = useState("");
   const [draftText, setDraftText] = useState("");
 
+  const iconRowRef = useRef(null);
+  const dragStateRef = useRef({
+    isDown: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
+
+  const handleIconDragStart = (event) => {
+    const row = iconRowRef.current;
+    if (!row) return;
+
+    dragStateRef.current.isDown = true;
+    dragStateRef.current.startX = event.pageX - row.offsetLeft;
+    dragStateRef.current.scrollLeft = row.scrollLeft;
+    row.classList.add("dragging");
+  };
+
+  const handleIconDragMove = (event) => {
+    const row = iconRowRef.current;
+    if (!row || !dragStateRef.current.isDown) return;
+
+    event.preventDefault();
+    const x = event.pageX - row.offsetLeft;
+    const walk = (x - dragStateRef.current.startX) * 1.1;
+    row.scrollLeft = dragStateRef.current.scrollLeft - walk;
+  };
+
+  const handleIconDragEnd = () => {
+    const row = iconRowRef.current;
+    dragStateRef.current.isDown = false;
+    if (row) row.classList.remove("dragging");
+  };
+
   const selectedCategory = useMemo(() => {
     return (
       CATEGORY_DATA.find((item) => item.id === selectedCategoryId) ||
@@ -753,14 +786,22 @@ export default function RequestCreateFlow() {
       line-height: 1.2;
     }
 
-    .dd-icon-banner {
-      width: min(1120px, 100%);
-      margin: 0 auto 28px;
-      padding: 18px 18px;
-      border-radius: 34px;
-      background: rgba(236, 243, 255, 0.96);
-      border: 1px solid rgba(59, 130, 246, 0.16);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.75);
+     .dd-icon-row {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: stretch;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 24px;
+      cursor: grab;
+      user-select: none;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .dd-icon-row::-webkit-scrollbar {
+      display: none;
     }
 
     .dd-icon-row {
@@ -778,27 +819,43 @@ export default function RequestCreateFlow() {
       display: none;
     }
 
-    .dd-icon-pill {
+        .dd-icon-row.dragging {
+      cursor: grabbing;
+    }
+
+        .dd-icon-pill {
+      position: relative;
       display: inline-flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      width: 92px;
-      min-width: 92px;
-      min-height: 102px;
-      padding: 10px 0;
+      gap: 10px;
+      width: 98px;
+      min-width: 98px;
+      min-height: 96px;
+      padding: 12px 8px;
       border-radius: 24px;
-      border: 1px solid rgba(226, 232, 240, 0.96);
-      background: #ffffff;
+      border: 1px solid rgba(216, 227, 243, 0.9);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.58) 100%);
       color: #334155;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       cursor: pointer;
-      transition: all 0.18s ease;
-      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        0 8px 20px rgba(15, 23, 42, 0.05);
       text-align: center;
       white-space: normal;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      flex: 0 0 auto;
+      scroll-snap-align: start;
     }
 
     .dd-icon-pill:hover {
@@ -1519,52 +1576,82 @@ export default function RequestCreateFlow() {
     }
 
     @media (max-width: 768px) {
-      .dd-flow-main {
-        padding: 24px 14px 56px;
-      }
+  .dd-icon-banner {
+    width: 100%;
+    margin: 0 auto 20px;
+    padding: 12px;
+    border-radius: 24px;
+  }
 
-      .dd-board-wrap {
-        grid-template-columns: 1fr;
-      }
+  .dd-icon-row {
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 2px 18px;
+  }
 
-      .dd-board-intro {
-        grid-template-columns: 1fr;
-      }
+  .dd-icon-pill {
+    width: 84px;
+    min-width: 84px;
+    min-height: 84px;
+    padding: 10px 6px;
+    border-radius: 18px;
+    gap: 8px;
+    font-size: 12px;
+  }
 
-      .dd-request-title {
-        font-size: 24px;
-        margin-bottom: 20px;
-      }
+  .dd-icon-symbol {
+    width: 36px;
+    height: 36px;
+    border-radius: 14px;
+    font-size: 16px;
+  }
 
-      .dd-top-hero {
-        padding: 20px;
-      }
+  .dd-flow-main {
+    padding: 24px 14px 56px;
+  }
 
-      .dd-category-board {
-        grid-template-columns: 1fr;
-      }
+  .dd-board-wrap {
+    grid-template-columns: 1fr;
+  }
 
-      .dd-category-card {
-        min-height: auto;
-      }
+  .dd-board-intro {
+    grid-template-columns: 1fr;
+  }
 
-      .dd-service-panel {
-        padding: 20px;
-        border-radius: 22px;
-      }
+  .dd-request-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
 
-      .dd-service-title {
-        font-size: 22px;
-      }
+  .dd-top-hero {
+    padding: 20px;
+  }
 
-      .dd-service-grid {
-        grid-template-columns: 1fr;
-      }
+  .dd-category-board {
+    grid-template-columns: 1fr;
+  }
 
-      .dd-actions {
-        grid-template-columns: 1fr;
-      }
-    }
+  .dd-category-card {
+    min-height: auto;
+  }
+
+  .dd-service-panel {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .dd-service-title {
+    font-size: 22px;
+  }
+
+  .dd-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dd-actions {
+    grid-template-columns: 1fr;
+  }
+}
   `;
 
   if (selectedService) {
@@ -1738,21 +1825,32 @@ export default function RequestCreateFlow() {
         <h1 className="dd-request-title">견적요청</h1>
 
         <section className="dd-icon-banner">
-          <div className="dd-icon-row">
+          <div
+            ref={iconRowRef}
+            className="dd-icon-row"
+            onMouseDown={handleIconDragStart}
+            onMouseMove={handleIconDragMove}
+            onMouseUp={handleIconDragEnd}
+            onMouseLeave={handleIconDragEnd}
+          >
             {CATEGORY_DATA.map((category) => (
               <button
                 key={category.id}
                 type="button"
                 className={`dd-icon-pill ${selectedCategoryId === category.id ? "active" : ""}`}
                 onClick={() => setSelectedCategoryId(category.id)}
+                aria-pressed={selectedCategoryId === category.id}
               >
                 <span
                   className="dd-icon-symbol"
-                  style={{ background: category.bg, color: category.color }}
+                  style={{
+                    "--icon-bg": category.bg,
+                    "--icon-color": category.color,
+                  }}
                 >
-                  {category.icon}
+                  <span className="dd-icon-glyph">{category.icon}</span>
                 </span>
-                <span>{category.title}</span>
+                <span className="dd-icon-label">{category.title}</span>
               </button>
             ))}
           </div>
