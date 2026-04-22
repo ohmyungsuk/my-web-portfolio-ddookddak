@@ -3,207 +3,119 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 import "../index.css";
 
-function AllRequestsPage({ onGoHome, onClickRequest }) {
-  const navigate = useNavigate();
-  const [requests, setRequests] = useState([]);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+function normalizeStatus(status) {
+  if (status === "pending" || status === "요청 등록") return "pending";
+  if (status === "quoted" || status === "견적 협의중") return "quoted";
+  if (status === "planned" || status === "작업 예정") return "planned";
+  if (status === "in_progress" || status === "진행중") return "in_progress";
+  if (status === "completed" || status === "완료됨") return "completed";
+  return "unknown";
+}
 
-  const isMobile = windowWidth <= 900;
+function getStatusText(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === "pending") return "요청 등록";
+  if (normalized === "quoted") return "견적 협의중";
+  if (normalized === "planned") return "작업 예정";
+  if (normalized === "in_progress") return "진행중";
+  if (normalized === "completed") return "완료됨";
+  return status || "상태 없음";
+}
 
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+function getStatusStyle(status) {
+  const normalized = normalizeStatus(status);
 
-  useEffect(() => {
-    const fetchAllRequests = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("requests")
-          .select("*")
-          .order("created_at", { ascending: false });
+  if (normalized === "pending") {
+    return { backgroundColor: "#eef2f7", color: "#475569" };
+  }
+  if (normalized === "quoted") {
+    return { backgroundColor: "#ffedd5", color: "#c2410c" };
+  }
+  if (normalized === "planned") {
+    return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
+  }
+  if (normalized === "in_progress") {
+    return { backgroundColor: "#dcfce7", color: "#15803d" };
+  }
+  if (normalized === "completed") {
+    return { backgroundColor: "#bbf7d0", color: "#166534" };
+  }
 
-        if (error) throw error;
-        setRequests(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("전체 요청 목록 불러오기 실패:", error);
-        setMessage(error.message || "전체 요청 목록을 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  return { backgroundColor: "#f3f4f6", color: "#111827" };
+}
 
-    fetchAllRequests();
-  }, []);
+function formatDate(value) {
+  if (!value) return "등록일 정보 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
 
-  const summary = useMemo(() => {
-    const total = requests.length;
-    const open = requests.filter((item) => item.status === "요청 등록").length;
-    const inProgress = requests.filter(
-      (item) =>
-        item.status === "견적 협의중" ||
-        item.status === "작업 예정" ||
-        item.status === "진행중"
-    ).length;
-    const completed = requests.filter((item) => item.status === "완료됨").length;
+function parseDescription(description) {
+  const raw = description || "";
+  const lines = raw.split("\n");
 
-    return { total, open, inProgress, completed };
-  }, [requests]);
+  const placeType =
+    lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "-";
 
-  const getStatusStyle = (status) => {
-    if (status === "요청 등록") return { backgroundColor: "#eef2f7", color: "#475569" };
-    if (status === "견적 협의중") return { backgroundColor: "#ffedd5", color: "#c2410c" };
-    if (status === "작업 예정") return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
-    if (status === "진행중") return { backgroundColor: "#dcfce7", color: "#15803d" };
-    if (status === "완료됨") return { backgroundColor: "#bbf7d0", color: "#166534" };
-    return { backgroundColor: "#f3f4f6", color: "#111827" };
+  const issueType =
+    lines
+      .find((line) => line.startsWith("도움이 필요한 내용:"))
+      ?.replace("도움이 필요한 내용:", "")
+      .trim() || "-";
+
+  const schedule =
+    lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
+
+  const detailText =
+    lines
+      .find((line) => line.startsWith("상세 설명:"))
+      ?.replace("상세 설명:", "")
+      .trim() || raw || "요청 내용이 없습니다.";
+
+  return {
+    placeType,
+    issueType,
+    schedule,
+    detailText,
   };
+}
 
-  const formatDate = (value) => {
-    if (!value) return "등록일 정보 없음";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const styles = getPageStyles(isMobile);
+function HoverButton({
+  children,
+  onClick,
+  type = "button",
+  style,
+  hoverStyle = {},
+  disabled = false,
+}) {
+  const [isHover, setIsHover] = useState(false);
 
   return (
-    <div style={styles.shell}>
-      <div style={styles.wrap}>
-        <div style={styles.topbar}>
-          <div
-            style={{ ...styles.brand, cursor: "pointer" }}
-            onClick={() => navigate("/")}
-          >
-            <div style={styles.brandMark}>ㄸ</div>
-            <div style={styles.brandText}>뚝딱</div>
-          </div>
-
-          <button type="button" className="button-hover" style={styles.backBtn} onClick={onGoHome}>
-            메인으로 돌아가기
-          </button>
-        </div>
-
-        <div style={styles.grid}>
-          <div style={styles.mainCard}>
-            <div style={styles.badge}>전체 요청 목록</div>
-
-            <h1 style={styles.title}>등록된 전체 요청</h1>
-            <p style={styles.desc}>
-              모든 사용자가 등록한 요청을 최신순으로 확인할 수 있습니다.
-            </p>
-
-            {!loading && !message && (
-              <div style={styles.chipRow}>
-                <div style={styles.chip}>전체 {summary.total}개</div>
-                <div style={styles.chip}>신규 {summary.open}개</div>
-                <div style={styles.chip}>진행중 {summary.inProgress}개</div>
-                <div style={styles.chip}>완료 {summary.completed}개</div>
-              </div>
-            )}
-
-            <div style={styles.listWrap}>
-              {loading && <p style={styles.infoText}>불러오는 중...</p>}
-
-              {!loading && message && <div className="message error">{message}</div>}
-
-              {!loading && !message && requests.length === 0 && (
-                <div style={styles.emptyCard}>등록된 요청이 없습니다.</div>
-              )}
-
-              {!loading &&
-                !message &&
-                requests.length > 0 &&
-                requests.map((request) => (
-                  <div
-                    key={request.id}
-                    style={styles.requestCard}
-                    onClick={() => onClickRequest(request)}
-                  >
-                    <div style={styles.requestTop}>
-                      <div>
-                        <h3 style={styles.requestTitle}>{request.title}</h3>
-                        <div style={styles.requestSub}>요청 번호 #{request.id}</div>
-                      </div>
-
-                      <span
-                        style={{
-                          ...styles.statusPill,
-                          ...getStatusStyle(request.status),
-                        }}
-                      >
-                        {request.status}
-                      </span>
-                    </div>
-
-                    <div style={styles.metaGrid}>
-                      <div style={styles.metaBox}>
-                        <div style={styles.metaLabel}>카테고리</div>
-                        <div style={styles.metaValue}>{request.category}</div>
-                      </div>
-
-                      <div style={styles.metaBox}>
-                        <div style={styles.metaLabel}>장소</div>
-                        <div style={styles.metaValue}>{request.location}</div>
-                      </div>
-
-                      <div style={styles.metaBox}>
-                        <div style={styles.metaLabel}>담당자</div>
-                        <div style={styles.metaValue}>
-                          {request.assigned_username
-                            ? request.assigned_username
-                            : request.assigned_user_id
-                            ? "배정됨"
-                            : "아직 없음"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={styles.previewBox}>
-                      {request.content?.trim() || "요청 내용이 없습니다."}
-                    </div>
-
-                    <div style={styles.cardFooter}>
-                      <div style={styles.footerDate}>
-                        등록일 {formatDate(request.created_at)}
-                      </div>
-                      <div style={styles.footerLink}>상세보기 →</div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          <div style={styles.sideWrap}>
-            <div style={styles.sideHero}>
-              <p style={styles.sideHeroLabel}>전체 요청</p>
-              <span style={styles.sideHeroBig}>{summary.total}건</span>
-              <p style={styles.sideHeroText}>
-                현재 시스템에 등록된 전체 요청 수입니다.
-              </p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>신규 요청</p>
-              <strong style={styles.sideSoftTitle}>{summary.open}건</strong>
-              <p style={styles.sideSoftText}>아직 수락 전인 요청입니다.</p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>진행중 요청</p>
-              <strong style={styles.sideSoftTitle}>{summary.inProgress}건</strong>
-              <p style={styles.sideSoftText}>협의중, 작업 예정, 진행중을 포함합니다.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="button-hover"
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      onBlur={() => setIsHover(false)}
+      style={{
+        outline: "none",
+        WebkitTapHighlightColor: "transparent",
+        transition:
+          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
+        ...style,
+        ...(isHover && !disabled ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -342,6 +254,7 @@ function getPageStyles(isMobile) {
       padding: "20px",
       boxShadow: "0 16px 30px rgba(15, 23, 42, 0.04)",
       cursor: "pointer",
+      transition: "transform 0.18s ease, box-shadow 0.18s ease",
     },
     requestTop: {
       display: "flex",
@@ -356,6 +269,7 @@ function getPageStyles(isMobile) {
       fontWeight: "900",
       letterSpacing: "-0.4px",
       color: "#0f172a",
+      wordBreak: "break-word",
     },
     requestSub: {
       marginTop: "8px",
@@ -404,9 +318,19 @@ function getPageStyles(isMobile) {
       borderRadius: "16px",
       background: "#f8fafc",
       border: "1px solid #e5ebf5",
+    },
+    previewLabel: {
+      fontSize: "12px",
+      fontWeight: "800",
+      color: "#64748b",
+      marginBottom: "8px",
+    },
+    previewValue: {
       color: "#475569",
       fontSize: "14px",
       lineHeight: "1.8",
+      fontWeight: "600",
+      wordBreak: "break-word",
     },
     cardFooter: {
       marginTop: "16px",
@@ -483,6 +407,228 @@ function getPageStyles(isMobile) {
       lineHeight: "1.8",
     },
   };
+}
+
+function AllRequestsPage({ onGoHome, onClickRequest }) {
+  const navigate = useNavigate();
+
+  const [requests, setRequests] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  const isMobile = windowWidth <= 900;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const fetchAllRequests = async () => {
+      try {
+        setLoading(true);
+        setMessage("");
+
+        const { data, error } = await supabase
+          .from("requests")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        setRequests(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("전체 요청 목록 불러오기 실패:", error);
+        setMessage(error.message || "전체 요청 목록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllRequests();
+  }, []);
+
+  const summary = useMemo(() => {
+    const normalized = requests.map((item) => normalizeStatus(item.status));
+    const total = requests.length;
+    const open = normalized.filter((status) => status === "pending").length;
+    const inProgress = normalized.filter((status) =>
+      ["quoted", "planned", "in_progress"].includes(status)
+    ).length;
+    const completed = normalized.filter((status) => status === "completed").length;
+
+    return { total, open, inProgress, completed };
+  }, [requests]);
+
+  const styles = getPageStyles(isMobile);
+
+  const handleOpenDetail = (request) => {
+    if (onClickRequest) {
+      onClickRequest(request);
+      return;
+    }
+
+    navigate(`/requests/${request.id}`, {
+      state: {
+        request,
+        from: "/requests/all",
+      },
+    });
+  };
+
+  return (
+    <div style={styles.shell}>
+      <div style={styles.wrap}>
+        <div style={styles.topbar}>
+          <div
+            style={{ ...styles.brand, cursor: "pointer" }}
+            onClick={() => navigate("/")}
+          >
+            <div style={styles.brandMark}>ㄸ</div>
+            <div style={styles.brandText}>뚝딱</div>
+          </div>
+
+          <HoverButton
+            type="button"
+            style={styles.backBtn}
+            hoverStyle={{
+              backgroundColor: "#F8FBFF",
+              color: "#2F80ED",
+              transform: isMobile ? "none" : "translateY(-1px)",
+              boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+            }}
+            onClick={onGoHome ? onGoHome : () => navigate("/")}
+          >
+            메인으로 돌아가기
+          </HoverButton>
+        </div>
+
+        <div style={styles.grid}>
+          <div style={styles.mainCard}>
+            <div style={styles.badge}>전체 요청 목록</div>
+
+            <h1 style={styles.title}>등록된 전체 요청</h1>
+            <p style={styles.desc}>
+              모든 사용자가 등록한 요청을 최신순으로 확인할 수 있습니다.
+            </p>
+
+            {!loading && !message && (
+              <div style={styles.chipRow}>
+                <div style={styles.chip}>전체 {summary.total}개</div>
+                <div style={styles.chip}>신규 {summary.open}개</div>
+                <div style={styles.chip}>진행중 {summary.inProgress}개</div>
+                <div style={styles.chip}>완료 {summary.completed}개</div>
+              </div>
+            )}
+
+            <div style={styles.listWrap}>
+              {loading && <p style={styles.infoText}>불러오는 중...</p>}
+
+              {!loading && message && <div className="message error">{message}</div>}
+
+              {!loading && !message && requests.length === 0 && (
+                <div style={styles.emptyCard}>등록된 요청이 없습니다.</div>
+              )}
+
+              {!loading &&
+                !message &&
+                requests.length > 0 &&
+                requests.map((request) => {
+                  const parsed = parseDescription(request.description);
+
+                  return (
+                    <div
+                      key={request.id}
+                      style={styles.requestCard}
+                      onClick={() => handleOpenDetail(request)}
+                    >
+                      <div style={styles.requestTop}>
+                        <div>
+                          <h3 style={styles.requestTitle}>{request.title}</h3>
+                          <div style={styles.requestSub}>요청 번호 #{request.id}</div>
+                        </div>
+
+                        <span
+                          style={{
+                            ...styles.statusPill,
+                            ...getStatusStyle(request.status),
+                          }}
+                        >
+                          {getStatusText(request.status)}
+                        </span>
+                      </div>
+
+                      <div style={styles.metaGrid}>
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>카테고리</div>
+                          <div style={styles.metaValue}>{request.category || "-"}</div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>공간 유형</div>
+                          <div style={styles.metaValue}>{parsed.placeType}</div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>담당자</div>
+                          <div style={styles.metaValue}>
+                            {request.assigned_username
+                              ? request.assigned_username
+                              : request.assigned_user_id
+                              ? "배정됨"
+                              : "아직 없음"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={styles.previewBox}>
+                        <div style={styles.previewLabel}>요청 내용</div>
+                        <div style={styles.previewValue}>
+                          {parsed.issueType !== "-" ? parsed.issueType : parsed.detailText}
+                        </div>
+                      </div>
+
+                      <div style={styles.cardFooter}>
+                        <div style={styles.footerDate}>등록일 {formatDate(request.created_at)}</div>
+                        <div style={styles.footerLink}>상세보기 →</div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          <div style={styles.sideWrap}>
+            <div style={styles.sideHero}>
+              <p style={styles.sideHeroLabel}>전체 요청</p>
+              <span style={styles.sideHeroBig}>{summary.total}건</span>
+              <p style={styles.sideHeroText}>현재 시스템에 등록된 전체 요청 수입니다.</p>
+            </div>
+
+            <div style={styles.sideSoft}>
+              <p style={styles.sideSoftLabel}>신규 요청</p>
+              <strong style={styles.sideSoftTitle}>{summary.open}건</strong>
+              <p style={styles.sideSoftText}>아직 수락 전인 요청입니다.</p>
+            </div>
+
+            <div style={styles.sideSoft}>
+              <p style={styles.sideSoftLabel}>진행중 요청</p>
+              <strong style={styles.sideSoftTitle}>{summary.inProgress}건</strong>
+              <p style={styles.sideSoftText}>협의중, 작업 예정, 진행중 상태를 포함합니다.</p>
+            </div>
+
+            <div style={styles.sideSoft}>
+              <p style={styles.sideSoftLabel}>완료된 요청</p>
+              <strong style={styles.sideSoftTitle}>{summary.completed}건</strong>
+              <p style={styles.sideSoftText}>완료 처리된 전체 요청 내역입니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default AllRequestsPage;

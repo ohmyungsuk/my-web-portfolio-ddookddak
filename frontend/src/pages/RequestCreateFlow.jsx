@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 const CATEGORY_DATA = [
   {
@@ -505,6 +507,7 @@ function buildQuestions(serviceName, issues) {
 }
 
 export default function RequestCreateFlow() {
+  const navigate = useNavigate();
   const [selectedCategoryId, setSelectedCategoryId] = useState("electrical");
   const [selectedService, setSelectedService] = useState(null);
 
@@ -610,15 +613,34 @@ export default function RequestCreateFlow() {
     setStep(targetIndex);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    const savedUser = localStorage.getItem("loginUser");
+    const loginUser = savedUser ? JSON.parse(savedUser) : null;
+
+    if (!loginUser?.id) {
+      alert("로그인 정보가 없습니다. 다시 로그인 후 시도해주세요.");
+      return;
+    }
+
     const payload = {
+      user_id: loginUser.id,
+      title: `${selectedCategory.title} - ${selectedService.name}`,
       category: selectedCategory.title,
-      service: selectedService.name,
-      ...answers,
+      location: answers.placeType,
+      content: `서비스: ${selectedService.name}\n요청 내용: ${answers.issueType}\n희망 일정: ${answers.schedule}\n상세 설명: ${answers.detail}`,
+      status: "요청 등록",
+      assigned_user_id: null,
     };
 
-    console.log("요청등록 payload:", payload);
-    alert("요청이 등록되었어요. 다음 단계에서 백엔드 저장 연결하면 됩니다.");
+    try {
+      const { error } = await supabase.from("requests").insert([payload]);
+      if (error) throw error;
+
+      navigate("/requests/my");
+    } catch (error) {
+      console.error("요청 등록 실패:", error);
+      alert(error.message || "요청 등록 중 문제가 발생했습니다.");
+    }
   };
 
   const styles = `

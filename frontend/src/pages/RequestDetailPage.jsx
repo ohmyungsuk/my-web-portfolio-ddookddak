@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 import "../index.css";
 
-function RequestDetailPage({ onGoHome }) {
+function RequestDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -12,16 +12,32 @@ function RequestDetailPage({ onGoHome }) {
   const [loading, setLoading] = useState(!location.state?.request);
   const [message, setMessage] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-
-  const savedUser = localStorage.getItem("loginUser");
-  const loginUser = savedUser ? JSON.parse(savedUser) : null;
+  const [loginUser, setLoginUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
 
   const fromPath = location.state?.from || "/requests/all";
-  const isMobile = useMemo(() => window.innerWidth <= 900, []);
 
   const BRAND_COLOR = "#2F80ED";
   const BRAND_HOVER = "#1F6FD6";
   const BRAND_SOFT = "#F8FBFF";
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setLoginUser(user || null);
+    };
+
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -58,29 +74,76 @@ function RequestDetailPage({ onGoHome }) {
     navigate(fromPath);
   };
 
+  const handleGoHome = () => {
+    navigate("/");
+  };
+
   const getStatusStyle = (status) => {
-    if (status === "요청 등록") {
+    if (status === "pending" || status === "요청 등록") {
       return { backgroundColor: "#eef2f7", color: "#475569" };
     }
-    if (status === "견적 협의중") {
+    if (status === "quoted" || status === "견적 협의중") {
       return { backgroundColor: "#ffedd5", color: "#c2410c" };
     }
-    if (status === "작업 예정") {
+    if (status === "planned" || status === "작업 예정") {
       return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
     }
-    if (status === "진행중") {
+    if (status === "in_progress" || status === "진행중") {
       return { backgroundColor: "#dcfce7", color: "#15803d" };
     }
-    if (status === "완료됨") {
+    if (status === "completed" || status === "완료됨") {
       return { backgroundColor: "#bbf7d0", color: "#166534" };
     }
     return { backgroundColor: "#f3f4f6", color: "#111827" };
   };
 
+  const getStatusText = (status) => {
+    if (status === "pending") return "요청 등록";
+    if (status === "quoted") return "견적 협의중";
+    if (status === "planned") return "작업 예정";
+    if (status === "in_progress") return "진행중";
+    if (status === "completed") return "완료됨";
+    return status || "상태 없음";
+  };
+
+  const parsedDescription = useMemo(() => {
+    const raw = detail?.description || "";
+    const lines = raw.split("\n");
+
+    const placeType =
+      lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "-";
+
+    const issueType =
+      lines
+        .find((line) => line.startsWith("도움이 필요한 내용:"))
+        ?.replace("도움이 필요한 내용:", "")
+        .trim() || "-";
+
+    const schedule =
+      lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
+
+    const detailText =
+      lines
+        .find((line) => line.startsWith("상세 설명:"))
+        ?.replace("상세 설명:", "")
+        .trim() || raw || "내용이 없습니다.";
+
+    return {
+      placeType,
+      issueType,
+      schedule,
+      detailText,
+      raw,
+    };
+  }, [detail]);
+
   const writerText =
     detail?.user_id === loginUser?.id
       ? "나"
-      : detail?.writer_name || detail?.writer_nickname || "작성자 정보 없음";
+      : detail?.writer_name ||
+        detail?.writer_nickname ||
+        detail?.writer_email ||
+        "작성자 정보 없음";
 
   const assignedText =
     !detail?.assigned_user_id
@@ -93,26 +156,28 @@ function RequestDetailPage({ onGoHome }) {
     loginUser &&
     detail &&
     detail.user_id !== loginUser.id &&
-    detail.status === "요청 등록" &&
+    (detail.status === "pending" || detail.status === "요청 등록") &&
     !detail.assigned_user_id;
 
   const canSetPlanned =
     loginUser &&
     detail &&
     detail.assigned_user_id === loginUser.id &&
-    detail.status === "견적 협의중";
+    (detail.status === "quoted" || detail.status === "견적 협의중");
 
   const canStartWork =
     loginUser &&
     detail &&
     detail.assigned_user_id === loginUser.id &&
-    detail.status === "작업 예정";
+    (detail.status === "planned" || detail.status === "작업 예정");
 
   const canComplete =
     loginUser &&
     detail &&
     detail.assigned_user_id === loginUser.id &&
-    detail.status === "진행중";
+    (detail.status === "in_progress" || detail.status === "진행중");
+
+  const isWriter = loginUser && detail && detail.user_id === loginUser.id;
 
   const updateRequest = async (updateData, successMessage) => {
     if (!detail) return;
@@ -143,24 +208,28 @@ function RequestDetailPage({ onGoHome }) {
   const handleAccept = async () => {
     await updateRequest(
       {
-        status: "견적 협의중",
+        status: "quoted",
         assigned_user_id: loginUser.id,
-        assigned_username: loginUser.username || loginUser.name || "작업자",
+        assigned_username:
+          loginUser.user_metadata?.name ||
+          loginUser.user_metadata?.full_name ||
+          loginUser.email ||
+          "작업자",
       },
       "요청을 수락했습니다."
     );
   };
 
   const handleSetPlanned = async () => {
-    await updateRequest({ status: "작업 예정" }, "작업 예정 상태로 변경되었습니다.");
+    await updateRequest({ status: "planned" }, "작업 예정 상태로 변경되었습니다.");
   };
 
   const handleStartWork = async () => {
-    await updateRequest({ status: "진행중" }, "작업을 시작했습니다.");
+    await updateRequest({ status: "in_progress" }, "작업을 시작했습니다.");
   };
 
   const handleComplete = async () => {
-    await updateRequest({ status: "완료됨" }, "작업을 완료 처리했습니다.");
+    await updateRequest({ status: "completed" }, "작업을 완료 처리했습니다.");
   };
 
   const formatDate = (value) => {
@@ -176,7 +245,7 @@ function RequestDetailPage({ onGoHome }) {
     shell: {
       minHeight: "100vh",
       background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
-      padding: isMobile ? "20px 14px 40px" : "34px 20px 64px",
+      padding: isMobile ? "18px 14px 40px" : "34px 20px 64px",
     },
     wrap: { maxWidth: "1180px", margin: "0 auto" },
     topbar: {
@@ -255,11 +324,12 @@ function RequestDetailPage({ onGoHome }) {
     },
     title: {
       margin: 0,
-      fontSize: isMobile ? "34px" : "48px",
+      fontSize: isMobile ? "30px" : "44px",
       lineHeight: "1.14",
       letterSpacing: isMobile ? "-1px" : "-1.6px",
       fontWeight: "900",
       color: "#0f172a",
+      wordBreak: "break-word",
     },
     desc: {
       margin: "16px 0 0",
@@ -317,7 +387,7 @@ function RequestDetailPage({ onGoHome }) {
       marginBottom: "12px",
     },
     contentBox: {
-      minHeight: "170px",
+      minHeight: "110px",
       border: "1px solid #d7deea",
       borderRadius: "18px",
       background: "#ffffff",
@@ -476,7 +546,7 @@ function RequestDetailPage({ onGoHome }) {
               </HoverButton>
 
               <HoverButton
-                onClick={onGoHome}
+                onClick={handleGoHome}
                 style={styles.homeBtn}
                 hoverStyle={{
                   transform: isMobile ? "none" : "translateY(-1px)",
@@ -531,7 +601,7 @@ function RequestDetailPage({ onGoHome }) {
               </div>
 
               <span style={{ ...styles.statusPill, ...getStatusStyle(detail.status) }}>
-                {detail.status}
+                {getStatusText(detail.status)}
               </span>
             </div>
 
@@ -564,18 +634,35 @@ function RequestDetailPage({ onGoHome }) {
 
               <div style={styles.infoCard}>
                 <div style={styles.infoLabel}>카테고리</div>
-                <div style={styles.infoValue}>{detail.category}</div>
+                <div style={styles.infoValue}>{detail.category || "-"}</div>
               </div>
 
               <div style={styles.infoCard}>
-                <div style={styles.infoLabel}>장소</div>
-                <div style={styles.infoValue}>{detail.location}</div>
+                <div style={styles.infoLabel}>등록일</div>
+                <div style={styles.infoValue}>{formatDate(detail.created_at)}</div>
               </div>
             </div>
 
             <div style={styles.contentWrap}>
-              <div style={styles.contentLabel}>상세 내용</div>
-              <div style={styles.contentBox}>{detail.content?.trim() || "내용이 없습니다."}</div>
+              <div style={styles.contentLabel}>공간 유형</div>
+              <div style={styles.contentBox}>{parsedDescription.placeType}</div>
+            </div>
+
+            <div style={styles.contentWrap}>
+              <div style={styles.contentLabel}>도움이 필요한 내용</div>
+              <div style={styles.contentBox}>{parsedDescription.issueType}</div>
+            </div>
+
+            <div style={styles.contentWrap}>
+              <div style={styles.contentLabel}>희망 일정</div>
+              <div style={styles.contentBox}>{parsedDescription.schedule}</div>
+            </div>
+
+            <div style={styles.contentWrap}>
+              <div style={styles.contentLabel}>상세 설명</div>
+              <div style={styles.contentBox}>
+                {parsedDescription.detailText?.trim() || "내용이 없습니다."}
+              </div>
             </div>
 
             <div style={styles.actionStack}>
@@ -651,7 +738,7 @@ function RequestDetailPage({ onGoHome }) {
               </HoverButton>
 
               <HoverButton
-                onClick={onGoHome}
+                onClick={handleGoHome}
                 style={styles.homeBtn}
                 hoverStyle={{
                   transform: isMobile ? "none" : "translateY(-1px)",
@@ -666,7 +753,7 @@ function RequestDetailPage({ onGoHome }) {
           <div style={styles.sideWrap}>
             <div style={styles.sideHero}>
               <p style={styles.sideHeroLabel}>현재 상태</p>
-              <span style={styles.sideHeroBig}>{detail.status}</span>
+              <span style={styles.sideHeroBig}>{getStatusText(detail.status)}</span>
               <p style={styles.sideHeroText}>
                 등록일 {formatDate(detail.created_at)}
                 <br />
@@ -695,6 +782,14 @@ function RequestDetailPage({ onGoHome }) {
               <strong style={styles.sideSoftTitle}>{assignedText}</strong>
               <p style={styles.sideSoftText}>
                 담당자가 아직 없으면 전체 요청 목록에서 수락 후 진행할 수 있습니다.
+              </p>
+            </div>
+
+            <div style={styles.sideSoft}>
+              <p style={styles.sideSoftLabel}>작성자 기준</p>
+              <strong style={styles.sideSoftTitle}>{isWriter ? "내가 등록한 요청" : "다른 사용자의 요청"}</strong>
+              <p style={styles.sideSoftText}>
+                내가 작성한 요청이면 진행 상태를 확인하고, 다른 사용자의 요청이면 작업 수락 여부를 판단할 수 있습니다.
               </p>
             </div>
           </div>
