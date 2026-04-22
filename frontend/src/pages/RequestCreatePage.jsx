@@ -20,6 +20,20 @@ function RequestCreatePage({ onGoHome }) {
 
   const isMobile = windowWidth <= 900;
 
+  const CATEGORY_OPTIONS = [
+    { value: "electric", label: "전기", icon: "⚡", bg: "#EEF4FF", color: "#1D4ED8" },
+    { value: "tools", label: "설비", icon: "🛠️", bg: "#ECFEFF", color: "#0F766E" },
+    { value: "water", label: "누수", icon: "💧", bg: "#EFF6FF", color: "#2563EB" },
+    { value: "lock", label: "도어락", icon: "🔐", bg: "#F5F3FF", color: "#7C3AED" },
+    { value: "aircon", label: "에어컨", icon: "❄️", bg: "#EFF6FF", color: "#0F61D8" },
+    { value: "cctv", label: "CCTV", icon: "📷", bg: "#FFF7ED", color: "#C2410C" },
+    { value: "signboard", label: "간판", icon: "🪧", bg: "#FDF2F8", color: "#BE123C" },
+    { value: "etc", label: "기타", icon: "📦", bg: "#F8FAFC", color: "#475569" },
+  ];
+
+  const selectedCategoryLabel =
+    CATEGORY_OPTIONS.find((item) => item.value === category)?.label || "";
+
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
@@ -47,7 +61,7 @@ function RequestCreatePage({ onGoHome }) {
         {
           user_id: loginUser.id,
           title: title.trim(),
-          category: category.trim(),
+          category: selectedCategoryLabel || category.trim(),
           location: location.trim(),
           content: content.trim(),
           status: "요청 등록",
@@ -322,6 +336,60 @@ function RequestCreatePage({ onGoHome }) {
       color: "#94a3b8",
       lineHeight: "1.8",
     },
+    categoryGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
+      gap: "14px",
+      marginTop: "18px",
+    },
+    categoryCard: {
+      borderRadius: "24px",
+      minHeight: "124px",
+      border: "1px solid transparent",
+      padding: "18px 16px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      cursor: "pointer",
+      transition: "transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease",
+      boxShadow: "0 10px 28px rgba(15, 23, 42, 0.05)",
+      background: "#ffffff",
+    },
+    categoryCardSelected: {
+      borderColor: "#2F80ED",
+      boxShadow: "0 16px 36px rgba(47, 128, 237, 0.16)",
+      background: "rgba(47, 128, 237, 0.05)",
+    },
+    categoryIcon: {
+      width: "48px",
+      height: "48px",
+      borderRadius: "18px",
+      display: "grid",
+      placeItems: "center",
+      fontSize: "24px",
+      marginBottom: "10px",
+      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
+    },
+    categoryLabel: {
+      margin: 0,
+      fontSize: "15px",
+      fontWeight: 800,
+      color: "#111827",
+      letterSpacing: "-0.02em",
+    },
+    categoryHint: {
+      margin: 0,
+      fontSize: "13px",
+      color: "#64748b",
+      lineHeight: "1.6",
+    },
+    categorySummary: {
+      marginTop: "10px",
+      fontSize: "13px",
+      color: "#475569",
+      fontWeight: 700,
+    },
   };
 
   return (
@@ -383,17 +451,54 @@ function RequestCreatePage({ onGoHome }) {
 
               <div style={styles.fieldCard}>
                 <div style={styles.fieldTop}>
-                  <div style={styles.fieldLabel}>카테고리</div>
-                  <div style={styles.fieldSub}>전기 / 설비 / 누수 등 분류</div>
+                  <div style={styles.fieldLabel}>카테고리 선택</div>
+                  <div style={styles.fieldSub}>요청에 가장 가까운 항목을 골라주세요.</div>
                 </div>
 
-                <input
-                  style={styles.input}
-                  type="text"
-                  placeholder="예: 전기 / 설비 / 누수"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                />
+                <div style={styles.categoryGrid}>
+                  {CATEGORY_OPTIONS.map((item) => {
+                    const selected = category === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setCategory(item.value)}
+                        style={{
+                          ...styles.categoryCard,
+                          ...(selected ? styles.categoryCardSelected : {}),
+                          borderColor: selected ? "#2F80ED" : "transparent",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!selected) {
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.borderColor = "#dbe4f0";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!selected) {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.borderColor = "transparent";
+                          }
+                        }}
+                      >
+                        <div style={{
+                          ...styles.categoryIcon,
+                          background: item.bg,
+                          color: item.color,
+                        }}>
+                          {item.icon}
+                        </div>
+                        <div style={styles.categoryLabel}>{item.label}</div>
+                        <p style={styles.categoryHint}>바로 요청을 시작할 수 있는 대표 카테고리</p>
+                        {selected && (
+                          <div style={styles.categorySummary}>
+                            선택됨 • 다음 단계로 이동하세요
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={styles.fieldCard}>

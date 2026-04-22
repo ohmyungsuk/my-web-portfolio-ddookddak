@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
@@ -19,10 +19,44 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
 
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
+  const resetOAuthUiState = () => {
+    setLoading(false);
+    setErrorMessage("");
+    sessionStorage.removeItem("oauth_in_progress");
+    sessionStorage.removeItem("oauth_provider");
+    sessionStorage.removeItem("oauth_mode");
+  };
+
+  useEffect(() => {
+    resetOAuthUiState();
+
+    const handlePageShow = () => {
+      resetOAuthUiState();
+    };
+
+    const handleFocus = () => {
+      resetOAuthUiState();
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   const handleOAuthLogin = async (provider) => {
+    if (loading) return;
+
     try {
       setLoading(true);
       setErrorMessage("");
+
+      sessionStorage.setItem("oauth_in_progress", "true");
+      sessionStorage.setItem("oauth_provider", provider);
+      sessionStorage.setItem("oauth_mode", "login");
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -32,10 +66,16 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
       });
 
       if (error) {
+        sessionStorage.removeItem("oauth_in_progress");
+        sessionStorage.removeItem("oauth_provider");
+        sessionStorage.removeItem("oauth_mode");
         setErrorMessage(`${provider} 로그인 중 오류가 발생했습니다.`);
         setLoading(false);
       }
     } catch (error) {
+      sessionStorage.removeItem("oauth_in_progress");
+      sessionStorage.removeItem("oauth_provider");
+      sessionStorage.removeItem("oauth_mode");
       setErrorMessage(error.message || "소셜 로그인 중 문제가 발생했습니다.");
       setLoading(false);
     }

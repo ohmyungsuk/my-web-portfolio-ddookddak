@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
@@ -23,11 +23,45 @@ function Signup({ onSwitchToLogin }) {
 
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
+  const resetOAuthUiState = () => {
+    setLoading(false);
+    setErrorMessage("");
+    sessionStorage.removeItem("oauth_in_progress");
+    sessionStorage.removeItem("oauth_provider");
+    sessionStorage.removeItem("oauth_mode");
+  };
+
+  useEffect(() => {
+    resetOAuthUiState();
+
+    const handlePageShow = () => {
+      resetOAuthUiState();
+    };
+
+    const handleFocus = () => {
+      resetOAuthUiState();
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   const handleOAuthSignup = async (provider) => {
+    if (loading) return;
+
     try {
       setLoading(true);
       setErrorMessage("");
       setSuccessMessage("");
+
+      sessionStorage.setItem("oauth_in_progress", "true");
+      sessionStorage.setItem("oauth_provider", provider);
+      sessionStorage.setItem("oauth_mode", "signup");
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -37,10 +71,16 @@ function Signup({ onSwitchToLogin }) {
       });
 
       if (error) {
+        sessionStorage.removeItem("oauth_in_progress");
+        sessionStorage.removeItem("oauth_provider");
+        sessionStorage.removeItem("oauth_mode");
         setErrorMessage(`${provider} 회원가입 중 오류가 발생했습니다.`);
         setLoading(false);
       }
     } catch (error) {
+      sessionStorage.removeItem("oauth_in_progress");
+      sessionStorage.removeItem("oauth_provider");
+      sessionStorage.removeItem("oauth_mode");
       setErrorMessage(error.message || "소셜 회원가입 중 문제가 발생했습니다.");
       setLoading(false);
     }
@@ -473,7 +513,6 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="비밀번호를 입력하세요"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
                 style={inputStyle}
               />
             </div>
@@ -485,7 +524,6 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="비밀번호를 다시 입력하세요"
                 value={passwordCheck}
                 onChange={(e) => setPasswordCheck(e.target.value)}
-                autoComplete="new-password"
                 style={inputStyle}
               />
             </div>
@@ -503,17 +541,17 @@ function Signup({ onSwitchToLogin }) {
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}
             >
-              {loading ? "회원가입 중..." : "이메일 회원가입"}
+              {loading ? "가입 중..." : "이메일 회원가입"}
             </HoverButton>
 
             <HoverButton
               onClick={() => setMode("choice")}
               style={secondaryButtonStyle}
               hoverStyle={{
-                color: BRAND_COLOR,
                 backgroundColor: BRAND_SOFT,
-                boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
+                color: BRAND_COLOR,
                 transform: "translateY(-1px)",
+                boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
               }}
             >
               다른 방법 선택
@@ -561,7 +599,6 @@ function HoverButton({
       onBlur={() => setIsHover(false)}
       style={{
         outline: "none",
-        boxShadow: isHover && !disabled ? undefined : style?.boxShadow,
         WebkitTapHighlightColor: "transparent",
         transition:
           "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease",
