@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
-import "../index.css";
 
-function RequestDetailPage() {
+export default function RequestDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,11 +14,18 @@ function RequestDetailPage() {
   const [loginUser, setLoginUser] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
 
-  const fromPath = location.state?.from || "/requests/all";
+  const fromPath = location.state?.from || "/requests/my";
 
-  const BRAND_COLOR = "#2F80ED";
-  const BRAND_HOVER = "#1F6FD6";
-  const BRAND_SOFT = "#F8FBFF";
+  const BRAND = "#3b82f6";
+  const BRAND_HOVER = "#2563eb";
+  const BG = "#f4f7fb";
+  const CARD = "#ffffff";
+  const BORDER = "#dbe4f0";
+  const TEXT = "#1e293b";
+  const SUB = "#64748b";
+  const SOFT = "#f8fbff";
+  const GRAY_BTN = "#94a3b8";
+  const GRAY_BTN_HOVER = "#64748b";
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 900);
@@ -32,7 +38,6 @@ function RequestDetailPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
       setLoginUser(user || null);
     };
 
@@ -53,7 +58,6 @@ function RequestDetailPage() {
           .single();
 
         if (error) throw error;
-
         setDetail(data);
       } catch (error) {
         console.error("상세 요청 조회 실패:", error);
@@ -66,48 +70,8 @@ function RequestDetailPage() {
     fetchDetail();
   }, [id]);
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate(fromPath);
-  };
-
-  const handleGoHome = () => {
-    navigate("/");
-  };
-
-  const getStatusStyle = (status) => {
-    if (status === "pending" || status === "요청 등록") {
-      return { backgroundColor: "#eef2f7", color: "#475569" };
-    }
-    if (status === "quoted" || status === "견적 협의중") {
-      return { backgroundColor: "#ffedd5", color: "#c2410c" };
-    }
-    if (status === "planned" || status === "작업 예정") {
-      return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
-    }
-    if (status === "in_progress" || status === "진행중") {
-      return { backgroundColor: "#dcfce7", color: "#15803d" };
-    }
-    if (status === "completed" || status === "완료됨") {
-      return { backgroundColor: "#bbf7d0", color: "#166534" };
-    }
-    return { backgroundColor: "#f3f4f6", color: "#111827" };
-  };
-
-  const getStatusText = (status) => {
-    if (status === "pending") return "요청 등록";
-    if (status === "quoted") return "견적 협의중";
-    if (status === "planned") return "작업 예정";
-    if (status === "in_progress") return "진행중";
-    if (status === "completed") return "완료됨";
-    return status || "상태 없음";
-  };
-
   const parsedDescription = useMemo(() => {
-    const raw = detail?.description || "";
+    const raw = detail?.content || "";
     const lines = raw.split("\n");
 
     const placeType =
@@ -133,9 +97,45 @@ function RequestDetailPage() {
       issueType,
       schedule,
       detailText,
-      raw,
     };
   }, [detail]);
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
+      date.getDate()
+    ).padStart(2, "0")}`;
+  };
+
+  const getStatusText = (status) => {
+    if (status === "pending") return "요청 등록";
+    if (status === "quoted") return "견적 협의중";
+    if (status === "planned") return "작업 예정";
+    if (status === "in_progress") return "진행중";
+    if (status === "completed") return "완료됨";
+    return status || "상태 없음";
+  };
+
+  const getStatusStyle = (status) => {
+    if (status === "pending" || status === "요청 등록") {
+      return { backgroundColor: "#eef2f7", color: "#475569" };
+    }
+    if (status === "quoted" || status === "견적 협의중") {
+      return { backgroundColor: "#fff4e5", color: "#c2410c" };
+    }
+    if (status === "planned" || status === "작업 예정") {
+      return { backgroundColor: "#e8f0ff", color: "#1d4ed8" };
+    }
+    if (status === "in_progress" || status === "진행중") {
+      return { backgroundColor: "#eaf8ef", color: "#15803d" };
+    }
+    if (status === "completed" || status === "완료됨") {
+      return { backgroundColor: "#dcfce7", color: "#166534" };
+    }
+    return { backgroundColor: "#f1f5f9", color: "#334155" };
+  };
 
   const writerText =
     detail?.user_id === loginUser?.id
@@ -151,6 +151,8 @@ function RequestDetailPage() {
       : detail.assigned_user_id === loginUser?.id
       ? "나"
       : detail.assigned_username || "배정됨";
+
+  const isWriter = !!(loginUser && detail && detail.user_id === loginUser.id);
 
   const canAccept =
     loginUser &&
@@ -176,8 +178,6 @@ function RequestDetailPage() {
     detail &&
     detail.assigned_user_id === loginUser.id &&
     (detail.status === "in_progress" || detail.status === "진행중");
-
-  const isWriter = loginUser && detail && detail.user_id === loginUser.id;
 
   const updateRequest = async (updateData, successMessage) => {
     if (!detail) return;
@@ -232,330 +232,337 @@ function RequestDetailPage() {
     await updateRequest({ status: "completed" }, "작업을 완료 처리했습니다.");
   };
 
-  const formatDate = (value) => {
-    if (!value) return "등록일 정보 없음";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
+  const handleEdit = () => {
+    navigate(`/requests/edit/${detail.id}`, {
+      state: { request: detail },
+    });
   };
 
+  const handleDelete = async () => {
+    if (!detail || !isWriter) return;
+
+    const confirmed = window.confirm("이 요청을 삭제할까요?");
+    if (!confirmed) return;
+
+    try {
+      setActionLoading(true);
+      setMessage("");
+
+      const { error } = await supabase.from("requests").delete().eq("id", detail.id);
+      if (error) throw error;
+
+      navigate("/requests/my");
+    } catch (error) {
+      console.error("요청 삭제 실패:", error);
+      setMessage(error.message || "요청 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBack = () => navigate(-1);
+  const handleGoHome = () => navigate("/");
+
   const styles = {
-    shell: {
+    page: {
       minHeight: "100vh",
-      background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
-      padding: isMobile ? "18px 14px 40px" : "34px 20px 64px",
+      background: BG,
+      padding: isMobile ? "92px 12px 28px" : "104px 20px 48px",
+      boxSizing: "border-box",
     },
-    wrap: { maxWidth: "1180px", margin: "0 auto" },
-    topbar: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "14px",
-      flexWrap: "wrap",
-      marginBottom: isMobile ? "18px" : "24px",
+    container: {
+      maxWidth: "1120px",
+      margin: "0 auto",
     },
-    brand: { display: "flex", alignItems: "center", gap: "10px" },
-    brandMark: {
-      width: "40px",
-      height: "40px",
-      borderRadius: "14px",
-      background: BRAND_COLOR,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#ffffff",
-      fontWeight: "900",
-      fontSize: "14px",
-      boxShadow: "0 12px 24px rgba(47, 128, 237, 0.18)",
+    pageTitle: {
+      margin: "0 0 18px",
+      fontSize: isMobile ? "22px" : "24px",
+      fontWeight: 700,
+      color: TEXT,
+      letterSpacing: "-0.3px",
+      lineHeight: 1.35,
     },
-    brandText: {
-      fontSize: "24px",
-      fontWeight: "900",
-      color: BRAND_COLOR,
-      letterSpacing: "-0.6px",
-    },
-    backBtn: {
-      border: "none",
-      background: "#ffffff",
-      color: "#1e293b",
-      borderRadius: "14px",
-      padding: "12px 18px",
-      fontSize: "14px",
-      fontWeight: "700",
-      cursor: "pointer",
-      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
-      outline: "none",
-      WebkitTapHighlightColor: "transparent",
-    },
-    grid: {
+    shell: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 320px",
-      gap: "22px",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 300px",
+      gap: "18px",
       alignItems: "start",
     },
     mainCard: {
-      background: "rgba(255,255,255,0.94)",
-      border: "1px solid #e4ebf5",
-      borderRadius: "30px",
-      padding: isMobile ? "22px 18px" : "30px",
-      boxShadow: "0 18px 38px rgba(15, 23, 42, 0.05)",
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "22px",
+      padding: isMobile ? "16px" : "22px",
+      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
     },
-    sideWrap: { display: "grid", gap: "14px" },
-    heroBadge: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "9px 14px",
-      borderRadius: "999px",
-      background: "#eef4ff",
-      color: BRAND_COLOR,
-      fontSize: "12px",
-      fontWeight: "800",
-      marginBottom: "16px",
+    heroCard: {
+      background: "#f7fbff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: isMobile ? "16px" : "20px",
+      marginBottom: "18px",
     },
-    titleRow: {
+    heroTop: {
       display: "flex",
-      alignItems: "flex-start",
       justifyContent: "space-between",
-      gap: "16px",
+      alignItems: isMobile ? "flex-start" : "center",
       flexDirection: isMobile ? "column" : "row",
+      gap: "10px",
+      marginBottom: "14px",
     },
-    title: {
+    heroTitle: {
       margin: 0,
-      fontSize: isMobile ? "30px" : "44px",
-      lineHeight: "1.14",
-      letterSpacing: isMobile ? "-1px" : "-1.6px",
-      fontWeight: "900",
-      color: "#0f172a",
+      fontSize: isMobile ? "28px" : "22px",
+      fontWeight: 700,
+      color: TEXT,
+      lineHeight: 1.4,
+      letterSpacing: "-0.4px",
       wordBreak: "break-word",
     },
-    desc: {
-      margin: "16px 0 0",
-      fontSize: isMobile ? "14px" : "16px",
-      lineHeight: "1.9",
-      color: "#64748b",
-    },
-    statusPill: {
+    statusBadge: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
+      padding: "8px 12px",
       borderRadius: "999px",
-      padding: "10px 14px",
-      fontSize: "14px",
-      fontWeight: "800",
+      fontSize: "12px",
+      fontWeight: 600,
       whiteSpace: "nowrap",
+    },
+    heroSub: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+      gap: "12px",
+    },
+    heroSubItem: {
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "16px",
+      padding: "14px 16px",
+    },
+    heroSubLabel: {
+      fontSize: "12px",
+      fontWeight: 600,
+      color: SUB,
+      marginBottom: "8px",
+    },
+    heroSubValue: {
+      fontSize: "15px",
+      fontWeight: 600,
+      color: TEXT,
+      lineHeight: 1.5,
+      wordBreak: "break-word",
+    },
+    section: {
+      marginTop: "18px",
+    },
+    sectionTitle: {
+      margin: "0 0 12px",
+      fontSize: isMobile ? "20px" : "18px",
+      fontWeight: 700,
+      color: TEXT,
+      letterSpacing: "-0.2px",
     },
     infoGrid: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-      gap: "14px",
-      marginTop: "26px",
+      gap: "12px",
     },
     infoCard: {
-      background: "#f8fbff",
-      border: "1px solid #e3eaf5",
-      borderRadius: "22px",
-      padding: "18px",
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "16px",
+      padding: "16px",
     },
     infoLabel: {
       fontSize: "13px",
-      color: "#64748b",
-      fontWeight: "800",
+      color: SUB,
+      fontWeight: 600,
       marginBottom: "8px",
     },
     infoValue: {
-      fontSize: "20px",
-      lineHeight: "1.5",
-      color: "#0f172a",
-      fontWeight: "900",
-      letterSpacing: "-0.3px",
+      fontSize: "15px",
+      color: TEXT,
+      fontWeight: 600,
+      lineHeight: 1.5,
       wordBreak: "break-word",
     },
-    contentWrap: {
-      marginTop: "20px",
-      background: "#f8fbff",
-      border: "1px solid #e3eaf5",
-      borderRadius: "24px",
-      padding: "20px",
-    },
-    contentLabel: {
-      fontSize: "14px",
-      color: "#64748b",
-      fontWeight: "800",
+    longCard: {
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "16px",
+      padding: "16px",
       marginBottom: "12px",
     },
-    contentBox: {
-      minHeight: "110px",
-      border: "1px solid #d7deea",
-      borderRadius: "18px",
-      background: "#ffffff",
-      padding: "18px",
+    longLabel: {
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 700,
+      marginBottom: "10px",
+    },
+    longValue: {
+      minHeight: "72px",
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "12px",
+      padding: "14px 15px",
+      color: TEXT,
+      fontSize: "14px",
+      lineHeight: 1.7,
       whiteSpace: "pre-wrap",
-      lineHeight: "1.9",
-      fontSize: "15px",
-      color: "#1f2937",
+      wordBreak: "break-word",
+      boxSizing: "border-box",
     },
-    messageWrap: { marginTop: "18px" },
-    actionStack: { display: "grid", gap: "10px", marginTop: "22px" },
-    primaryAction: {
-      height: "52px",
-      border: "none",
-      borderRadius: "16px",
-      background: "linear-gradient(135deg, #2F80ED 0%, #1C63E0 100%)",
-      color: "#ffffff",
-      fontSize: "15px",
-      fontWeight: "800",
-      cursor: "pointer",
-      boxShadow: "0 14px 28px rgba(47, 128, 237, 0.18)",
-      outline: "none",
-      WebkitTapHighlightColor: "transparent",
-    },
-    actionRow: {
-      display: "flex",
-      gap: "12px",
-      flexWrap: "wrap",
-      marginTop: "20px",
-    },
-    subtleBtn: {
-      flex: isMobile ? "1 1 100%" : "0 0 auto",
-      minWidth: isMobile ? "100%" : "180px",
-      height: "52px",
-      border: "none",
-      borderRadius: "16px",
-      background: "#ffffff",
-      color: "#475569",
-      fontSize: "15px",
-      fontWeight: "700",
-      cursor: "pointer",
-      boxShadow: "0 8px 20px rgba(15, 23, 42, 0.04)",
-      outline: "none",
-      WebkitTapHighlightColor: "transparent",
-    },
-    homeBtn: {
-      flex: isMobile ? "1 1 100%" : "0 0 auto",
-      minWidth: isMobile ? "100%" : "180px",
-      height: "52px",
-      border: "none",
-      borderRadius: "16px",
-      background: "linear-gradient(135deg, #2F80ED 0%, #1C63E0 100%)",
-      color: "#ffffff",
-      fontSize: "15px",
-      fontWeight: "800",
-      cursor: "pointer",
-      boxShadow: "0 14px 28px rgba(47, 128, 237, 0.18)",
-      outline: "none",
-      WebkitTapHighlightColor: "transparent",
-    },
-    sideHero: {
-      borderRadius: "24px",
-      padding: "22px",
-      background: "linear-gradient(145deg, #1C63E0 0%, #2F80ED 55%, #2F7BE5 100%)",
-      color: "#ffffff",
-      boxShadow: "0 20px 38px rgba(47, 128, 237, 0.18)",
-    },
-    sideHeroLabel: {
-      margin: 0,
-      fontSize: "13px",
-      fontWeight: "800",
-      opacity: 0.88,
-    },
-    sideHeroBig: {
-      display: "block",
-      marginTop: "10px",
-      marginBottom: "12px",
-      fontSize: isMobile ? "24px" : "28px",
-      lineHeight: "1.2",
-      letterSpacing: "-0.7px",
-      fontWeight: "900",
-    },
-    sideHeroText: {
-      margin: 0,
-      fontSize: "14px",
-      lineHeight: "1.8",
-      opacity: 0.94,
-    },
-    sideSoft: {
-      border: "1px solid #e5ebf5",
+    sideCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
       borderRadius: "22px",
-      padding: "18px",
-      background: "rgba(255,255,255,0.94)",
+      padding: isMobile ? "16px" : "18px",
+      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+      position: isMobile ? "static" : "sticky",
+      top: "96px",
     },
-    sideSoftLabel: {
+    sideTitle: {
       margin: 0,
-      fontSize: "13px",
-      color: "#64748b",
-      fontWeight: "800",
+      fontSize: "18px",
+      fontWeight: 700,
+      color: TEXT,
     },
-    sideSoftTitle: {
-      display: "block",
-      marginTop: "8px",
-      marginBottom: "6px",
-      fontSize: "20px",
-      color: "#0f172a",
-      fontWeight: "900",
-      letterSpacing: "-0.3px",
-      lineHeight: "1.4",
-    },
-    sideSoftText: {
-      margin: 0,
+    sideDesc: {
+      margin: "8px 0 16px",
       fontSize: "13px",
-      color: "#94a3b8",
-      lineHeight: "1.8",
+      lineHeight: 1.65,
+      color: SUB,
+      fontWeight: 500,
+    },
+    primaryBtn: {
+      width: "100%",
+      height: "50px",
+      border: "none",
+      borderRadius: "14px",
+      background: BRAND,
+      color: "#ffffff",
+      fontSize: "15px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
+      transition: "all 0.18s ease",
+    },
+    dangerBtn: {
+      width: "100%",
+      height: "50px",
+      border: "none",
+      borderRadius: "14px",
+      background: GRAY_BTN,
+      color: "#ffffff",
+      fontSize: "15px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 8px 16px rgba(100, 116, 139, 0.14)",
+      transition: "all 0.18s ease",
+    },
+    secondaryBtn: {
+      width: "100%",
+      height: "48px",
+      border: "1px solid #dbe4f0",
+      borderRadius: "14px",
+      background: "#ffffff",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 8px 16px rgba(15, 23, 42, 0.04)",
+      transition: "all 0.18s ease",
+    },
+    message: {
+      marginTop: "14px",
+      padding: "12px 14px",
+      borderRadius: "12px",
+      fontSize: "13px",
+      fontWeight: 600,
+      lineHeight: 1.6,
+      border: "1px solid #d9e6ff",
+      background: "#f8fbff",
+      color: BRAND_HOVER,
+    },
+    miniInfo: {
+      marginTop: "16px",
+      paddingTop: "16px",
+      borderTop: `1px solid ${BORDER}`,
+      display: "grid",
+      gap: "10px",
+    },
+    miniItem: {
+      background: "#f6f9fc",
+      borderRadius: "14px",
+      padding: "12px 14px",
+      border: `1px solid ${BORDER}`,
+    },
+    miniLabel: {
+      fontSize: "12px",
+      fontWeight: 600,
+      color: SUB,
+      marginBottom: "4px",
+    },
+    miniValue: {
+      fontSize: "14px",
+      fontWeight: 600,
+      color: TEXT,
+      lineHeight: 1.55,
+      wordBreak: "break-word",
+    },
+    bottomActions: {
+      marginTop: "18px",
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gap: "10px",
+    },
+    loadingWrap: {
+      maxWidth: "900px",
+      margin: "40px auto",
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: "30px",
+      textAlign: "center",
+      fontSize: "15px",
+      fontWeight: 600,
+      color: SUB,
     },
   };
 
   if (loading) {
     return (
-      <div style={styles.shell}>
-        <div style={styles.wrap}>
-          <div style={styles.mainCard}>불러오는 중...</div>
-        </div>
+      <div style={styles.page}>
+        <div style={styles.loadingWrap}>요청 정보를 불러오는 중입니다...</div>
       </div>
     );
   }
 
   if (!detail) {
     return (
-      <div style={styles.shell}>
-        <div style={styles.wrap}>
-          <div style={styles.mainCard}>
-            <div style={styles.heroBadge}>요청 상세보기</div>
-            <h1 style={styles.title}>요청을 찾을 수 없습니다</h1>
-            <p style={styles.desc}>삭제되었거나 잘못된 주소일 수 있습니다.</p>
-
-            {message && (
-              <div style={styles.messageWrap}>
-                <div className="message error">{message}</div>
-              </div>
-            )}
-
-            <div style={styles.actionRow}>
-              <HoverButton
-                onClick={handleBack}
-                style={styles.subtleBtn}
-                hoverStyle={{
-                  backgroundColor: BRAND_SOFT,
-                  color: BRAND_COLOR,
-                  transform: isMobile ? "none" : "translateY(-1px)",
-                  boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
-                }}
-              >
-                뒤로가기
-              </HoverButton>
-
-              <HoverButton
-                onClick={handleGoHome}
-                style={styles.homeBtn}
-                hoverStyle={{
-                  transform: isMobile ? "none" : "translateY(-1px)",
-                  boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
-                }}
-              >
-                메인으로 돌아가기
-              </HoverButton>
-            </div>
+      <div style={styles.page}>
+        <div style={styles.loadingWrap}>
+          요청 정보를 찾을 수 없습니다.
+          <div style={{ marginTop: "16px" }}>
+            <HoverButton
+              onClick={() => navigate(fromPath)}
+              baseStyle={{
+                ...styles.primaryBtn,
+                width: "220px",
+                margin: "0 auto",
+              }}
+              hoverStyle={{
+                background: BRAND_HOVER,
+                transform: isMobile ? "none" : "translateY(-1px)",
+                boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+              }}
+            >
+              목록으로 돌아가기
+            </HoverButton>
           </div>
         </div>
       </div>
@@ -563,117 +570,152 @@ function RequestDetailPage() {
   }
 
   return (
-    <div style={styles.shell}>
-      <div style={styles.wrap}>
-        <div style={styles.topbar}>
-          <div
-            style={{ ...styles.brand, cursor: "pointer" }}
-            onClick={() => navigate("/")}
-          >
-            <div style={styles.brandMark}>ㄸ</div>
-            <div style={styles.brandText}>뚝딱</div>
-          </div>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <h1 style={styles.pageTitle}>요청 상세보기</h1>
 
-          <HoverButton
-            onClick={handleBack}
-            style={styles.backBtn}
-            hoverStyle={{
-              backgroundColor: BRAND_SOFT,
-              color: BRAND_COLOR,
-              transform: isMobile ? "none" : "translateY(-1px)",
-              boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
-            }}
-          >
-            뒤로가기
-          </HoverButton>
-        </div>
-
-        <div style={styles.grid}>
+        <div style={styles.shell}>
           <div style={styles.mainCard}>
-            <div style={styles.heroBadge}>요청 상세보기</div>
-
-            <div style={styles.titleRow}>
-              <div>
-                <h1 style={styles.title}>{detail.title}</h1>
-                <p style={styles.desc}>
-                  요청 정보와 현재 진행 상태를 확인할 수 있습니다.
-                </p>
+            <div style={styles.heroCard}>
+              <div style={styles.heroTop}>
+                <h2 style={styles.heroTitle}>{detail.title || "요청 제목 없음"}</h2>
+                <span style={{ ...styles.statusBadge, ...getStatusStyle(detail.status) }}>
+                  {getStatusText(detail.status)}
+                </span>
               </div>
 
-              <span style={{ ...styles.statusPill, ...getStatusStyle(detail.status) }}>
-                {getStatusText(detail.status)}
-              </span>
-            </div>
-
-            {message && (
-              <div style={styles.messageWrap}>
-                <div
-                  className={`message ${
-                    message.includes("완료") ||
-                    message.includes("수락") ||
-                    message.includes("변경")
-                      ? "success"
-                      : "error"
-                  }`}
-                >
-                  {message}
+              <div style={styles.heroSub}>
+                <div style={styles.heroSubItem}>
+                  <div style={styles.heroSubLabel}>카테고리</div>
+                  <div style={styles.heroSubValue}>{detail.category || "-"}</div>
+                </div>
+                <div style={styles.heroSubItem}>
+                  <div style={styles.heroSubLabel}>작성자</div>
+                  <div style={styles.heroSubValue}>{writerText}</div>
+                </div>
+                <div style={styles.heroSubItem}>
+                  <div style={styles.heroSubLabel}>등록일</div>
+                  <div style={styles.heroSubValue}>{formatDate(detail.created_at)}</div>
                 </div>
               </div>
-            )}
-
-            <div style={styles.infoGrid}>
-              <div style={styles.infoCard}>
-                <div style={styles.infoLabel}>작성자</div>
-                <div style={styles.infoValue}>{writerText}</div>
-              </div>
-
-              <div style={styles.infoCard}>
-                <div style={styles.infoLabel}>담당자</div>
-                <div style={styles.infoValue}>{assignedText}</div>
-              </div>
-
-              <div style={styles.infoCard}>
-                <div style={styles.infoLabel}>카테고리</div>
-                <div style={styles.infoValue}>{detail.category || "-"}</div>
-              </div>
-
-              <div style={styles.infoCard}>
-                <div style={styles.infoLabel}>등록일</div>
-                <div style={styles.infoValue}>{formatDate(detail.created_at)}</div>
-              </div>
             </div>
 
-            <div style={styles.contentWrap}>
-              <div style={styles.contentLabel}>공간 유형</div>
-              <div style={styles.contentBox}>{parsedDescription.placeType}</div>
-            </div>
-
-            <div style={styles.contentWrap}>
-              <div style={styles.contentLabel}>도움이 필요한 내용</div>
-              <div style={styles.contentBox}>{parsedDescription.issueType}</div>
-            </div>
-
-            <div style={styles.contentWrap}>
-              <div style={styles.contentLabel}>희망 일정</div>
-              <div style={styles.contentBox}>{parsedDescription.schedule}</div>
-            </div>
-
-            <div style={styles.contentWrap}>
-              <div style={styles.contentLabel}>상세 설명</div>
-              <div style={styles.contentBox}>
-                {parsedDescription.detailText?.trim() || "내용이 없습니다."}
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}>요청 정보</h3>
+              <div style={styles.infoGrid}>
+                <div style={styles.infoCard}>
+                  <div style={styles.infoLabel}>담당자</div>
+                  <div style={styles.infoValue}>{assignedText}</div>
+                </div>
+                <div style={styles.infoCard}>
+                  <div style={styles.infoLabel}>요청 번호</div>
+                  <div style={styles.infoValue}>#{detail.id}</div>
+                </div>
+                <div style={styles.infoCard}>
+                  <div style={styles.infoLabel}>공간 유형</div>
+                  <div style={styles.infoValue}>{parsedDescription.placeType}</div>
+                </div>
+                <div style={styles.infoCard}>
+                  <div style={styles.infoLabel}>희망 일정</div>
+                  <div style={styles.infoValue}>{parsedDescription.schedule}</div>
+                </div>
               </div>
             </div>
 
-            <div style={styles.actionStack}>
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}>상세 내용</h3>
+
+              <div style={styles.longCard}>
+                <div style={styles.longLabel}>도움이 필요한 내용</div>
+                <div style={styles.longValue}>{parsedDescription.issueType}</div>
+              </div>
+
+              <div style={styles.longCard}>
+                <div style={styles.longLabel}>상세 설명</div>
+                <div style={styles.longValue}>
+                  {parsedDescription.detailText?.trim() || "내용이 없습니다."}
+                </div>
+              </div>
+            </div>
+
+            {message && <div style={styles.message}>{message}</div>}
+
+            <div style={styles.bottomActions}>
+              <HoverButton
+                onClick={handleBack}
+                baseStyle={styles.secondaryBtn}
+                hoverStyle={{
+                  background: SOFT,
+                  color: BRAND,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 10px 18px rgba(59, 130, 246, 0.10)",
+                }}
+              >
+                뒤로가기
+              </HoverButton>
+
+              <HoverButton
+                onClick={handleGoHome}
+                baseStyle={styles.primaryBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  transform: isMobile ? "none" : "translateY(-1px)",
+                  boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+                }}
+              >
+                메인으로 돌아가기
+              </HoverButton>
+            </div>
+          </div>
+
+          <div style={styles.sideCard}>
+            <h3 style={styles.sideTitle}>빠른 작업</h3>
+            <p style={styles.sideDesc}>
+              요청 상태에 따라 가능한 작업을
+              <br />
+              여기서 바로 진행할 수 있어요.
+            </p>
+
+            <div style={{ display: "grid", gap: "10px" }}>
+              {isWriter && (
+                <>
+                  <HoverButton
+                    onClick={handleEdit}
+                    disabled={actionLoading}
+                    baseStyle={styles.primaryBtn}
+                    hoverStyle={{
+                      background: BRAND_HOVER,
+                      transform: isMobile ? "none" : "translateY(-1px)",
+                      boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+                    }}
+                  >
+                    수정하기
+                  </HoverButton>
+
+                  <HoverButton
+                    onClick={handleDelete}
+                    disabled={actionLoading}
+                    baseStyle={styles.dangerBtn}
+                    hoverStyle={{
+                      background: GRAY_BTN_HOVER,
+                      transform: isMobile ? "none" : "translateY(-1px)",
+                      boxShadow: "0 10px 18px rgba(100, 116, 139, 0.18)",
+                    }}
+                  >
+                    {actionLoading ? "삭제 중..." : "삭제하기"}
+                  </HoverButton>
+                </>
+              )}
+
               {canAccept && (
                 <HoverButton
                   onClick={handleAccept}
                   disabled={actionLoading}
-                  style={styles.primaryAction}
+                  baseStyle={styles.primaryBtn}
                   hoverStyle={{
+                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
-                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                    boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
                   }}
                 >
                   {actionLoading ? "처리 중..." : "요청 수락하기"}
@@ -684,10 +726,11 @@ function RequestDetailPage() {
                 <HoverButton
                   onClick={handleSetPlanned}
                   disabled={actionLoading}
-                  style={styles.primaryAction}
+                  baseStyle={styles.primaryBtn}
                   hoverStyle={{
+                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
-                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                    boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
                   }}
                 >
                   {actionLoading ? "처리 중..." : "작업 예정으로 변경"}
@@ -698,10 +741,11 @@ function RequestDetailPage() {
                 <HoverButton
                   onClick={handleStartWork}
                   disabled={actionLoading}
-                  style={styles.primaryAction}
+                  baseStyle={styles.primaryBtn}
                   hoverStyle={{
+                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
-                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                    boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
                   }}
                 >
                   {actionLoading ? "처리 중..." : "작업 시작하기"}
@@ -712,10 +756,11 @@ function RequestDetailPage() {
                 <HoverButton
                   onClick={handleComplete}
                   disabled={actionLoading}
-                  style={styles.primaryAction}
+                  baseStyle={styles.primaryBtn}
                   hoverStyle={{
+                    background: BRAND_HOVER,
                     transform: isMobile ? "none" : "translateY(-1px)",
-                    boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
+                    boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
                   }}
                 >
                   {actionLoading ? "처리 중..." : "완료 처리하기"}
@@ -723,74 +768,25 @@ function RequestDetailPage() {
               )}
             </div>
 
-            <div style={styles.actionRow}>
-              <HoverButton
-                onClick={handleBack}
-                style={styles.subtleBtn}
-                hoverStyle={{
-                  backgroundColor: BRAND_SOFT,
-                  color: BRAND_COLOR,
-                  transform: isMobile ? "none" : "translateY(-1px)",
-                  boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
-                }}
-              >
-                뒤로가기
-              </HoverButton>
+            <div style={styles.miniInfo}>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>현재 상태</div>
+                <div style={styles.miniValue}>{getStatusText(detail.status)}</div>
+              </div>
 
-              <HoverButton
-                onClick={handleGoHome}
-                style={styles.homeBtn}
-                hoverStyle={{
-                  transform: isMobile ? "none" : "translateY(-1px)",
-                  boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
-                }}
-              >
-                메인으로 돌아가기
-              </HoverButton>
-            </div>
-          </div>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>담당자</div>
+                <div style={styles.miniValue}>{assignedText}</div>
+              </div>
 
-          <div style={styles.sideWrap}>
-            <div style={styles.sideHero}>
-              <p style={styles.sideHeroLabel}>현재 상태</p>
-              <span style={styles.sideHeroBig}>{getStatusText(detail.status)}</span>
-              <p style={styles.sideHeroText}>
-                등록일 {formatDate(detail.created_at)}
-                <br />
-                요청 번호 #{detail.id}
-              </p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>처리 안내</p>
-              <strong style={styles.sideSoftTitle}>상태는 순서대로 바뀝니다</strong>
-              <p style={styles.sideSoftText}>
-                요청 등록 → 견적 협의중 → 작업 예정 → 진행중 → 완료됨 순서로 이어집니다.
-              </p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>빠른 이동</p>
-              <strong style={styles.sideSoftTitle}>목록과 홈으로 이동 가능</strong>
-              <p style={styles.sideSoftText}>
-                뒤로가기를 누르면 이전 목록으로, 메인으로 돌아가기를 누르면 홈으로 이동합니다.
-              </p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>담당자 정보</p>
-              <strong style={styles.sideSoftTitle}>{assignedText}</strong>
-              <p style={styles.sideSoftText}>
-                담당자가 아직 없으면 전체 요청 목록에서 수락 후 진행할 수 있습니다.
-              </p>
-            </div>
-
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>작성자 기준</p>
-              <strong style={styles.sideSoftTitle}>{isWriter ? "내가 등록한 요청" : "다른 사용자의 요청"}</strong>
-              <p style={styles.sideSoftText}>
-                내가 작성한 요청이면 진행 상태를 확인하고, 다른 사용자의 요청이면 작업 수락 여부를 판단할 수 있습니다.
-              </p>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>안내</div>
+                <div style={styles.miniValue}>
+                  내가 작성한 요청이면 수정/삭제 가능,
+                  <br />
+                  담당자로 배정된 경우 진행 상태 변경이 가능합니다.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -802,8 +798,7 @@ function RequestDetailPage() {
 function HoverButton({
   children,
   onClick,
-  className = "button-hover",
-  style,
+  baseStyle,
   hoverStyle = {},
   disabled = false,
   type = "button",
@@ -813,27 +808,20 @@ function HoverButton({
   return (
     <button
       type={type}
-      className={className}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
       onMouseDown={(e) => e.currentTarget.blur()}
-      onMouseUp={(e) => e.currentTarget.blur()}
       onFocus={(e) => e.currentTarget.blur()}
-      onBlur={() => setIsHover(false)}
       style={{
-        outline: "none",
-        WebkitTapHighlightColor: "transparent",
-        transition:
-          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
-        ...style,
+        ...baseStyle,
         ...(isHover && !disabled ? hoverStyle : {}),
+        opacity: disabled ? 0.72 : 1,
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       {children}
     </button>
   );
 }
-
-export default RequestDetailPage;

@@ -626,10 +626,16 @@ export default function RequestCreateFlow() {
       user_id: loginUser.id,
       title: `${selectedCategory.title} - ${selectedService.name}`,
       category: selectedCategory.title,
-      location: answers.placeType,
-      content: `서비스: ${selectedService.name}\n요청 내용: ${answers.issueType}\n희망 일정: ${answers.schedule}\n상세 설명: ${answers.detail}`,
+      location: answers.placeType || "",
+      content: [
+        `공간 유형: ${answers.placeType || ""}`,
+        `도움이 필요한 내용: ${answers.issueType || ""}`,
+        `희망 일정: ${answers.schedule || ""}`,
+        `상세 설명: ${answers.detail || ""}`,
+      ].join("\n"),
       status: "요청 등록",
       assigned_user_id: null,
+      assigned_username: null,
     };
 
     try {

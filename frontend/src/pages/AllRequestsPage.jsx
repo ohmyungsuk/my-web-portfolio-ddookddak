@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
-import "../index.css";
 
 function normalizeStatus(status) {
   if (status === "pending" || status === "요청 등록") return "pending";
@@ -29,25 +28,25 @@ function getStatusStyle(status) {
     return { backgroundColor: "#eef2f7", color: "#475569" };
   }
   if (normalized === "quoted") {
-    return { backgroundColor: "#ffedd5", color: "#c2410c" };
+    return { backgroundColor: "#fff4e5", color: "#c2410c" };
   }
   if (normalized === "planned") {
-    return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
+    return { backgroundColor: "#e8f0ff", color: "#1d4ed8" };
   }
   if (normalized === "in_progress") {
-    return { backgroundColor: "#dcfce7", color: "#15803d" };
+    return { backgroundColor: "#eaf8ef", color: "#15803d" };
   }
   if (normalized === "completed") {
-    return { backgroundColor: "#bbf7d0", color: "#166534" };
+    return { backgroundColor: "#dcfce7", color: "#166534" };
   }
 
-  return { backgroundColor: "#f3f4f6", color: "#111827" };
+  return { backgroundColor: "#f1f5f9", color: "#334155" };
 }
 
 function formatDate(value) {
-  if (!value) return "등록일 정보 없음";
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
+  if (Number.isNaN(date.getTime())) return "-";
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
     date.getDate()
   ).padStart(2, "0")}`;
@@ -66,52 +65,52 @@ function parseDescription(description) {
       ?.replace("도움이 필요한 내용:", "")
       .trim() || "-";
 
-  const schedule =
-    lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
-
   const detailText =
     lines
       .find((line) => line.startsWith("상세 설명:"))
       ?.replace("상세 설명:", "")
-      .trim() || raw || "요청 내용이 없습니다.";
+      .trim() || raw || "내용이 없습니다.";
 
   return {
     placeType,
     issueType,
-    schedule,
     detailText,
   };
 }
 
-function HoverButton({
-  children,
-  onClick,
-  type = "button",
-  style,
-  hoverStyle = {},
-  disabled = false,
-}) {
+function HoverCard({ children, onClick, baseStyle, hoverStyle = {} }) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      style={{
+        ...baseStyle,
+        ...(isHover ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function HoverButton({ children, onClick, baseStyle, hoverStyle = {} }) {
   const [isHover, setIsHover] = useState(false);
 
   return (
     <button
-      type={type}
+      type="button"
       onClick={onClick}
-      disabled={disabled}
-      className="button-hover"
       onMouseEnter={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
       onMouseDown={(e) => e.currentTarget.blur()}
-      onMouseUp={(e) => e.currentTarget.blur()}
       onFocus={(e) => e.currentTarget.blur()}
-      onBlur={() => setIsHover(false)}
       style={{
-        outline: "none",
+        ...baseStyle,
+        ...(isHover ? hoverStyle : {}),
         WebkitTapHighlightColor: "transparent",
-        transition:
-          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
-        ...style,
-        ...(isHover && !disabled ? hoverStyle : {}),
       }}
     >
       {children}
@@ -119,308 +118,24 @@ function HoverButton({
   );
 }
 
-function getPageStyles(isMobile) {
-  return {
-    shell: {
-      minHeight: "100vh",
-      background: "linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)",
-      padding: isMobile ? "20px 14px 40px" : "34px 20px 64px",
-    },
-    wrap: {
-      maxWidth: "1180px",
-      margin: "0 auto",
-    },
-    topbar: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "14px",
-      flexWrap: "wrap",
-      marginBottom: isMobile ? "18px" : "24px",
-    },
-    brand: {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-    },
-    brandMark: {
-      width: "40px",
-      height: "40px",
-      borderRadius: "14px",
-      background: "#2F80ED",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#ffffff",
-      fontWeight: "900",
-      fontSize: "14px",
-      boxShadow: "0 12px 24px rgba(77, 163, 255, 0.18)",
-    },
-    brandText: {
-      fontSize: "24px",
-      fontWeight: "900",
-      color: "#2F80ED",
-      letterSpacing: "-0.6px",
-    },
-    backBtn: {
-      border: "1px solid #dbe4f2",
-      background: "#ffffff",
-      color: "#1e293b",
-      borderRadius: "14px",
-      padding: "12px 18px",
-      fontSize: "14px",
-      fontWeight: "700",
-      cursor: "pointer",
-    },
-    grid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 300px",
-      gap: "22px",
-      alignItems: "start",
-    },
-    mainCard: {
-      background: "rgba(255,255,255,0.94)",
-      border: "1px solid #e4ebf5",
-      borderRadius: "30px",
-      padding: isMobile ? "22px 18px" : "30px",
-      boxShadow: "0 18px 38px rgba(15, 23, 42, 0.05)",
-    },
-    sideWrap: {
-      display: "grid",
-      gap: "14px",
-    },
-    badge: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "9px 14px",
-      borderRadius: "999px",
-      background: "#eef4ff",
-      color: "#2F80ED",
-      fontSize: "12px",
-      fontWeight: "800",
-      marginBottom: "16px",
-    },
-    title: {
-      margin: 0,
-      fontSize: isMobile ? "34px" : "44px",
-      lineHeight: "1.14",
-      letterSpacing: isMobile ? "-1px" : "-1.5px",
-      fontWeight: "900",
-      color: "#0f172a",
-    },
-    desc: {
-      margin: "14px 0 0",
-      fontSize: isMobile ? "14px" : "16px",
-      lineHeight: "1.9",
-      color: "#64748b",
-    },
-    chipRow: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      marginTop: "18px",
-    },
-    chip: {
-      border: "1px solid #dbe4f2",
-      background: "#ffffff",
-      color: "#334155",
-      borderRadius: "999px",
-      padding: "9px 13px",
-      fontSize: "13px",
-      fontWeight: "700",
-    },
-    listWrap: {
-      display: "grid",
-      gap: "14px",
-      marginTop: "22px",
-    },
-    infoText: {
-      color: "#6b7280",
-    },
-    emptyCard: {
-      background: "#ffffff",
-      border: "1px dashed #cbd5e1",
-      borderRadius: "22px",
-      padding: "34px 22px",
-      textAlign: "center",
-      color: "#64748b",
-      lineHeight: "1.8",
-    },
-    requestCard: {
-      background: "#ffffff",
-      border: "1px solid #e2e8f0",
-      borderRadius: "22px",
-      padding: "20px",
-      boxShadow: "0 16px 30px rgba(15, 23, 42, 0.04)",
-      cursor: "pointer",
-      transition: "transform 0.18s ease, box-shadow 0.18s ease",
-    },
-    requestTop: {
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: "14px",
-      flexDirection: isMobile ? "column" : "row",
-    },
-    requestTitle: {
-      margin: 0,
-      fontSize: "22px",
-      fontWeight: "900",
-      letterSpacing: "-0.4px",
-      color: "#0f172a",
-      wordBreak: "break-word",
-    },
-    requestSub: {
-      marginTop: "8px",
-      fontSize: "14px",
-      color: "#64748b",
-      lineHeight: "1.7",
-    },
-    statusPill: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "999px",
-      padding: "10px 14px",
-      fontSize: "14px",
-      fontWeight: "800",
-      whiteSpace: "nowrap",
-    },
-    metaGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-      gap: "12px",
-      marginTop: "18px",
-    },
-    metaBox: {
-      background: "#f8fafc",
-      border: "1px solid #e5ebf5",
-      borderRadius: "16px",
-      padding: "14px",
-    },
-    metaLabel: {
-      fontSize: "12px",
-      fontWeight: "800",
-      color: "#64748b",
-      marginBottom: "6px",
-    },
-    metaValue: {
-      fontSize: "15px",
-      lineHeight: "1.6",
-      fontWeight: "700",
-      color: "#0f172a",
-      wordBreak: "break-word",
-    },
-    previewBox: {
-      marginTop: "16px",
-      padding: "16px",
-      borderRadius: "16px",
-      background: "#f8fafc",
-      border: "1px solid #e5ebf5",
-    },
-    previewLabel: {
-      fontSize: "12px",
-      fontWeight: "800",
-      color: "#64748b",
-      marginBottom: "8px",
-    },
-    previewValue: {
-      color: "#475569",
-      fontSize: "14px",
-      lineHeight: "1.8",
-      fontWeight: "600",
-      wordBreak: "break-word",
-    },
-    cardFooter: {
-      marginTop: "16px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "12px",
-      flexWrap: "wrap",
-    },
-    footerDate: {
-      fontSize: "13px",
-      color: "#94a3b8",
-      fontWeight: "700",
-    },
-    footerLink: {
-      fontSize: "13px",
-      fontWeight: "800",
-      color: "#2F80ED",
-    },
-    sideHero: {
-      borderRadius: "24px",
-      padding: "22px",
-      background: "linear-gradient(145deg, #1C63E0 0%, #2F80ED 55%, #2F7BE5 100%)",
-      color: "#ffffff",
-      boxShadow: "0 20px 38px rgba(47, 128, 237, 0.18)",
-    },
-    sideHeroLabel: {
-      margin: 0,
-      fontSize: "13px",
-      fontWeight: "800",
-      opacity: 0.88,
-    },
-    sideHeroBig: {
-      display: "block",
-      marginTop: "10px",
-      marginBottom: "12px",
-      fontSize: isMobile ? "26px" : "30px",
-      lineHeight: "1.2",
-      letterSpacing: "-0.7px",
-      fontWeight: "900",
-    },
-    sideHeroText: {
-      margin: 0,
-      fontSize: "14px",
-      lineHeight: "1.8",
-      opacity: 0.94,
-    },
-    sideSoft: {
-      border: "1px solid #e5ebf5",
-      borderRadius: "22px",
-      padding: "18px",
-      background: "rgba(255,255,255,0.94)",
-    },
-    sideSoftLabel: {
-      margin: 0,
-      fontSize: "13px",
-      color: "#64748b",
-      fontWeight: "800",
-    },
-    sideSoftTitle: {
-      display: "block",
-      marginTop: "8px",
-      marginBottom: "6px",
-      fontSize: "20px",
-      color: "#0f172a",
-      fontWeight: "900",
-      letterSpacing: "-0.3px",
-      lineHeight: "1.4",
-    },
-    sideSoftText: {
-      margin: 0,
-      fontSize: "13px",
-      color: "#94a3b8",
-      lineHeight: "1.8",
-    },
-  };
-}
-
-function AllRequestsPage({ onGoHome, onClickRequest }) {
+export default function AllRequestsPage({ onGoHome, onClickRequest }) {
   const navigate = useNavigate();
 
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
 
-  const isMobile = windowWidth <= 900;
+  const BRAND = "#3b82f6";
+  const BRAND_HOVER = "#2563eb";
+  const BG = "#f4f7fb";
+  const CARD = "#ffffff";
+  const BORDER = "#dbe4f0";
+  const TEXT = "#1e293b";
+  const SUB = "#64748b";
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -454,15 +169,13 @@ function AllRequestsPage({ onGoHome, onClickRequest }) {
     const normalized = requests.map((item) => normalizeStatus(item.status));
     const total = requests.length;
     const open = normalized.filter((status) => status === "pending").length;
-    const inProgress = normalized.filter((status) =>
+    const active = normalized.filter((status) =>
       ["quoted", "planned", "in_progress"].includes(status)
     ).length;
     const completed = normalized.filter((status) => status === "completed").length;
 
-    return { total, open, inProgress, completed };
+    return { total, open, active, completed };
   }, [requests]);
-
-  const styles = getPageStyles(isMobile);
 
   const handleOpenDetail = (request) => {
     if (onClickRequest) {
@@ -478,55 +191,314 @@ function AllRequestsPage({ onGoHome, onClickRequest }) {
     });
   };
 
+  const handleGoHome = () => {
+    if (onGoHome) {
+      onGoHome();
+      return;
+    }
+    navigate("/");
+  };
+
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      background: BG,
+      padding: isMobile ? "92px 12px 28px" : "104px 20px 48px",
+      boxSizing: "border-box",
+    },
+    container: {
+      maxWidth: "1120px",
+      margin: "0 auto",
+    },
+    pageTitle: {
+      margin: "0 0 18px",
+      fontSize: isMobile ? "22px" : "24px",
+      fontWeight: 700,
+      color: TEXT,
+      letterSpacing: "-0.3px",
+      lineHeight: 1.35,
+    },
+    shell: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 300px",
+      gap: "18px",
+      alignItems: "start",
+    },
+    mainCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "22px",
+      padding: isMobile ? "16px" : "22px",
+      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+    },
+    heroCard: {
+      background: "#f7fbff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: isMobile ? "16px" : "20px",
+      marginBottom: "18px",
+    },
+    heroTitle: {
+      margin: 0,
+      fontSize: isMobile ? "26px" : "22px",
+      fontWeight: 700,
+      color: TEXT,
+      lineHeight: 1.4,
+      letterSpacing: "-0.4px",
+    },
+    heroSub: {
+      marginTop: "10px",
+      fontSize: "14px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 500,
+    },
+    chipRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "16px",
+    },
+    chip: {
+      border: `1px solid ${BORDER}`,
+      background: "#fff",
+      color: TEXT,
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 600,
+    },
+    listWrap: {
+      display: "grid",
+      gap: "14px",
+      marginTop: "18px",
+    },
+    emptyCard: {
+      background: "#fff",
+      border: `1px dashed ${BORDER}`,
+      borderRadius: "18px",
+      padding: "32px 20px",
+      textAlign: "center",
+      color: SUB,
+      fontSize: "14px",
+      lineHeight: 1.8,
+      fontWeight: 500,
+    },
+    requestCard: {
+      background: "#fff",
+      border: "1px solid #e8eef5",
+      borderRadius: "18px",
+      padding: "16px",
+      cursor: "pointer",
+      transition: "all 0.18s ease",
+      boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
+    },
+    requestTop: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: isMobile ? "flex-start" : "center",
+      flexDirection: isMobile ? "column" : "row",
+      gap: "10px",
+      marginBottom: "14px",
+    },
+    requestTitle: {
+      margin: 0,
+      fontSize: isMobile ? "20px" : "18px",
+      fontWeight: 700,
+      color: TEXT,
+      lineHeight: 1.45,
+      letterSpacing: "-0.2px",
+      wordBreak: "break-word",
+    },
+    requestSub: {
+      marginTop: "4px",
+      fontSize: "13px",
+      color: SUB,
+      fontWeight: 500,
+    },
+    statusPill: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "8px 12px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+    },
+    metaGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+      gap: "10px",
+      marginBottom: "12px",
+    },
+    metaBox: {
+      background: "#fbfdff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "14px",
+      padding: "12px 14px",
+    },
+    metaLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 600,
+      marginBottom: "6px",
+    },
+    metaValue: {
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 600,
+      lineHeight: 1.5,
+      wordBreak: "break-word",
+    },
+    previewBox: {
+      background: "#fbfdff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "14px",
+      padding: "13px 14px",
+    },
+    previewLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 600,
+      marginBottom: "6px",
+    },
+    previewValue: {
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 500,
+      lineHeight: 1.7,
+      wordBreak: "break-word",
+    },
+    footer: {
+      marginTop: "12px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: "10px",
+      flexWrap: "wrap",
+    },
+    footerDate: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 500,
+    },
+    footerLink: {
+      fontSize: "13px",
+      color: BRAND,
+      fontWeight: 700,
+    },
+    sideCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "22px",
+      padding: isMobile ? "16px" : "18px",
+      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+      position: isMobile ? "static" : "sticky",
+      top: "96px",
+    },
+    sideTitle: {
+      margin: 0,
+      fontSize: "18px",
+      fontWeight: 700,
+      color: TEXT,
+    },
+    sideDesc: {
+      margin: "8px 0 16px",
+      fontSize: "13px",
+      lineHeight: 1.65,
+      color: SUB,
+      fontWeight: 500,
+    },
+    sidePrimaryBtn: {
+      width: "100%",
+      height: "48px",
+      border: "none",
+      borderRadius: "14px",
+      background: BRAND,
+      color: "#fff",
+      fontSize: "14px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
+      transition: "all 0.18s ease",
+    },
+    miniInfo: {
+      marginTop: "16px",
+      paddingTop: "16px",
+      borderTop: `1px solid ${BORDER}`,
+      display: "grid",
+      gap: "10px",
+    },
+    miniItem: {
+      background: "#f6f9fc",
+      borderRadius: "14px",
+      padding: "12px 14px",
+      border: `1px solid ${BORDER}`,
+    },
+    miniLabel: {
+      fontSize: "12px",
+      fontWeight: 600,
+      color: SUB,
+      marginBottom: "4px",
+    },
+    miniValue: {
+      fontSize: "14px",
+      fontWeight: 600,
+      color: TEXT,
+      lineHeight: 1.55,
+      wordBreak: "break-word",
+    },
+    loadingWrap: {
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "18px",
+      padding: "28px 20px",
+      textAlign: "center",
+      color: SUB,
+      fontSize: "15px",
+      fontWeight: 600,
+    },
+    errorMessage: {
+      padding: "12px 14px",
+      borderRadius: "12px",
+      fontSize: "13px",
+      fontWeight: 600,
+      lineHeight: 1.6,
+      border: "1px solid #ffd8d8",
+      background: "#fff5f5",
+      color: "#dc2626",
+    },
+  };
+
   return (
-    <div style={styles.shell}>
-      <div style={styles.wrap}>
-        <div style={styles.topbar}>
-          <div
-            style={{ ...styles.brand, cursor: "pointer" }}
-            onClick={() => navigate("/")}
-          >
-            <div style={styles.brandMark}>ㄸ</div>
-            <div style={styles.brandText}>뚝딱</div>
-          </div>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <h1 style={styles.pageTitle}>전체 요청 목록</h1>
 
-          <HoverButton
-            type="button"
-            style={styles.backBtn}
-            hoverStyle={{
-              backgroundColor: "#F8FBFF",
-              color: "#2F80ED",
-              transform: isMobile ? "none" : "translateY(-1px)",
-              boxShadow: "0 12px 24px rgba(47, 128, 237, 0.10)",
-            }}
-            onClick={onGoHome ? onGoHome : () => navigate("/")}
-          >
-            메인으로 돌아가기
-          </HoverButton>
-        </div>
-
-        <div style={styles.grid}>
+        <div style={styles.shell}>
           <div style={styles.mainCard}>
-            <div style={styles.badge}>전체 요청 목록</div>
-
-            <h1 style={styles.title}>등록된 전체 요청</h1>
-            <p style={styles.desc}>
-              모든 사용자가 등록한 요청을 최신순으로 확인할 수 있습니다.
-            </p>
-
-            {!loading && !message && (
-              <div style={styles.chipRow}>
-                <div style={styles.chip}>전체 {summary.total}개</div>
-                <div style={styles.chip}>신규 {summary.open}개</div>
-                <div style={styles.chip}>진행중 {summary.inProgress}개</div>
-                <div style={styles.chip}>완료 {summary.completed}개</div>
+            <div style={styles.heroCard}>
+              <h2 style={styles.heroTitle}>등록된 전체 요청</h2>
+              <div style={styles.heroSub}>
+                모든 사용자가 등록한 요청을 최신순으로 확인할 수 있어요.
               </div>
-            )}
+
+              {!loading && !message && (
+                <div style={styles.chipRow}>
+                  <div style={styles.chip}>전체 {summary.total}개</div>
+                  <div style={styles.chip}>신규 {summary.open}개</div>
+                  <div style={styles.chip}>진행중 {summary.active}개</div>
+                  <div style={styles.chip}>완료 {summary.completed}개</div>
+                </div>
+              )}
+            </div>
 
             <div style={styles.listWrap}>
-              {loading && <p style={styles.infoText}>불러오는 중...</p>}
+              {loading && <div style={styles.loadingWrap}>목록을 불러오는 중입니다...</div>}
 
-              {!loading && message && <div className="message error">{message}</div>}
+              {!loading && message && <div style={styles.errorMessage}>{message}</div>}
 
               {!loading && !message && requests.length === 0 && (
                 <div style={styles.emptyCard}>등록된 요청이 없습니다.</div>
@@ -536,13 +508,17 @@ function AllRequestsPage({ onGoHome, onClickRequest }) {
                 !message &&
                 requests.length > 0 &&
                 requests.map((request) => {
-                  const parsed = parseDescription(request.description);
+                  const parsed = parseDescription(request.content);
 
                   return (
-                    <div
+                    <HoverCard
                       key={request.id}
-                      style={styles.requestCard}
                       onClick={() => handleOpenDetail(request)}
+                      baseStyle={styles.requestCard}
+                      hoverStyle={{
+                        transform: isMobile ? "none" : "translateY(-2px)",
+                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+                      }}
                     >
                       <div style={styles.requestTop}>
                         <div>
@@ -590,39 +566,51 @@ function AllRequestsPage({ onGoHome, onClickRequest }) {
                         </div>
                       </div>
 
-                      <div style={styles.cardFooter}>
+                      <div style={styles.footer}>
                         <div style={styles.footerDate}>등록일 {formatDate(request.created_at)}</div>
                         <div style={styles.footerLink}>상세보기 →</div>
                       </div>
-                    </div>
+                    </HoverCard>
                   );
                 })}
             </div>
           </div>
 
-          <div style={styles.sideWrap}>
-            <div style={styles.sideHero}>
-              <p style={styles.sideHeroLabel}>전체 요청</p>
-              <span style={styles.sideHeroBig}>{summary.total}건</span>
-              <p style={styles.sideHeroText}>현재 시스템에 등록된 전체 요청 수입니다.</p>
-            </div>
+          <div style={styles.sideCard}>
+            <h3 style={styles.sideTitle}>빠른 이동</h3>
+            <p style={styles.sideDesc}>
+              전체 요청을 확인하고
+              <br />
+              상세 페이지에서 상태를 볼 수 있어요.
+            </p>
 
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>신규 요청</p>
-              <strong style={styles.sideSoftTitle}>{summary.open}건</strong>
-              <p style={styles.sideSoftText}>아직 수락 전인 요청입니다.</p>
-            </div>
+            <HoverButton
+              onClick={handleGoHome}
+              baseStyle={styles.sidePrimaryBtn}
+              hoverStyle={{
+                background: BRAND_HOVER,
+                transform: isMobile ? "none" : "translateY(-1px)",
+                boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+              }}
+            >
+              메인으로 돌아가기
+            </HoverButton>
 
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>진행중 요청</p>
-              <strong style={styles.sideSoftTitle}>{summary.inProgress}건</strong>
-              <p style={styles.sideSoftText}>협의중, 작업 예정, 진행중 상태를 포함합니다.</p>
-            </div>
+            <div style={styles.miniInfo}>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>신규 요청</div>
+                <div style={styles.miniValue}>{summary.open}건</div>
+              </div>
 
-            <div style={styles.sideSoft}>
-              <p style={styles.sideSoftLabel}>완료된 요청</p>
-              <strong style={styles.sideSoftTitle}>{summary.completed}건</strong>
-              <p style={styles.sideSoftText}>완료 처리된 전체 요청 내역입니다.</p>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>진행중 요청</div>
+                <div style={styles.miniValue}>{summary.active}건</div>
+              </div>
+
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>완료된 요청</div>
+                <div style={styles.miniValue}>{summary.completed}건</div>
+              </div>
             </div>
           </div>
         </div>
@@ -630,5 +618,3 @@ function AllRequestsPage({ onGoHome, onClickRequest }) {
     </div>
   );
 }
-
-export default AllRequestsPage;

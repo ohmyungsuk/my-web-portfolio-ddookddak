@@ -1,4 +1,5 @@
 import MyPage from "./pages/MyPage";
+import RequestEditPage from "./pages/RequestEditPage";
 import { useEffect, useMemo, useState } from "react";
 import {
   Navigate,
@@ -275,6 +276,15 @@ function App() {
         element={
           <RequireAuth isLoggedIn={isLoggedIn}>
             <RequestDetailPage onGoHome={() => navigate("/")} />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/requests/edit/:id"
+        element={
+          <RequireAuth isLoggedIn={isLoggedIn}>
+            <RequestEditPage />
           </RequireAuth>
         }
       />
