@@ -21,7 +21,13 @@ const CATEGORY_DATA = [
         id: "switch",
         name: "스위치 수리/교체",
         summary: "전등 버튼, 터치스위치, 고장 교체",
-        issues: ["전등이 안 켜짐", "버튼 불량", "교체 필요", "새로 설치", "기타"],
+        issues: [
+          "전등이 안 켜짐",
+          "버튼 불량",
+          "교체 필요",
+          "새로 설치",
+          "기타",
+        ],
       },
       {
         id: "lighting",
@@ -33,7 +39,13 @@ const CATEGORY_DATA = [
         id: "breaker",
         name: "차단기 점검",
         summary: "차단기 내려감, 누전 의심",
-        issues: ["차단기 자주 내려감", "누전 의심", "교체 필요", "점검 요청", "기타"],
+        issues: [
+          "차단기 자주 내려감",
+          "누전 의심",
+          "교체 필요",
+          "점검 요청",
+          "기타",
+        ],
       },
       {
         id: "wiring",
@@ -45,7 +57,13 @@ const CATEGORY_DATA = [
         id: "sensor-light",
         name: "센서등 설치",
         summary: "현관/복도 센서등 설치 및 교체",
-        issues: ["센서등 교체", "작동 안됨", "새로 설치", "센서 오작동", "기타"],
+        issues: [
+          "센서등 교체",
+          "작동 안됨",
+          "새로 설치",
+          "센서 오작동",
+          "기타",
+        ],
       },
     ],
   },
@@ -61,7 +79,13 @@ const CATEGORY_DATA = [
         id: "faucet",
         name: "수전 교체",
         summary: "주방/욕실 수전 교체 및 설치",
-        issues: ["물 샘", "노후 교체", "새 제품 설치", "욕실 수전", "주방 수전"],
+        issues: [
+          "물 샘",
+          "노후 교체",
+          "새 제품 설치",
+          "욕실 수전",
+          "주방 수전",
+        ],
       },
       {
         id: "sink",
@@ -79,7 +103,13 @@ const CATEGORY_DATA = [
         id: "drain",
         name: "배수구 막힘",
         summary: "주방, 욕실, 베란다 배수 문제",
-        issues: ["욕실 배수 막힘", "주방 배수 막힘", "베란다 배수", "악취", "기타"],
+        issues: [
+          "욕실 배수 막힘",
+          "주방 배수 막힘",
+          "베란다 배수",
+          "악취",
+          "기타",
+        ],
       },
       {
         id: "pipe",
@@ -113,7 +143,13 @@ const CATEGORY_DATA = [
         id: "bathroom-leak",
         name: "욕실 누수",
         summary: "타일 틈 누수, 배관 누수, 아래층 피해",
-        issues: ["타일 틈 누수", "배관 문제", "아래층 피해", "방수 필요", "기타"],
+        issues: [
+          "타일 틈 누수",
+          "배관 문제",
+          "아래층 피해",
+          "방수 필요",
+          "기타",
+        ],
       },
       {
         id: "balcony-waterproof",
@@ -125,7 +161,13 @@ const CATEGORY_DATA = [
         id: "outer-wall",
         name: "외벽 누수/방수",
         summary: "실리콘 노후, 외벽 균열, 빗물 유입",
-        issues: ["비 올 때 누수", "외벽 균열", "실리콘 문제", "보수 필요", "기타"],
+        issues: [
+          "비 올 때 누수",
+          "외벽 균열",
+          "실리콘 문제",
+          "보수 필요",
+          "기타",
+        ],
       },
       {
         id: "window-leak",
@@ -153,13 +195,25 @@ const CATEGORY_DATA = [
         id: "doorlock-install",
         name: "도어락 설치",
         summary: "신규 설치, 번호키, 지문형 도어락",
-        issues: ["신규 설치", "교체 설치", "번호키 설치", "지문형 설치", "기타"],
+        issues: [
+          "신규 설치",
+          "교체 설치",
+          "번호키 설치",
+          "지문형 설치",
+          "기타",
+        ],
       },
       {
         id: "doorlock-repair",
         name: "도어락 수리",
         summary: "문 안 열림, 비밀번호 오류, 오작동",
-        issues: ["문 안 열림", "오작동", "비밀번호 오류", "배터리 문제", "기타"],
+        issues: [
+          "문 안 열림",
+          "오작동",
+          "비밀번호 오류",
+          "배터리 문제",
+          "기타",
+        ],
       },
       {
         id: "front-door",
@@ -199,7 +253,13 @@ const CATEGORY_DATA = [
         id: "aircon-clean",
         name: "에어컨 청소",
         summary: "벽걸이, 스탠드, 시스템 분해청소",
-        issues: ["벽걸이 청소", "스탠드 청소", "시스템 청소", "곰팡이 냄새", "기타"],
+        issues: [
+          "벽걸이 청소",
+          "스탠드 청소",
+          "시스템 청소",
+          "곰팡이 냄새",
+          "기타",
+        ],
       },
       {
         id: "aircon-repair",
@@ -407,7 +467,13 @@ const CATEGORY_DATA = [
         id: "waste",
         name: "폐기물 처리",
         summary: "가구, 생활폐기물, 사무실 폐기물",
-        issues: ["생활 폐기물", "가구 폐기", "사무실 폐기", "대형 폐기물", "기타"],
+        issues: [
+          "생활 폐기물",
+          "가구 폐기",
+          "사무실 폐기",
+          "대형 폐기물",
+          "기타",
+        ],
       },
       {
         id: "special-clean",
@@ -429,7 +495,12 @@ const CATEGORY_DATA = [
         id: "inspection",
         name: "문제 진단 요청",
         summary: "어디가 문제인지 모를 때 점검 요청",
-        issues: ["어디가 문제인지 모르겠음", "점검 먼저 원함", "상담 후 진행", "기타"],
+        issues: [
+          "어디가 문제인지 모르겠음",
+          "점검 먼저 원함",
+          "상담 후 진행",
+          "기타",
+        ],
       },
       {
         id: "small-fix",
@@ -489,7 +560,9 @@ function buildQuestions(serviceName, issues) {
       key: "issueType",
       type: "options",
       title: `${serviceName}와 관련해 어떤 도움이 필요하신가요?`,
-      options: issues?.length ? issues : ["점검 요청", "수리 요청", "교체 요청", "기타"],
+      options: issues?.length
+        ? issues
+        : ["점검 요청", "수리 요청", "교체 요청", "기타"],
     },
     {
       key: "schedule",
@@ -517,7 +590,10 @@ export default function RequestCreateFlow() {
   const [draftText, setDraftText] = useState("");
 
   const selectedCategory = useMemo(() => {
-    return CATEGORY_DATA.find((item) => item.id === selectedCategoryId) || CATEGORY_DATA[0];
+    return (
+      CATEGORY_DATA.find((item) => item.id === selectedCategoryId) ||
+      CATEGORY_DATA[0]
+    );
   }, [selectedCategoryId]);
 
   const filteredServices = selectedCategory.services;
@@ -528,7 +604,9 @@ export default function RequestCreateFlow() {
   }, [selectedService]);
 
   const currentQuestion = questions[step] || null;
-  const progress = questions.length ? Math.round((step / questions.length) * 100) : 0;
+  const progress = questions.length
+    ? Math.round((step / questions.length) * 100)
+    : 0;
 
   const handleSelectService = (categoryId, service) => {
     setSelectedCategoryId(categoryId);
@@ -551,7 +629,9 @@ export default function RequestCreateFlow() {
 
     const previousStep = step - 1;
     const previousQuestion = questions[previousStep];
-    const previousValue = previousQuestion ? answers[previousQuestion.key] || "" : "";
+    const previousValue = previousQuestion
+      ? answers[previousQuestion.key] || ""
+      : "";
 
     if (previousQuestion?.type === "options") {
       setDraftOption(previousValue);
@@ -568,9 +648,7 @@ export default function RequestCreateFlow() {
     if (!currentQuestion) return;
 
     const value =
-      currentQuestion.type === "options"
-        ? draftOption
-        : draftText.trim();
+      currentQuestion.type === "options" ? draftOption : draftText.trim();
 
     if (!value) return;
 
@@ -596,7 +674,9 @@ export default function RequestCreateFlow() {
   };
 
   const handleEdit = (questionKey) => {
-    const targetIndex = questions.findIndex((question) => question.key === questionKey);
+    const targetIndex = questions.findIndex(
+      (question) => question.key === questionKey,
+    );
     if (targetIndex < 0) return;
 
     const targetQuestion = questions[targetIndex];
@@ -1502,8 +1582,7 @@ export default function RequestCreateFlow() {
 
             <div className="dd-guide-bubble">
               몇 가지 정보만 알려주시면
-              <br />
-              더 정확한 요청으로 연결할 수 있어요.
+              <br />더 정확한 요청으로 연결할 수 있어요.
             </div>
 
             <div className="dd-answer-list">
@@ -1513,7 +1592,10 @@ export default function RequestCreateFlow() {
                     <div className="dd-answer-q">{question.title}</div>
                     <div className="dd-answer-v">{answers[question.key]}</div>
                     <div className="dd-answer-edit">
-                      <button type="button" onClick={() => handleEdit(question.key)}>
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(question.key)}
+                      >
                         수정
                       </button>
                     </div>
@@ -1561,9 +1643,11 @@ export default function RequestCreateFlow() {
                   <button
                     type="button"
                     className={`dd-btn primary ${
-                      (currentQuestion.type === "options"
-                        ? !!draftOption
-                        : !!draftText.trim())
+                      (
+                        currentQuestion.type === "options"
+                          ? !!draftOption
+                          : !!draftText.trim()
+                      )
                         ? "enabled"
                         : ""
                     }`}
@@ -1580,12 +1664,16 @@ export default function RequestCreateFlow() {
                 <div className="dd-summary">
                   <div className="dd-summary-item">
                     <div className="dd-summary-key">카테고리</div>
-                    <div className="dd-summary-value">{selectedCategory.title}</div>
+                    <div className="dd-summary-value">
+                      {selectedCategory.title}
+                    </div>
                   </div>
 
                   <div className="dd-summary-item">
                     <div className="dd-summary-key">선택한 서비스</div>
-                    <div className="dd-summary-value">{selectedService.name}</div>
+                    <div className="dd-summary-value">
+                      {selectedService.name}
+                    </div>
                   </div>
 
                   <div className="dd-summary-item">
@@ -1693,11 +1781,14 @@ export default function RequestCreateFlow() {
                 className="dd-spot-card"
                 onClick={() => {
                   const featured = selectedCategory.services[0];
-                  if (featured) handleSelectService(selectedCategory.id, featured);
+                  if (featured)
+                    handleSelectService(selectedCategory.id, featured);
                 }}
               >
                 <p className="dd-spot-label">추천 서비스</p>
-                <p className="dd-spot-title">{selectedCategory.title} 대표 작업</p>
+                <p className="dd-spot-title">
+                  {selectedCategory.title} 대표 작업
+                </p>
                 <span className="dd-spot-action">바로 요청하기 →</span>
               </button>
 
@@ -1705,35 +1796,45 @@ export default function RequestCreateFlow() {
                 type="button"
                 className="dd-spot-card"
                 onClick={() => {
-                  const featured = selectedCategory.services[1] || selectedCategory.services[0];
-                  if (featured) handleSelectService(selectedCategory.id, featured);
+                  const featured =
+                    selectedCategory.services[1] ||
+                    selectedCategory.services[0];
+                  if (featured)
+                    handleSelectService(selectedCategory.id, featured);
                 }}
               >
                 <p className="dd-spot-label">빠른 선택</p>
-                <p className="dd-spot-title">주요 {selectedCategory.title} 작업</p>
+                <p className="dd-spot-title">
+                  주요 {selectedCategory.title} 작업
+                </p>
                 <span className="dd-spot-action">바로 요청하기 →</span>
               </button>
             </div>
 
             <div>
-              <h3 className="dd-board-service-title">{selectedCategory.title} 서비스</h3>
+              <h3 className="dd-board-service-title">
+                {selectedCategory.title} 서비스
+              </h3>
               <div className="dd-board-service-grid">
                 {filteredServices.map((service) => (
                   <button
                     key={service.id}
                     type="button"
                     className="dd-board-service-card"
-                    onClick={() => handleSelectService(selectedCategory.id, service)}
+                    onClick={() =>
+                      handleSelectService(selectedCategory.id, service)
+                    }
                   >
                     <p className="dd-board-service-name">{service.name}</p>
-                    <p className="dd-board-service-summary">{service.summary}</p>
+                    <p className="dd-board-service-summary">
+                      {service.summary}
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
           </div>
         </section>
-
       </main>
     </div>
   );
