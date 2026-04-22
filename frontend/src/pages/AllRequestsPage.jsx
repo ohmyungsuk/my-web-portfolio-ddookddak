@@ -52,8 +52,8 @@ function formatDate(value) {
   ).padStart(2, "0")}`;
 }
 
-function parseDescription(description) {
-  const raw = description || "";
+function parseDescription(content) {
+  const raw = content || "";
   const lines = raw.split("\n");
 
   const placeType =
@@ -125,6 +125,7 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [selectedFilter, setSelectedFilter] = useState("all");
 
   const BRAND = "#3b82f6";
   const BRAND_HOVER = "#2563eb";
@@ -133,6 +134,15 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
   const BORDER = "#dbe4f0";
   const TEXT = "#1e293b";
   const SUB = "#64748b";
+
+  const filterOptions = [
+    { key: "all", label: "전체" },
+    { key: "pending", label: "요청 등록" },
+    { key: "quoted", label: "견적 협의중" },
+    { key: "planned", label: "작업 예정" },
+    { key: "in_progress", label: "진행중" },
+    { key: "completed", label: "완료됨" },
+  ];
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 900);
@@ -176,6 +186,11 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
 
     return { total, open, active, completed };
   }, [requests]);
+
+  const filteredRequests = useMemo(() => {
+    if (selectedFilter === "all") return requests;
+    return requests.filter((item) => normalizeStatus(item.status) === selectedFilter);
+  }, [requests, selectedFilter]);
 
   const handleOpenDetail = (request) => {
     if (onClickRequest) {
@@ -267,6 +282,32 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
       padding: "8px 12px",
       fontSize: "13px",
       fontWeight: 600,
+    },
+    filterRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "18px",
+    },
+    filterBtn: {
+      height: "38px",
+      padding: "0 14px",
+      border: "1px solid #dbe4f0",
+      borderRadius: "999px",
+      background: "#ffffff",
+      color: TEXT,
+      fontSize: "13px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 4px 10px rgba(15, 23, 42, 0.03)",
+      transition: "all 0.18s ease",
+    },
+    filterBtnActive: {
+      background: BRAND,
+      color: "#ffffff",
+      border: "1px solid transparent",
+      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
     },
     listWrap: {
       display: "grid",
@@ -493,6 +534,34 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
                   <div style={styles.chip}>완료 {summary.completed}개</div>
                 </div>
               )}
+
+              <div style={styles.filterRow}>
+                {filterOptions.map((option) => {
+                  const isActive = selectedFilter === option.key;
+
+                  return (
+                    <HoverButton
+                      key={option.key}
+                      onClick={() => setSelectedFilter(option.key)}
+                      baseStyle={{
+                        ...styles.filterBtn,
+                        ...(isActive ? styles.filterBtnActive : {}),
+                      }}
+                      hoverStyle={
+                        isActive
+                          ? {
+                              background: BRAND_HOVER,
+                            }
+                          : {
+                              color: BRAND,
+                            }
+                      }
+                    >
+                      {option.label}
+                    </HoverButton>
+                  );
+                })}
+              </div>
             </div>
 
             <div style={styles.listWrap}>
@@ -500,14 +569,14 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
 
               {!loading && message && <div style={styles.errorMessage}>{message}</div>}
 
-              {!loading && !message && requests.length === 0 && (
-                <div style={styles.emptyCard}>등록된 요청이 없습니다.</div>
+              {!loading && !message && filteredRequests.length === 0 && (
+                <div style={styles.emptyCard}>해당 상태의 요청이 없습니다.</div>
               )}
 
               {!loading &&
                 !message &&
-                requests.length > 0 &&
-                requests.map((request) => {
+                filteredRequests.length > 0 &&
+                filteredRequests.map((request) => {
                   const parsed = parseDescription(request.content);
 
                   return (
@@ -544,7 +613,9 @@ export default function AllRequestsPage({ onGoHome, onClickRequest }) {
 
                         <div style={styles.metaBox}>
                           <div style={styles.metaLabel}>공간 유형</div>
-                          <div style={styles.metaValue}>{parsed.placeType}</div>
+                          <div style={styles.metaValue}>
+                            {request.location || parsed.placeType}
+                          </div>
                         </div>
 
                         <div style={styles.metaBox}>

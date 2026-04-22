@@ -52,8 +52,8 @@ function formatDate(value) {
   ).padStart(2, "0")}`;
 }
 
-function parseDescription(description) {
-  const raw = description || "";
+function parseDescription(content) {
+  const raw = content || "";
   const lines = raw.split("\n");
 
   const placeType =
@@ -65,9 +65,6 @@ function parseDescription(description) {
       ?.replace("도움이 필요한 내용:", "")
       .trim() || "-";
 
-  const schedule =
-    lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
-
   const detailText =
     lines
       .find((line) => line.startsWith("상세 설명:"))
@@ -77,7 +74,6 @@ function parseDescription(description) {
   return {
     placeType,
     issueType,
-    schedule,
     detailText,
   };
 }
@@ -100,6 +96,28 @@ function HoverCard({ children, onClick, baseStyle, hoverStyle = {} }) {
   );
 }
 
+function HoverButton({ children, onClick, baseStyle, hoverStyle = {} }) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      style={{
+        ...baseStyle,
+        ...(isHover ? hoverStyle : {}),
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const navigate = useNavigate();
 
@@ -108,6 +126,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [loading, setLoading] = useState(true);
   const [loginUser, setLoginUser] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [selectedFilter, setSelectedFilter] = useState("all");
 
   const BRAND = "#3b82f6";
   const BRAND_HOVER = "#2563eb";
@@ -116,7 +135,16 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const BORDER = "#dbe4f0";
   const TEXT = "#1e293b";
   const SUB = "#64748b";
-  const SOFT = "#eef4ff";
+  const SOFT = "#f8fbff";
+
+  const filterOptions = [
+    { key: "all", label: "전체" },
+    { key: "pending", label: "요청 등록" },
+    { key: "quoted", label: "견적 협의중" },
+    { key: "planned", label: "작업 예정" },
+    { key: "in_progress", label: "진행중" },
+    { key: "completed", label: "완료됨" },
+  ];
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 900);
@@ -174,6 +202,11 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     return { total, active, completed };
   }, [requests]);
 
+  const filteredRequests = useMemo(() => {
+    if (selectedFilter === "all") return requests;
+    return requests.filter((item) => normalizeStatus(item.status) === selectedFilter);
+  }, [requests, selectedFilter]);
+
   const handleOpenDetail = (request) => {
     if (onClickRequest) {
       onClickRequest(request);
@@ -203,12 +236,10 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       padding: isMobile ? "92px 12px 28px" : "104px 20px 48px",
       boxSizing: "border-box",
     },
-
     container: {
       maxWidth: "1120px",
       margin: "0 auto",
     },
-
     pageTitle: {
       margin: "0 0 18px",
       fontSize: isMobile ? "22px" : "24px",
@@ -217,14 +248,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       letterSpacing: "-0.3px",
       lineHeight: 1.35,
     },
-
     shell: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 300px",
       gap: "18px",
       alignItems: "start",
     },
-
     mainCard: {
       background: CARD,
       border: `1px solid ${BORDER}`,
@@ -232,7 +261,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       padding: isMobile ? "16px" : "22px",
       boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
     },
-
     heroCard: {
       background: "#f7fbff",
       border: `1px solid ${BORDER}`,
@@ -240,7 +268,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       padding: isMobile ? "16px" : "20px",
       marginBottom: "18px",
     },
-
     heroTitle: {
       margin: 0,
       fontSize: isMobile ? "26px" : "22px",
@@ -249,7 +276,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.4,
       letterSpacing: "-0.4px",
     },
-
     heroSub: {
       marginTop: "10px",
       fontSize: "14px",
@@ -257,14 +283,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.7,
       fontWeight: 500,
     },
-
     chipRow: {
       display: "flex",
       flexWrap: "wrap",
       gap: "8px",
       marginTop: "16px",
     },
-
     chip: {
       border: `1px solid ${BORDER}`,
       background: "#fff",
@@ -274,13 +298,37 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       fontSize: "13px",
       fontWeight: 600,
     },
-
+    filterRow: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "18px",
+    },
+    filterBtn: {
+      height: "38px",
+      padding: "0 14px",
+      border: "1px solid #dbe4f0",
+      borderRadius: "999px",
+      background: "#ffffff",
+      color: TEXT,
+      fontSize: "13px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 4px 10px rgba(15, 23, 42, 0.03)",
+      transition: "all 0.18s ease",
+    },
+    filterBtnActive: {
+      background: BRAND,
+      color: "#ffffff",
+      border: "1px solid transparent",
+      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
+    },
     listWrap: {
       display: "grid",
       gap: "14px",
       marginTop: "18px",
     },
-
     emptyCard: {
       background: "#fff",
       border: `1px dashed ${BORDER}`,
@@ -292,7 +340,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.8,
       fontWeight: 500,
     },
-
     requestCard: {
       background: "#fff",
       border: "1px solid #e8eef5",
@@ -302,7 +349,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       transition: "all 0.18s ease",
       boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
     },
-
     requestTop: {
       display: "flex",
       justifyContent: "space-between",
@@ -311,7 +357,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       gap: "10px",
       marginBottom: "14px",
     },
-
     requestTitle: {
       margin: 0,
       fontSize: isMobile ? "20px" : "18px",
@@ -321,14 +366,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       letterSpacing: "-0.2px",
       wordBreak: "break-word",
     },
-
     requestSub: {
       marginTop: "4px",
       fontSize: "13px",
       color: SUB,
       fontWeight: 500,
     },
-
     statusPill: {
       display: "inline-flex",
       alignItems: "center",
@@ -339,28 +382,24 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       fontWeight: 600,
       whiteSpace: "nowrap",
     },
-
     metaGrid: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
       gap: "10px",
       marginBottom: "12px",
     },
-
     metaBox: {
       background: "#fbfdff",
       border: `1px solid ${BORDER}`,
       borderRadius: "14px",
       padding: "12px 14px",
     },
-
     metaLabel: {
       fontSize: "12px",
       color: SUB,
       fontWeight: 600,
       marginBottom: "6px",
     },
-
     metaValue: {
       fontSize: "14px",
       color: TEXT,
@@ -368,21 +407,18 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.5,
       wordBreak: "break-word",
     },
-
     previewBox: {
       background: "#fbfdff",
       border: `1px solid ${BORDER}`,
       borderRadius: "14px",
       padding: "13px 14px",
     },
-
     previewLabel: {
       fontSize: "12px",
       color: SUB,
       fontWeight: 600,
       marginBottom: "6px",
     },
-
     previewValue: {
       fontSize: "14px",
       color: TEXT,
@@ -390,7 +426,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.7,
       wordBreak: "break-word",
     },
-
     footer: {
       marginTop: "12px",
       display: "flex",
@@ -399,19 +434,16 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       gap: "10px",
       flexWrap: "wrap",
     },
-
     footerDate: {
       fontSize: "12px",
       color: SUB,
       fontWeight: 500,
     },
-
     footerLink: {
       fontSize: "13px",
       color: BRAND,
       fontWeight: 700,
     },
-
     sideCard: {
       background: CARD,
       border: `1px solid ${BORDER}`,
@@ -421,14 +453,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       position: isMobile ? "static" : "sticky",
       top: "96px",
     },
-
     sideTitle: {
       margin: 0,
       fontSize: "18px",
       fontWeight: 700,
       color: TEXT,
     },
-
     sideDesc: {
       margin: "8px 0 16px",
       fontSize: "13px",
@@ -436,7 +466,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       color: SUB,
       fontWeight: 500,
     },
-
     sidePrimaryBtn: {
       width: "100%",
       height: "48px",
@@ -451,7 +480,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
       transition: "all 0.18s ease",
     },
-
     miniInfo: {
       marginTop: "16px",
       paddingTop: "16px",
@@ -459,21 +487,18 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       display: "grid",
       gap: "10px",
     },
-
     miniItem: {
       background: "#f6f9fc",
       borderRadius: "14px",
       padding: "12px 14px",
       border: `1px solid ${BORDER}`,
     },
-
     miniLabel: {
       fontSize: "12px",
       fontWeight: 600,
       color: SUB,
       marginBottom: "4px",
     },
-
     miniValue: {
       fontSize: "14px",
       fontWeight: 600,
@@ -481,7 +506,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       lineHeight: 1.55,
       wordBreak: "break-word",
     },
-
     loadingWrap: {
       background: "#fff",
       border: `1px solid ${BORDER}`,
@@ -492,7 +516,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       fontSize: "15px",
       fontWeight: 600,
     },
-
     errorMessage: {
       padding: "12px 14px",
       borderRadius: "12px",
@@ -525,6 +548,34 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
                   <div style={styles.chip}>완료 {summary.completed}개</div>
                 </div>
               )}
+
+              <div style={styles.filterRow}>
+                {filterOptions.map((option) => {
+                  const isActive = selectedFilter === option.key;
+
+                  return (
+                    <HoverButton
+                      key={option.key}
+                      onClick={() => setSelectedFilter(option.key)}
+                      baseStyle={{
+                        ...styles.filterBtn,
+                        ...(isActive ? styles.filterBtnActive : {}),
+                      }}
+                      hoverStyle={
+                        isActive
+                          ? {
+                              background: BRAND_HOVER,
+                            }
+                          : {
+                              color: BRAND,
+                            }
+                      }
+                    >
+                      {option.label}
+                    </HoverButton>
+                  );
+                })}
+              </div>
             </div>
 
             <div style={styles.listWrap}>
@@ -532,18 +583,16 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
 
               {!loading && message && <div style={styles.errorMessage}>{message}</div>}
 
-              {!loading && !message && requests.length === 0 && (
+              {!loading && !message && filteredRequests.length === 0 && (
                 <div style={styles.emptyCard}>
-                  아직 등록한 요청이 없습니다.
-                  <br />
-                  메인에서 새 요청을 등록해보세요.
+                  해당 상태의 요청이 없습니다.
                 </div>
               )}
 
               {!loading &&
                 !message &&
-                requests.length > 0 &&
-                requests.map((request) => {
+                filteredRequests.length > 0 &&
+                filteredRequests.map((request) => {
                   const parsed = parseDescription(request.content);
 
                   return (
@@ -580,7 +629,9 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
 
                         <div style={styles.metaBox}>
                           <div style={styles.metaLabel}>공간 유형</div>
-                          <div style={styles.metaValue}>{parsed.placeType}</div>
+                          <div style={styles.metaValue}>
+                            {request.location || parsed.placeType}
+                          </div>
                         </div>
 
                         <div style={styles.metaBox}>
@@ -620,24 +671,17 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
               상세 페이지에서 상태를 볼 수 있어요.
             </p>
 
-            <HoverCard
+            <HoverButton
               onClick={handleGoHome}
-              baseStyle={{
-                ...styles.sidePrimaryBtn,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              baseStyle={styles.sidePrimaryBtn}
               hoverStyle={{
-                background: "#f8fbff",
-                color: BRAND,
-                borderColor: "#dbe4f0",
+                background: BRAND_HOVER,
                 transform: isMobile ? "none" : "translateY(-1px)",
-                boxShadow: "0 10px 18px rgba(59, 130, 246, 0.10)",
+                boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
               }}
             >
               메인으로 돌아가기
-            </HoverCard>
+            </HoverButton>
 
             <div style={styles.miniInfo}>
               <div style={styles.miniItem}>
