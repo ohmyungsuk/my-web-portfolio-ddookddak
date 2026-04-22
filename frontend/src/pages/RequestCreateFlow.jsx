@@ -1523,6 +1523,14 @@ export default function RequestCreateFlow() {
         padding: 24px 14px 56px;
       }
 
+      .dd-board-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .dd-board-intro {
+        grid-template-columns: 1fr;
+      }
+
       .dd-request-title {
         font-size: 24px;
         margin-bottom: 20px;
