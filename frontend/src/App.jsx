@@ -1,4 +1,6 @@
 import MyPage from "./pages/MyPage";
+import AdminPage from "./pages/AdminPage";
+import AdminRequestsPage from "./pages/AdminRequestsPage";
 import RequestEditPage from "./pages/RequestEditPage";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -152,6 +154,15 @@ function App() {
       <Routes>
 
       <Route
+        path="/admin/requests"
+        element={
+          <RequireAuth isLoggedIn={isLoggedIn}>
+            <AdminRequestsPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
         path="/mypage"
         element={
           <RequireAuth isLoggedIn={isLoggedIn}>
@@ -279,6 +290,15 @@ function App() {
           </RequireAuth>
         }
       />
+
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth isLoggedIn={isLoggedIn}>
+              <AdminPage />
+            </RequireAuth>
+          }
+        />
 
       <Route
         path="/requests/edit/:id"

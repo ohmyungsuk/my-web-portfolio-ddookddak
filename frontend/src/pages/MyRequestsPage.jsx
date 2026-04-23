@@ -1,5 +1,6 @@
+
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
 function normalizeStatus(status) {
@@ -8,6 +9,7 @@ function normalizeStatus(status) {
   if (status === "planned" || status === "작업 예정") return "planned";
   if (status === "in_progress" || status === "진행중") return "in_progress";
   if (status === "completed" || status === "완료됨") return "completed";
+  if (status === "cancelled" || status === "취소됨" || status === "요청 취소") return "cancelled";
   return "unknown";
 }
 
@@ -18,6 +20,7 @@ function getStatusText(status) {
   if (normalized === "planned") return "작업 예정";
   if (normalized === "in_progress") return "진행중";
   if (normalized === "completed") return "완료됨";
+  if (normalized === "cancelled") return "취소됨";
   return status || "상태 없음";
 }
 
@@ -25,19 +28,22 @@ function getStatusStyle(status) {
   const normalized = normalizeStatus(status);
 
   if (normalized === "pending") {
-    return { backgroundColor: "#eef2f7", color: "#475569" };
+    return { backgroundColor: "#eff6ff", color: "#1d4ed8" };
   }
   if (normalized === "quoted") {
-    return { backgroundColor: "#fff4e5", color: "#c2410c" };
+    return { backgroundColor: "#fff7ed", color: "#c2410c" };
   }
   if (normalized === "planned") {
-    return { backgroundColor: "#e8f0ff", color: "#1d4ed8" };
+    return { backgroundColor: "#eef2ff", color: "#4338ca" };
   }
   if (normalized === "in_progress") {
-    return { backgroundColor: "#eaf8ef", color: "#15803d" };
+    return { backgroundColor: "#ecfdf3", color: "#15803d" };
   }
   if (normalized === "completed") {
-    return { backgroundColor: "#dcfce7", color: "#166534" };
+    return { backgroundColor: "#f0fdf4", color: "#166534" };
+  }
+  if (normalized === "cancelled") {
+    return { backgroundColor: "#f1f5f9", color: "#475569" };
   }
 
   return { backgroundColor: "#f1f5f9", color: "#334155" };
@@ -96,12 +102,13 @@ function HoverCard({ children, onClick, baseStyle, hoverStyle = {} }) {
   );
 }
 
-function HoverButton({ children, onClick, baseStyle, hoverStyle = {} }) {
+function HoverButton({ children, onClick, baseStyle, hoverStyle = {}, disabled = false }) {
   const [isHover, setIsHover] = useState(false);
 
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       onMouseEnter={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
@@ -109,7 +116,7 @@ function HoverButton({ children, onClick, baseStyle, hoverStyle = {} }) {
       onFocus={(e) => e.currentTarget.blur()}
       style={{
         ...baseStyle,
-        ...(isHover ? hoverStyle : {}),
+        ...(isHover && !disabled ? hoverStyle : {}),
         WebkitTapHighlightColor: "transparent",
       }}
     >
@@ -118,8 +125,19 @@ function HoverButton({ children, onClick, baseStyle, hoverStyle = {} }) {
   );
 }
 
+function StatCard({ label, value, sub, styles }) {
+  return (
+    <div style={styles.statCard}>
+      <div style={styles.statLabel}>{label}</div>
+      <div style={styles.statValue}>{value}</div>
+      <div style={styles.statSub}>{sub}</div>
+    </div>
+  );
+}
+
 export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState("");
@@ -127,13 +145,15 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [loginUser, setLoginUser] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const BRAND = "#3b82f6";
-  const BRAND_HOVER = "#2563eb";
-  const BG = "#f4f7fb";
+  const BRAND = "#2563eb";
+  const BRAND_HOVER = "#1d4ed8";
+  const BG = "#f6f8fc";
   const CARD = "#ffffff";
-  const BORDER = "#dbe4f0";
-  const TEXT = "#1e293b";
+  const BORDER = "#dbe5f0";
+  const TEXT = "#0f172a";
   const SUB = "#64748b";
   const SOFT = "#f8fbff";
 
@@ -144,6 +164,21 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     { key: "planned", label: "작업 예정" },
     { key: "in_progress", label: "진행중" },
     { key: "completed", label: "완료됨" },
+    { key: "cancelled", label: "취소됨" },
+  ];
+
+  const categoryOptions = [
+    { key: "all", label: "전체 카테고리" },
+    { key: "전기/조명", label: "전기/조명" },
+    { key: "설비/배관", label: "설비/배관" },
+    { key: "누수/방수", label: "누수/방수" },
+    { key: "도어락/출입문", label: "도어락/출입문" },
+    { key: "에어컨/환기", label: "에어컨/환기" },
+    { key: "CCTV/네트워크", label: "CCTV/네트워크" },
+    { key: "유리/창호", label: "유리/창호" },
+    { key: "가전/생활수리", label: "가전/생활수리" },
+    { key: "청소/철거", label: "청소/철거" },
+    { key: "기타 유지보수", label: "기타 유지보수" },
   ];
 
   useEffect(() => {
@@ -152,44 +187,50 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    const fetchMyRequests = async () => {
-      try {
-        setLoading(true);
-        setMessage("");
+  const fetchMyRequests = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-          setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
-          setLoading(false);
-          return;
-        }
-
-        setLoginUser(user);
-
-        const { data, error } = await supabase
-          .from("requests")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        setRequests(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("내 요청 목록 불러오기 실패:", error);
-        setMessage(error.message || "내 요청 목록을 불러오지 못했습니다.");
-      } finally {
+      if (userError || !user) {
+        setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
         setLoading(false);
+        return;
       }
-    };
 
+      setLoginUser(user);
+
+      const { data, error } = await supabase
+        .from("requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setRequests(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("내 요청 목록 불러오기 실패:", error);
+      setMessage(error.message || "내 요청 목록을 불러오지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchMyRequests();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchMyRequests();
+    }
+  }, [location.state]);
 
   const summary = useMemo(() => {
     const normalized = requests.map((item) => normalizeStatus(item.status));
@@ -203,9 +244,24 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
-    if (selectedFilter === "all") return requests;
-    return requests.filter((item) => normalizeStatus(item.status) === selectedFilter);
-  }, [requests, selectedFilter]);
+    const keyword = search.trim().toLowerCase();
+
+    return requests.filter((item) => {
+      const statusMatch =
+        selectedFilter === "all" || normalizeStatus(item.status) === selectedFilter;
+
+      const categoryMatch =
+        categoryFilter === "all" || (item.category || "") === categoryFilter;
+
+      const searchMatch =
+        keyword === "" ||
+        (item.title || "").toLowerCase().includes(keyword) ||
+        (item.category || "").toLowerCase().includes(keyword) ||
+        (item.content || "").toLowerCase().includes(keyword);
+
+      return statusMatch && categoryMatch && searchMatch;
+    });
+  }, [requests, selectedFilter, categoryFilter, search]);
 
   const handleOpenDetail = (request) => {
     if (onClickRequest) {
@@ -233,19 +289,19 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     page: {
       minHeight: "100vh",
       background: BG,
-      padding: isMobile ? "92px 12px 28px" : "104px 20px 48px",
+      padding: isMobile ? "88px 12px 28px" : "104px 20px 48px",
       boxSizing: "border-box",
     },
     container: {
-      maxWidth: "1120px",
+      maxWidth: "1180px",
       margin: "0 auto",
     },
     pageTitle: {
       margin: "0 0 18px",
-      fontSize: isMobile ? "22px" : "24px",
-      fontWeight: 700,
+      fontSize: isMobile ? "23px" : "28px",
+      fontWeight: 800,
       color: TEXT,
-      letterSpacing: "-0.3px",
+      letterSpacing: "-0.5px",
       lineHeight: 1.35,
     },
     shell: {
@@ -257,57 +313,143 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     mainCard: {
       background: CARD,
       border: `1px solid ${BORDER}`,
-      borderRadius: "22px",
-      padding: isMobile ? "16px" : "22px",
-      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+      borderRadius: "26px",
+      padding: isMobile ? "14px" : "22px",
+      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
     },
     heroCard: {
-      background: "#f7fbff",
+      background: "linear-gradient(180deg, #f8fbff 0%, #fdfefe 100%)",
       border: `1px solid ${BORDER}`,
-      borderRadius: "20px",
-      padding: isMobile ? "16px" : "20px",
+      borderRadius: "22px",
+      padding: isMobile ? "18px 16px" : "24px",
       marginBottom: "18px",
+    },
+    heroTop: {
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      justifyContent: "space-between",
+      alignItems: isMobile ? "flex-start" : "center",
+      gap: "14px",
+      marginBottom: "18px",
+    },
+    heroTitleWrap: {
+      minWidth: 0,
+    },
+    eyebrow: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "7px 11px",
+      borderRadius: "999px",
+      background: "#eaf2ff",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 800,
+      marginBottom: "12px",
+      letterSpacing: "-0.1px",
     },
     heroTitle: {
       margin: 0,
-      fontSize: isMobile ? "26px" : "22px",
-      fontWeight: 700,
+      fontSize: isMobile ? "24px" : "30px",
+      fontWeight: 800,
       color: TEXT,
-      lineHeight: 1.4,
-      letterSpacing: "-0.4px",
+      lineHeight: 1.32,
+      letterSpacing: "-0.7px",
     },
     heroSub: {
       marginTop: "10px",
       fontSize: "14px",
       color: SUB,
-      lineHeight: 1.7,
+      lineHeight: 1.75,
+      fontWeight: 500,
+      wordBreak: "keep-all",
+    },
+    statGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+      gap: "10px",
+    },
+    statCard: {
+      background: "#fff",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "18px",
+      padding: isMobile ? "14px" : "16px",
+      boxShadow: "0 6px 16px rgba(15, 23, 42, 0.03)",
+    },
+    statLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 700,
+      marginBottom: "8px",
+    },
+    statValue: {
+      fontSize: isMobile ? "22px" : "24px",
+      color: TEXT,
+      fontWeight: 800,
+      letterSpacing: "-0.4px",
+      lineHeight: 1.2,
+    },
+    statSub: {
+      marginTop: "6px",
+      fontSize: "12px",
+      color: SUB,
+      lineHeight: 1.5,
       fontWeight: 500,
     },
-    chipRow: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "8px",
-      marginTop: "16px",
-    },
-    chip: {
+    controlsCard: {
+      background: SOFT,
       border: `1px solid ${BORDER}`,
-      background: "#fff",
-      color: TEXT,
-      borderRadius: "999px",
-      padding: "8px 12px",
+      borderRadius: "18px",
+      padding: isMobile ? "14px" : "16px",
+      marginBottom: "4px",
+    },
+    controlLabel: {
       fontSize: "13px",
-      fontWeight: 600,
+      color: TEXT,
+      fontWeight: 700,
+      marginBottom: "10px",
+    },
+    filterBar: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 210px",
+      gap: "10px",
+      marginBottom: "12px",
+    },
+    searchInput: {
+      width: "100%",
+      height: "48px",
+      padding: "0 15px",
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      background: "#ffffff",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 500,
+      outline: "none",
+      boxSizing: "border-box",
+    },
+    select: {
+      width: "100%",
+      height: "48px",
+      padding: "0 14px",
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      background: "#ffffff",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 500,
+      outline: "none",
+      boxSizing: "border-box",
     },
     filterRow: {
       display: "flex",
       flexWrap: "wrap",
       gap: "8px",
-      marginTop: "18px",
     },
     filterBtn: {
-      height: "38px",
+      minHeight: "38px",
       padding: "0 14px",
-      border: "1px solid #dbe4f0",
+      border: "1px solid #d9e4f2",
       borderRadius: "999px",
       background: "#ffffff",
       color: TEXT,
@@ -315,14 +457,14 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       fontWeight: 700,
       cursor: "pointer",
       outline: "none",
-      boxShadow: "0 4px 10px rgba(15, 23, 42, 0.03)",
+      boxShadow: "none",
       transition: "all 0.18s ease",
     },
     filterBtnActive: {
       background: BRAND,
       color: "#ffffff",
       border: "1px solid transparent",
-      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
+      boxShadow: "0 10px 20px rgba(37, 99, 235, 0.16)",
     },
     listWrap: {
       display: "grid",
@@ -332,8 +474,8 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     emptyCard: {
       background: "#fff",
       border: `1px dashed ${BORDER}`,
-      borderRadius: "18px",
-      padding: "32px 20px",
+      borderRadius: "20px",
+      padding: "34px 20px",
       textAlign: "center",
       color: SUB,
       fontSize: "14px",
@@ -342,12 +484,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     },
     requestCard: {
       background: "#fff",
-      border: "1px solid #e8eef5",
-      borderRadius: "18px",
-      padding: "16px",
+      border: "1px solid #e6edf5",
+      borderRadius: "22px",
+      padding: isMobile ? "16px" : "18px",
       cursor: "pointer",
       transition: "all 0.18s ease",
-      boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
+      boxShadow: "0 8px 22px rgba(15, 23, 42, 0.035)",
     },
     requestTop: {
       display: "flex",
@@ -357,17 +499,20 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       gap: "10px",
       marginBottom: "14px",
     },
+    requestTitleWrap: {
+      minWidth: 0,
+    },
     requestTitle: {
       margin: 0,
-      fontSize: isMobile ? "20px" : "18px",
-      fontWeight: 700,
+      fontSize: isMobile ? "18px" : "19px",
+      fontWeight: 800,
       color: TEXT,
       lineHeight: 1.45,
-      letterSpacing: "-0.2px",
+      letterSpacing: "-0.3px",
       wordBreak: "break-word",
     },
     requestSub: {
-      marginTop: "4px",
+      marginTop: "6px",
       fontSize: "13px",
       color: SUB,
       fontWeight: 500,
@@ -379,7 +524,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       padding: "8px 12px",
       borderRadius: "999px",
       fontSize: "12px",
-      fontWeight: 600,
+      fontWeight: 700,
       whiteSpace: "nowrap",
     },
     metaGrid: {
@@ -391,80 +536,95 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     metaBox: {
       background: "#fbfdff",
       border: `1px solid ${BORDER}`,
-      borderRadius: "14px",
+      borderRadius: "16px",
       padding: "12px 14px",
     },
     metaLabel: {
       fontSize: "12px",
       color: SUB,
-      fontWeight: 600,
+      fontWeight: 700,
       marginBottom: "6px",
     },
     metaValue: {
       fontSize: "14px",
       color: TEXT,
-      fontWeight: 600,
-      lineHeight: 1.5,
+      fontWeight: 700,
+      lineHeight: 1.55,
       wordBreak: "break-word",
     },
     previewBox: {
       background: "#fbfdff",
       border: `1px solid ${BORDER}`,
-      borderRadius: "14px",
-      padding: "13px 14px",
+      borderRadius: "16px",
+      padding: "14px",
     },
     previewLabel: {
       fontSize: "12px",
       color: SUB,
-      fontWeight: 600,
-      marginBottom: "6px",
+      fontWeight: 700,
+      marginBottom: "8px",
     },
     previewValue: {
       fontSize: "14px",
       color: TEXT,
       fontWeight: 500,
-      lineHeight: 1.7,
+      lineHeight: 1.75,
       wordBreak: "break-word",
     },
     footer: {
-      marginTop: "12px",
+      marginTop: "14px",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
       gap: "10px",
       flexWrap: "wrap",
+      paddingTop: "12px",
+      borderTop: `1px solid #edf2f7`,
     },
     footerDate: {
       fontSize: "12px",
       color: SUB,
-      fontWeight: 500,
+      fontWeight: 600,
     },
     footerLink: {
       fontSize: "13px",
       color: BRAND,
-      fontWeight: 700,
+      fontWeight: 800,
     },
     sideCard: {
       background: CARD,
       border: `1px solid ${BORDER}`,
-      borderRadius: "22px",
+      borderRadius: "26px",
       padding: isMobile ? "16px" : "18px",
-      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
       position: isMobile ? "static" : "sticky",
-      top: "96px",
+      top: "94px",
+    },
+    sideBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "7px 10px",
+      borderRadius: "999px",
+      background: "#eef4ff",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 800,
+      marginBottom: "12px",
     },
     sideTitle: {
       margin: 0,
-      fontSize: "18px",
-      fontWeight: 700,
+      fontSize: "20px",
+      fontWeight: 800,
       color: TEXT,
+      letterSpacing: "-0.3px",
     },
     sideDesc: {
       margin: "8px 0 16px",
       fontSize: "13px",
-      lineHeight: 1.65,
+      lineHeight: 1.75,
       color: SUB,
       fontWeight: 500,
+      wordBreak: "keep-all",
     },
     sidePrimaryBtn: {
       width: "100%",
@@ -477,7 +637,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       fontWeight: 700,
       cursor: "pointer",
       outline: "none",
-      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
+      boxShadow: "0 10px 20px rgba(37, 99, 235, 0.16)",
       transition: "all 0.18s ease",
     },
     miniInfo: {
@@ -488,20 +648,20 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       gap: "10px",
     },
     miniItem: {
-      background: "#f6f9fc",
-      borderRadius: "14px",
+      background: "#f8fbff",
+      borderRadius: "16px",
       padding: "12px 14px",
       border: `1px solid ${BORDER}`,
     },
     miniLabel: {
       fontSize: "12px",
-      fontWeight: 600,
+      fontWeight: 700,
       color: SUB,
       marginBottom: "4px",
     },
     miniValue: {
       fontSize: "14px",
-      fontWeight: 600,
+      fontWeight: 700,
       color: TEXT,
       lineHeight: 1.55,
       wordBreak: "break-word",
@@ -509,16 +669,16 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     loadingWrap: {
       background: "#fff",
       border: `1px solid ${BORDER}`,
-      borderRadius: "18px",
-      padding: "28px 20px",
+      borderRadius: "20px",
+      padding: "30px 20px",
       textAlign: "center",
       color: SUB,
       fontSize: "15px",
-      fontWeight: 600,
+      fontWeight: 700,
     },
     errorMessage: {
       padding: "12px 14px",
-      borderRadius: "12px",
+      borderRadius: "14px",
       fontSize: "13px",
       fontWeight: 600,
       lineHeight: 1.6,
@@ -536,18 +696,65 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
         <div style={styles.shell}>
           <div style={styles.mainCard}>
             <div style={styles.heroCard}>
-              <h2 style={styles.heroTitle}>내가 등록한 요청</h2>
-              <div style={styles.heroSub}>
-                최근에 등록한 요청부터 순서대로 확인할 수 있어요.
+              <div style={styles.heroTop}>
+                <div style={styles.heroTitleWrap}>
+                  <div style={styles.eyebrow}>내 요청 관리</div>
+                  <h2 style={styles.heroTitle}>내가 등록한 요청을 깔끔하게 모아봐요</h2>
+                  <div style={styles.heroSub}>
+                    최근에 등록한 요청부터 상태별로 빠르게 확인하고,
+                    필요한 건 바로 상세보기로 들어갈 수 있어요.
+                  </div>
+                </div>
               </div>
 
               {!loading && !message && (
-                <div style={styles.chipRow}>
-                  <div style={styles.chip}>전체 {summary.total}개</div>
-                  <div style={styles.chip}>진행중 {summary.active}개</div>
-                  <div style={styles.chip}>완료 {summary.completed}개</div>
+                <div style={styles.statGrid}>
+                  <StatCard
+                    label="전체 요청"
+                    value={`${summary.total}개`}
+                    sub="내가 등록한 전체 건수"
+                    styles={styles}
+                  />
+                  <StatCard
+                    label="진행중"
+                    value={`${summary.active}개`}
+                    sub="현재 처리중인 요청"
+                    styles={styles}
+                  />
+                  <StatCard
+                    label="완료"
+                    value={`${summary.completed}개`}
+                    sub="작업이 끝난 요청"
+                    styles={styles}
+                  />
                 </div>
               )}
+            </div>
+
+            <div style={styles.controlsCard}>
+              <div style={styles.controlLabel}>검색 및 필터</div>
+
+              <div style={styles.filterBar}>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="제목, 내용, 카테고리로 검색"
+                  style={styles.searchInput}
+                />
+
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  style={styles.select}
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div style={styles.filterRow}>
                 {filterOptions.map((option) => {
@@ -568,6 +775,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
                             }
                           : {
                               color: BRAND,
+                              border: "1px solid #bfd3f7",
                             }
                       }
                     >
@@ -585,7 +793,9 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
 
               {!loading && !message && filteredRequests.length === 0 && (
                 <div style={styles.emptyCard}>
-                  해당 상태의 요청이 없습니다.
+                  검색어나 필터 조건에 맞는 요청이 없어요.
+                  <br />
+                  다른 검색어 또는 카테고리를 선택해보세요.
                 </div>
               )}
 
@@ -601,12 +811,13 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
                       onClick={() => handleOpenDetail(request)}
                       baseStyle={styles.requestCard}
                       hoverStyle={{
-                        transform: isMobile ? "none" : "translateY(-2px)",
-                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+                        transform: isMobile ? "none" : "translateY(-3px)",
+                        boxShadow: "0 16px 34px rgba(15, 23, 42, 0.08)",
+                        border: "1px solid #d7e6fb",
                       }}
                     >
                       <div style={styles.requestTop}>
-                        <div>
+                        <div style={styles.requestTitleWrap}>
                           <h3 style={styles.requestTitle}>{request.title}</h3>
                           <div style={styles.requestSub}>요청 번호 #{request.id}</div>
                         </div>
@@ -654,7 +865,9 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
                       </div>
 
                       <div style={styles.footer}>
-                        <div style={styles.footerDate}>등록일 {formatDate(request.created_at)}</div>
+                        <div style={styles.footerDate}>
+                          등록일 {formatDate(request.created_at)}
+                        </div>
                         <div style={styles.footerLink}>상세보기 →</div>
                       </div>
                     </HoverCard>
@@ -664,11 +877,12 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
           </div>
 
           <div style={styles.sideCard}>
-            <h3 style={styles.sideTitle}>빠른 이동</h3>
+            <div style={styles.sideBadge}>빠른 이동</div>
+            <h3 style={styles.sideTitle}>내 요청 요약</h3>
             <p style={styles.sideDesc}>
-              등록한 요청을 확인하고
+              진행 상태를 한눈에 보고,
               <br />
-              상세 페이지에서 상태를 볼 수 있어요.
+              홈으로 돌아가서 새 요청도 바로 등록할 수 있어요.
             </p>
 
             <HoverButton
@@ -677,7 +891,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
               hoverStyle={{
                 background: BRAND_HOVER,
                 transform: isMobile ? "none" : "translateY(-1px)",
-                boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+                boxShadow: "0 14px 24px rgba(29, 78, 216, 0.22)",
               }}
             >
               메인으로 돌아가기

@@ -2,6 +2,98 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
+function normalizeStatus(status) {
+  if (status === "pending" || status === "요청 등록") return "pending";
+  if (status === "assigned" || status === "배정완료") return "assigned";
+  if (status === "quoted" || status === "견적 협의중") return "quoted";
+  if (status === "planned" || status === "작업 예정") return "planned";
+  if (status === "in_progress" || status === "진행중") return "in_progress";
+  if (status === "completed" || status === "완료됨") return "completed";
+  if (status === "cancelled" || status === "취소됨") return "cancelled";
+  return "unknown";
+}
+
+function getStatusText(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pending") return "요청 등록";
+  if (normalized === "assigned") return "배정완료";
+  if (normalized === "quoted") return "견적 협의중";
+  if (normalized === "planned") return "작업 예정";
+  if (normalized === "in_progress") return "진행중";
+  if (normalized === "completed") return "완료됨";
+  if (normalized === "cancelled") return "취소됨";
+
+  return status || "상태 없음";
+}
+
+function getStatusStyle(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pending") {
+    return { backgroundColor: "#eef2f7", color: "#475569" };
+  }
+  if (normalized === "assigned") {
+    return { backgroundColor: "#e8f0ff", color: "#1d4ed8" };
+  }
+  if (normalized === "quoted") {
+    return { backgroundColor: "#fff4e5", color: "#c2410c" };
+  }
+  if (normalized === "planned") {
+    return { backgroundColor: "#eff6ff", color: "#1d4ed8" };
+  }
+  if (normalized === "in_progress") {
+    return { backgroundColor: "#eaf8ef", color: "#15803d" };
+  }
+  if (normalized === "completed") {
+    return { backgroundColor: "#dcfce7", color: "#166534" };
+  }
+  if (normalized === "cancelled") {
+    return { backgroundColor: "#f1f5f9", color: "#64748b" };
+  }
+
+  return { backgroundColor: "#f1f5f9", color: "#334155" };
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function parseContent(content) {
+  const raw = content || "";
+  const lines = raw.split("\n");
+
+  const placeType =
+    lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "-";
+
+  const issueType =
+    lines
+      .find((line) => line.startsWith("도움이 필요한 내용:"))
+      ?.replace("도움이 필요한 내용:", "")
+      .trim() || "-";
+
+  const schedule =
+    lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
+
+  const detailText =
+    lines
+      .find((line) => line.startsWith("상세 설명:"))
+      ?.replace("상세 설명:", "")
+      .trim() || raw || "내용이 없습니다.";
+
+  return {
+    placeType,
+    issueType,
+    schedule,
+    detailText,
+  };
+}
+
 export default function RequestDetailPage() {
   const { id } = useParams();
   const location = useLocation();
@@ -24,6 +116,8 @@ export default function RequestDetailPage() {
   const TEXT = "#1e293b";
   const SUB = "#64748b";
   const SOFT = "#f8fbff";
+  const DANGER = "#ef4444";
+  const DANGER_HOVER = "#dc2626";
   const GRAY_BTN = "#94a3b8";
   const GRAY_BTN_HOVER = "#64748b";
 
@@ -50,6 +144,7 @@ export default function RequestDetailPage() {
 
       try {
         setLoading(true);
+        setMessage("");
 
         const { data, error } = await supabase
           .from("requests")
@@ -70,72 +165,8 @@ export default function RequestDetailPage() {
     fetchDetail();
   }, [id]);
 
-  const parsedDescription = useMemo(() => {
-    const raw = detail?.content || "";
-    const lines = raw.split("\n");
-
-    const placeType =
-      lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "-";
-
-    const issueType =
-      lines
-        .find((line) => line.startsWith("도움이 필요한 내용:"))
-        ?.replace("도움이 필요한 내용:", "")
-        .trim() || "-";
-
-    const schedule =
-      lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "-";
-
-    const detailText =
-      lines
-        .find((line) => line.startsWith("상세 설명:"))
-        ?.replace("상세 설명:", "")
-        .trim() || raw || "내용이 없습니다.";
-
-    return {
-      placeType,
-      issueType,
-      schedule,
-      detailText,
-    };
-  }, [detail]);
-
-  const formatDate = (value) => {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const getStatusText = (status) => {
-    if (status === "pending") return "요청 등록";
-    if (status === "quoted") return "견적 협의중";
-    if (status === "planned") return "작업 예정";
-    if (status === "in_progress") return "진행중";
-    if (status === "completed") return "완료됨";
-    return status || "상태 없음";
-  };
-
-  const getStatusStyle = (status) => {
-    if (status === "pending" || status === "요청 등록") {
-      return { backgroundColor: "#eef2f7", color: "#475569" };
-    }
-    if (status === "quoted" || status === "견적 협의중") {
-      return { backgroundColor: "#fff4e5", color: "#c2410c" };
-    }
-    if (status === "planned" || status === "작업 예정") {
-      return { backgroundColor: "#e8f0ff", color: "#1d4ed8" };
-    }
-    if (status === "in_progress" || status === "진행중") {
-      return { backgroundColor: "#eaf8ef", color: "#15803d" };
-    }
-    if (status === "completed" || status === "완료됨") {
-      return { backgroundColor: "#dcfce7", color: "#166534" };
-    }
-    return { backgroundColor: "#f1f5f9", color: "#334155" };
-  };
+  const parsedContent = useMemo(() => parseContent(detail?.content), [detail]);
+  const normalizedStatus = normalizeStatus(detail?.status);
 
   const writerText =
     detail?.user_id === loginUser?.id
@@ -153,31 +184,47 @@ export default function RequestDetailPage() {
       : detail.assigned_username || "배정됨";
 
   const isWriter = !!(loginUser && detail && detail.user_id === loginUser.id);
+  const isAssignedWorker = !!(
+    loginUser &&
+    detail &&
+    detail.assigned_user_id &&
+    detail.assigned_user_id === loginUser.id
+  );
+
+  const canEdit =
+    isWriter &&
+    !["completed", "cancelled"].includes(normalizedStatus);
+
+  const canCancel =
+    isWriter &&
+    !["completed", "cancelled"].includes(normalizedStatus);
+
+  const canDelete =
+    isWriter && ["pending", "assigned", "quoted", "planned", "cancelled"].includes(normalizedStatus);
 
   const canAccept =
-    loginUser &&
-    detail &&
-    detail.user_id !== loginUser.id &&
-    (detail.status === "pending" || detail.status === "요청 등록") &&
-    !detail.assigned_user_id;
+    !!(
+      loginUser &&
+      detail &&
+      detail.user_id !== loginUser.id &&
+      ["pending"].includes(normalizedStatus) &&
+      !detail.assigned_user_id
+    );
 
   const canSetPlanned =
-    loginUser &&
-    detail &&
-    detail.assigned_user_id === loginUser.id &&
-    (detail.status === "quoted" || detail.status === "견적 협의중");
+    !!(
+      isAssignedWorker && ["assigned", "quoted"].includes(normalizedStatus)
+    );
 
   const canStartWork =
-    loginUser &&
-    detail &&
-    detail.assigned_user_id === loginUser.id &&
-    (detail.status === "planned" || detail.status === "작업 예정");
+    !!(
+      isAssignedWorker && ["planned"].includes(normalizedStatus)
+    );
 
   const canComplete =
-    loginUser &&
-    detail &&
-    detail.assigned_user_id === loginUser.id &&
-    (detail.status === "in_progress" || detail.status === "진행중");
+    !!(
+      isAssignedWorker && ["in_progress"].includes(normalizedStatus)
+    );
 
   const updateRequest = async (updateData, successMessage) => {
     if (!detail) return;
@@ -232,6 +279,15 @@ export default function RequestDetailPage() {
     await updateRequest({ status: "completed" }, "작업을 완료 처리했습니다.");
   };
 
+  const handleCancel = async () => {
+    if (!detail || !canCancel) return;
+
+    const confirmed = window.confirm("이 요청을 취소할까요?");
+    if (!confirmed) return;
+
+    await updateRequest({ status: "cancelled" }, "요청이 취소되었습니다.");
+  };
+
   const handleEdit = () => {
     navigate(`/requests/edit/${detail.id}`, {
       state: { request: detail },
@@ -239,7 +295,7 @@ export default function RequestDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!detail || !isWriter) return;
+    if (!detail || !canDelete) return;
 
     const confirmed = window.confirm("이 요청을 삭제할까요?");
     if (!confirmed) return;
@@ -251,7 +307,7 @@ export default function RequestDetailPage() {
       const { error } = await supabase.from("requests").delete().eq("id", detail.id);
       if (error) throw error;
 
-      navigate("/requests/my");
+      navigate(fromPath, { state: { refresh: true } });
     } catch (error) {
       console.error("요청 삭제 실패:", error);
       setMessage(error.message || "요청 삭제 중 오류가 발생했습니다.");
@@ -260,7 +316,7 @@ export default function RequestDetailPage() {
     }
   };
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => navigate(fromPath, { state: { refresh: true } });
   const handleGoHome = () => navigate("/");
 
   const styles = {
@@ -454,6 +510,20 @@ export default function RequestDetailPage() {
       height: "50px",
       border: "none",
       borderRadius: "14px",
+      background: DANGER,
+      color: "#ffffff",
+      fontSize: "15px",
+      fontWeight: 700,
+      cursor: "pointer",
+      outline: "none",
+      boxShadow: "0 8px 16px rgba(239, 68, 68, 0.16)",
+      transition: "all 0.18s ease",
+    },
+    grayBtn: {
+      width: "100%",
+      height: "50px",
+      border: "none",
+      borderRadius: "14px",
       background: GRAY_BTN,
       color: "#ffffff",
       fontSize: "15px",
@@ -613,11 +683,11 @@ export default function RequestDetailPage() {
                 </div>
                 <div style={styles.infoCard}>
                   <div style={styles.infoLabel}>공간 유형</div>
-                  <div style={styles.infoValue}>{parsedDescription.placeType}</div>
+                  <div style={styles.infoValue}>{parsedContent.placeType}</div>
                 </div>
                 <div style={styles.infoCard}>
                   <div style={styles.infoLabel}>희망 일정</div>
-                  <div style={styles.infoValue}>{parsedDescription.schedule}</div>
+                  <div style={styles.infoValue}>{parsedContent.schedule}</div>
                 </div>
               </div>
             </div>
@@ -627,13 +697,13 @@ export default function RequestDetailPage() {
 
               <div style={styles.longCard}>
                 <div style={styles.longLabel}>도움이 필요한 내용</div>
-                <div style={styles.longValue}>{parsedDescription.issueType}</div>
+                <div style={styles.longValue}>{parsedContent.issueType}</div>
               </div>
 
               <div style={styles.longCard}>
                 <div style={styles.longLabel}>상세 설명</div>
                 <div style={styles.longValue}>
-                  {parsedDescription.detailText?.trim() || "내용이 없습니다."}
+                  {parsedContent.detailText?.trim() || "내용이 없습니다."}
                 </div>
               </div>
             </div>
@@ -651,7 +721,7 @@ export default function RequestDetailPage() {
                   boxShadow: "0 10px 18px rgba(59, 130, 246, 0.10)",
                 }}
               >
-                뒤로가기
+                목록으로 돌아가기
               </HoverButton>
 
               <HoverButton
@@ -671,40 +741,55 @@ export default function RequestDetailPage() {
           <div style={styles.sideCard}>
             <h3 style={styles.sideTitle}>빠른 작업</h3>
             <p style={styles.sideDesc}>
-              요청 상태에 따라 가능한 작업을
+              요청 상태와 내 권한에 따라
               <br />
-              여기서 바로 진행할 수 있어요.
+              여기서 바로 처리할 수 있어요.
             </p>
 
             <div style={{ display: "grid", gap: "10px" }}>
-              {isWriter && (
-                <>
-                  <HoverButton
-                    onClick={handleEdit}
-                    disabled={actionLoading}
-                    baseStyle={styles.primaryBtn}
-                    hoverStyle={{
-                      background: BRAND_HOVER,
-                      transform: isMobile ? "none" : "translateY(-1px)",
-                      boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
-                    }}
-                  >
-                    수정하기
-                  </HoverButton>
+              {canEdit && (
+                <HoverButton
+                  onClick={handleEdit}
+                  disabled={actionLoading}
+                  baseStyle={styles.primaryBtn}
+                  hoverStyle={{
+                    background: BRAND_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+                  }}
+                >
+                  수정하기
+                </HoverButton>
+              )}
 
-                  <HoverButton
-                    onClick={handleDelete}
-                    disabled={actionLoading}
-                    baseStyle={styles.dangerBtn}
-                    hoverStyle={{
-                      background: GRAY_BTN_HOVER,
-                      transform: isMobile ? "none" : "translateY(-1px)",
-                      boxShadow: "0 10px 18px rgba(100, 116, 139, 0.18)",
-                    }}
-                  >
-                    {actionLoading ? "삭제 중..." : "삭제하기"}
-                  </HoverButton>
-                </>
+              {canCancel && (
+                <HoverButton
+                  onClick={handleCancel}
+                  disabled={actionLoading}
+                  baseStyle={styles.grayBtn}
+                  hoverStyle={{
+                    background: GRAY_BTN_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 10px 18px rgba(100, 116, 139, 0.18)",
+                  }}
+                >
+                  {actionLoading ? "처리 중..." : "요청 취소하기"}
+                </HoverButton>
+              )}
+
+              {canDelete && (
+                <HoverButton
+                  onClick={handleDelete}
+                  disabled={actionLoading}
+                  baseStyle={styles.dangerBtn}
+                  hoverStyle={{
+                    background: DANGER_HOVER,
+                    transform: isMobile ? "none" : "translateY(-1px)",
+                    boxShadow: "0 10px 18px rgba(220, 38, 38, 0.20)",
+                  }}
+                >
+                  {actionLoading ? "삭제 중..." : "삭제하기"}
+                </HoverButton>
               )}
 
               {canAccept && (
@@ -782,9 +867,9 @@ export default function RequestDetailPage() {
               <div style={styles.miniItem}>
                 <div style={styles.miniLabel}>안내</div>
                 <div style={styles.miniValue}>
-                  내가 작성한 요청이면 수정/삭제 가능,
+                  내가 작성한 요청이면 수정/취소/삭제 가능,
                   <br />
-                  담당자로 배정된 경우 진행 상태 변경이 가능합니다.
+                  담당자면 진행 상태 변경이 가능합니다.
                 </div>
               </div>
             </div>

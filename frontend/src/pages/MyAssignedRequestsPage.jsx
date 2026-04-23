@@ -3,7 +3,52 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 import "../index.css";
 
-function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
+function normalizeStatus(status) {
+  if (status === "pending" || status === "요청 등록") return "pending";
+  if (status === "quoted" || status === "견적 협의중") return "quoted";
+  if (status === "planned" || status === "작업 예정" || status === "assigned" || status === "배정완료") {
+    return "planned";
+  }
+  if (status === "in_progress" || status === "진행중") return "in_progress";
+  if (status === "completed" || status === "완료됨") return "completed";
+  if (status === "cancelled" || status === "취소됨" || status === "요청 취소") return "cancelled";
+  return "unknown";
+}
+
+function getStatusText(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === "pending") return "요청 등록";
+  if (normalized === "quoted") return "견적 협의중";
+  if (normalized === "planned") return "작업 예정";
+  if (normalized === "in_progress") return "진행중";
+  if (normalized === "completed") return "완료됨";
+  if (normalized === "cancelled") return "취소됨";
+  return status || "상태 없음";
+}
+
+function getStatusStyle(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pending") return { backgroundColor: "#eef2f7", color: "#475569" };
+  if (normalized === "quoted") return { backgroundColor: "#ffedd5", color: "#c2410c" };
+  if (normalized === "planned") return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
+  if (normalized === "in_progress") return { backgroundColor: "#dcfce7", color: "#15803d" };
+  if (normalized === "completed") return { backgroundColor: "#bbf7d0", color: "#166534" };
+  if (normalized === "cancelled") return { backgroundColor: "#f1f5f9", color: "#475569" };
+
+  return { backgroundColor: "#f3f4f6", color: "#111827" };
+}
+
+function formatDate(value) {
+  if (!value) return "등록일 정보 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+export default function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState("");
@@ -20,20 +65,32 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
 
   useEffect(() => {
     const fetchAssignedRequests = async () => {
-      const savedUser = localStorage.getItem("loginUser");
-      const loginUser = savedUser ? JSON.parse(savedUser) : null;
-
-      if (!loginUser || !loginUser.id) {
-        setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
-        setLoading(false);
-        return;
-      }
-
       try {
+        setLoading(true);
+        setMessage("");
+
+        const savedUser = localStorage.getItem("loginUser");
+        const loginUser = savedUser ? JSON.parse(savedUser) : null;
+
+        let currentUserId = loginUser?.id || null;
+
+        if (!currentUserId) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          currentUserId = user?.id || null;
+        }
+
+        if (!currentUserId) {
+          setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
+          setRequests([]);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("requests")
           .select("*")
-          .eq("assigned_user_id", loginUser.id)
+          .eq("assigned_user_id", currentUserId)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
@@ -50,30 +107,36 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
   }, []);
 
   const summary = useMemo(() => {
+    const normalized = requests.map((item) => normalizeStatus(item.status));
     const total = requests.length;
-    const planned = requests.filter((item) => item.status === "작업 예정").length;
-    const working = requests.filter((item) => item.status === "진행중").length;
-    const done = requests.filter((item) => item.status === "완료됨").length;
+    const planned = normalized.filter((status) => status === "planned").length;
+    const working = normalized.filter((status) => status === "in_progress").length;
+    const done = normalized.filter((status) => status === "completed").length;
+    const cancelled = normalized.filter((status) => status === "cancelled").length;
 
-    return { total, planned, working, done };
+    return { total, planned, working, done, cancelled };
   }, [requests]);
 
-  const getStatusStyle = (status) => {
-    if (status === "요청 등록") return { backgroundColor: "#eef2f7", color: "#475569" };
-    if (status === "견적 협의중") return { backgroundColor: "#ffedd5", color: "#c2410c" };
-    if (status === "작업 예정") return { backgroundColor: "#dbeafe", color: "#1d4ed8" };
-    if (status === "진행중") return { backgroundColor: "#dcfce7", color: "#15803d" };
-    if (status === "완료됨") return { backgroundColor: "#bbf7d0", color: "#166534" };
-    return { backgroundColor: "#f3f4f6", color: "#111827" };
+  const handleGoHome = () => {
+    if (onGoHome) {
+      onGoHome();
+      return;
+    }
+    navigate("/");
   };
 
-  const formatDate = (value) => {
-    if (!value) return "등록일 정보 없음";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "등록일 정보 없음";
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
+  const handleOpenDetail = (request) => {
+    if (onClickRequest) {
+      onClickRequest(request);
+      return;
+    }
+
+    navigate(`/requests/${request.id}`, {
+      state: {
+        request,
+        from: "/requests/assigned",
+      },
+    });
   };
 
   const styles = getPageStyles(isMobile);
@@ -82,15 +145,12 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
     <div style={styles.shell}>
       <div style={styles.wrap}>
         <div style={styles.topbar}>
-          <div
-            style={{ ...styles.brand, cursor: "pointer" }}
-            onClick={() => navigate("/")}
-          >
+          <div style={{ ...styles.brand, cursor: "pointer" }} onClick={() => navigate("/")}>
             <div style={styles.brandMark}>ㄸ</div>
             <div style={styles.brandText}>뚝딱</div>
           </div>
 
-          <button type="button" className="button-hover" style={styles.backBtn} onClick={onGoHome}>
+          <button type="button" className="button-hover" style={styles.backBtn} onClick={handleGoHome}>
             메인으로 돌아가기
           </button>
         </div>
@@ -110,6 +170,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
                 <div style={styles.chip}>작업 예정 {summary.planned}개</div>
                 <div style={styles.chip}>진행중 {summary.working}개</div>
                 <div style={styles.chip}>완료 {summary.done}개</div>
+                <div style={styles.chip}>취소 {summary.cancelled}개</div>
               </div>
             )}
 
@@ -130,11 +191,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
                 !message &&
                 requests.length > 0 &&
                 requests.map((request) => (
-                  <div
-                    key={request.id}
-                    style={styles.requestCard}
-                    onClick={() => onClickRequest(request)}
-                  >
+                  <div key={request.id} style={styles.requestCard} onClick={() => handleOpenDetail(request)}>
                     <div style={styles.requestTop}>
                       <div>
                         <h3 style={styles.requestTitle}>{request.title}</h3>
@@ -147,19 +204,19 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
                           ...getStatusStyle(request.status),
                         }}
                       >
-                        {request.status}
+                        {getStatusText(request.status)}
                       </span>
                     </div>
 
                     <div style={styles.metaGrid}>
                       <div style={styles.metaBox}>
                         <div style={styles.metaLabel}>카테고리</div>
-                        <div style={styles.metaValue}>{request.category}</div>
+                        <div style={styles.metaValue}>{request.category || "-"}</div>
                       </div>
 
                       <div style={styles.metaBox}>
                         <div style={styles.metaLabel}>장소</div>
-                        <div style={styles.metaValue}>{request.location}</div>
+                        <div style={styles.metaValue}>{request.location || "-"}</div>
                       </div>
 
                       <div style={styles.metaBox}>
@@ -168,14 +225,10 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
                       </div>
                     </div>
 
-                    <div style={styles.previewBox}>
-                      {request.content?.trim() || "요청 내용이 없습니다."}
-                    </div>
+                    <div style={styles.previewBox}>{request.content?.trim() || "요청 내용이 없습니다."}</div>
 
                     <div style={styles.cardFooter}>
-                      <div style={styles.footerDate}>
-                        등록일 {formatDate(request.created_at)}
-                      </div>
+                      <div style={styles.footerDate}>등록일 {formatDate(request.created_at)}</div>
                       <div style={styles.footerLink}>상세보기 →</div>
                     </div>
                   </div>
@@ -187,9 +240,7 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
             <div style={styles.sideHero}>
               <p style={styles.sideHeroLabel}>맡은 작업</p>
               <span style={styles.sideHeroBig}>{summary.total}건</span>
-              <p style={styles.sideHeroText}>
-                내가 현재 맡고 있는 전체 요청 수입니다.
-              </p>
+              <p style={styles.sideHeroText}>내가 현재 맡고 있는 전체 요청 수입니다.</p>
             </div>
 
             <div style={styles.sideSoft}>
@@ -203,9 +254,13 @@ function MyAssignedRequestsPage({ onGoHome, onClickRequest }) {
               <strong style={styles.sideSoftTitle}>
                 {summary.working} / {summary.done}
               </strong>
-              <p style={styles.sideSoftText}>
-                현재 작업 중인 요청과 완료 처리한 요청입니다.
-              </p>
+              <p style={styles.sideSoftText}>현재 작업 중인 요청과 완료 처리한 요청입니다.</p>
+            </div>
+
+            <div style={styles.sideSoft}>
+              <p style={styles.sideSoftLabel}>취소됨</p>
+              <strong style={styles.sideSoftTitle}>{summary.cancelled}건</strong>
+              <p style={styles.sideSoftText}>진행이 중단되었거나 취소된 요청입니다.</p>
             </div>
           </div>
         </div>
@@ -238,7 +293,7 @@ function getPageStyles(isMobile) {
       alignItems: "center",
       gap: "10px",
     },
-   brandMark: {
+    brandMark: {
       width: "40px",
       height: "40px",
       borderRadius: "14px",
@@ -414,6 +469,7 @@ function getPageStyles(isMobile) {
       color: "#475569",
       fontSize: "14px",
       lineHeight: "1.8",
+      whiteSpace: "pre-wrap",
     },
     cardFooter: {
       marginTop: "16px",
@@ -491,5 +547,3 @@ function getPageStyles(isMobile) {
     },
   };
 }
-
-export default MyAssignedRequestsPage;
