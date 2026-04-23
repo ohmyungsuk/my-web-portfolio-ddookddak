@@ -30,6 +30,10 @@ function LandingPage({
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredGhostButton, setHoveredGhostButton] = useState("");
   const profileRef = useRef(null);
+  const userRole = String(loginUser?.role || "user").toLowerCase();
+  const isAdmin = userRole === "admin";
+  const isWorker = userRole === "worker";
+  const roleLabel = isAdmin ? "관리자" : isWorker ? "전문가" : "일반 회원";
 
   const isMobile = windowWidth <= 768;
 
@@ -513,6 +517,34 @@ function LandingPage({
                         padding: "10px",
                       }}
                     >
+                      <div
+                        style={{
+                          padding: "10px 12px 12px",
+                          borderBottom: `1px solid ${CARD_BORDER}`,
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "700",
+                            color: TEXT_DARK,
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {displayName}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: isAdmin ? "#DC2626" : isWorker ? "#7C3AED" : "#64748B",
+                            fontWeight: "700",
+                          }}
+                        >
+                          {roleLabel}
+                        </div>
+                      </div>
+
                       <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
                         마이페이지
                       </DropdownButton>
@@ -526,11 +558,13 @@ function LandingPage({
                       >
                         전체 요청 보기
                       </DropdownButton>
-                      <DropdownButton
-                        onClick={() => closeAndRun(onGoAssignedRequests)}
-                      >
-                        맡은 작업 보기
-                      </DropdownButton>
+                      {(isWorker || isAdmin) && (
+                        <DropdownButton
+                          onClick={() => closeAndRun(onGoAssignedRequests)}
+                        >
+                          맡은 작업 보기
+                        </DropdownButton>
+                      )}
                       <DropdownButton
                         onClick={() => closeAndRun(onLogout)}
                         danger
@@ -646,6 +680,60 @@ function LandingPage({
                             padding: "10px",
                           }}
                         >
+                          <div
+                            style={{
+                              padding: "10px 12px 12px",
+                              borderBottom: `1px solid ${CARD_BORDER}`,
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "700",
+                                color: TEXT_DARK,
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {displayName}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: isAdmin ? "#DC2626" : isWorker ? "#7C3AED" : "#64748B",
+                                fontWeight: "700",
+                              }}
+                            >
+                              {roleLabel}
+                            </div>
+                          </div>
+                           <div
+                          style={{
+                            padding: "10px 12px 12px",
+                            borderBottom: `1px solid ${CARD_BORDER}`,
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "700",
+                              color: TEXT_DARK,
+                              marginBottom: "4px",
+                            }}
+                          >
+                            {displayName}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: isAdmin ? "#DC2626" : isWorker ? "#7C3AED" : "#64748B",
+                              fontWeight: "700",
+                            }}
+                          >
+                            {roleLabel}
+                          </div>
+                        </div>   
                           <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
                             마이페이지
                           </DropdownButton>
@@ -659,11 +747,13 @@ function LandingPage({
                           >
                             전체 요청 보기
                           </DropdownButton>
-                          <DropdownButton
-                            onClick={() => closeAndRun(onGoAssignedRequests)}
-                          >
-                            맡은 작업 보기
-                          </DropdownButton>
+                          {(isWorker || isAdmin) && (
+                            <DropdownButton
+                              onClick={() => closeAndRun(onGoAssignedRequests)}
+                            >
+                              맡은 작업 보기
+                            </DropdownButton>
+                          )}
                           <DropdownButton
                             onClick={() => closeAndRun(onLogout)}
                             danger

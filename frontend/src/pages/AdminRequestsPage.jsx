@@ -8,14 +8,24 @@ function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [requests, setRequests] = useState([]);
+  const [workers, setWorkers] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [savingRequestId, setSavingRequestId] = useState(null);
 
   const loginUser = useMemo(() => {
     const savedUser = localStorage.getItem("loginUser");
     return savedUser ? JSON.parse(savedUser) : null;
   }, []);
+
+  const statusOptions = [
+    { value: "pending", label: "접수대기" },
+    { value: "assigned", label: "배정완료" },
+    { value: "in_progress", label: "작업중" },
+    { value: "completed", label: "완료" },
+    { value: "cancelled", label: "취소됨" },
+  ];
 
   const normalizeStatus = (status) => {
     const value = String(status || "").trim().toLowerCase();
@@ -100,6 +110,11 @@ function AdminRequestsPage() {
     return cleaned.length > 110 ? `${cleaned.slice(0, 110)}...` : cleaned;
   };
 
+  const getWorkerDisplayName = (worker) => {
+    if (!worker) return "";
+    return worker.name || worker.username || "이름 없는 담당자";
+  };
+
   useEffect(() => {
     const fetchAdminRequests = async () => {
       try {
@@ -130,18 +145,38 @@ function AdminRequestsPage() {
 
         setIsAdmin(true);
 
-        const { data, error } = await supabase
-          .from("requests")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const [{ data: requestData, error: requestError }, { data: workerData, error: workerError }] =
+          await Promise.all([
+            supabase.from("requests").select("*").order("created_at", { ascending: false }),
+            supabase
+              .from("profiles")
+              .select("id, username, name, role")
+              .eq("role", "worker")
+              .order("name", { ascending: true }),
+          ]);
 
-        if (error) {
-          console.error("전체 요청 조회 실패:", error);
+        if (requestError) {
+          console.error("전체 요청 조회 실패:", requestError);
           setLoading(false);
           return;
         }
 
-        setRequests(Array.isArray(data) ? data : []);
+        if (workerError) {
+          console.error("담당자 목록 조회 실패:", workerError);
+        }
+
+        const safeWorkers = Array.isArray(workerData) ? workerData : [];
+        setWorkers(safeWorkers);
+
+        const safeData = Array.isArray(requestData) ? requestData : [];
+        setRequests(
+          safeData.map((request) => ({
+            ...request,
+            normalized_status: normalizeStatus(request.status),
+            selected_assigned_to: request.assigned_to || "",
+            selected_assigned_name: request.assigned_name || "",
+          }))
+        );
       } catch (error) {
         console.error("관리자 요청 페이지 로딩 실패:", error);
       } finally {
@@ -151,6 +186,99 @@ function AdminRequestsPage() {
 
     fetchAdminRequests();
   }, [loginUser, navigate]);
+
+  const handleStatusChange = (requestId, nextStatus) => {
+    setRequests((prev) =>
+      prev.map((request) =>
+        request.id === requestId
+          ? {
+              ...request,
+              normalized_status: nextStatus,
+            }
+          : request
+      )
+    );
+  };
+
+  const handleWorkerChange = (requestId, workerId) => {
+    const selectedWorker = workers.find((worker) => worker.id === workerId);
+
+    setRequests((prev) =>
+      prev.map((request) => {
+        if (request.id !== requestId) return request;
+
+        const hasWorker = Boolean(workerId);
+        const nextStatus = hasWorker
+          ? request.normalized_status === "pending"
+            ? "assigned"
+            : request.normalized_status
+          : request.normalized_status === "assigned"
+          ? "pending"
+          : request.normalized_status;
+
+        return {
+          ...request,
+          selected_assigned_to: workerId,
+          selected_assigned_name: selectedWorker ? getWorkerDisplayName(selectedWorker) : "",
+          normalized_status: nextStatus,
+        };
+      })
+    );
+  };
+
+  const handleSaveRequest = async (requestId) => {
+    const targetRequest = requests.find((request) => request.id === requestId);
+
+    if (!targetRequest) return;
+
+    try {
+      setSavingRequestId(requestId);
+
+      const hasAssignedWorker = Boolean(targetRequest.selected_assigned_to);
+      const nextStatus = hasAssignedWorker
+        ? targetRequest.normalized_status === "pending"
+          ? "assigned"
+          : targetRequest.normalized_status
+        : targetRequest.normalized_status;
+
+      const payload = {
+        status: nextStatus,
+        assigned_to: targetRequest.selected_assigned_to || null,
+        assigned_name: targetRequest.selected_assigned_name || null,
+      };
+
+      const { error } = await supabase.from("requests").update(payload).eq("id", requestId);
+
+      if (error) {
+        console.error("요청 저장 실패:", error);
+        alert("저장에 실패했어요.");
+        return;
+      }
+
+      setRequests((prev) =>
+        prev.map((request) =>
+          request.id === requestId
+            ? {
+                ...request,
+                status: nextStatus,
+                normalized_status: nextStatus,
+                assigned_to: targetRequest.selected_assigned_to || null,
+                assigned_name: targetRequest.selected_assigned_name || null,
+                selected_assigned_to: targetRequest.selected_assigned_to || "",
+                selected_assigned_name: targetRequest.selected_assigned_name || "",
+              }
+            : request
+        )
+      );
+
+      alert("상태와 담당자 정보가 저장됐어요.");
+    } catch (error) {
+      console.error("요청 저장 중 오류:", error);
+      alert("저장 중 문제가 생겼어요.");
+    } finally {
+      setSavingRequestId(null);
+    }
+  };
 
   const categoryOptions = useMemo(() => {
     const categories = requests
@@ -163,7 +291,7 @@ function AdminRequestsPage() {
 
   const filteredRequests = useMemo(() => {
     return requests.filter((request) => {
-      const normalizedStatus = normalizeStatus(request.status);
+      const normalizedStatus = request.normalized_status || normalizeStatus(request.status);
 
       const matchesStatus =
         statusFilter === "all" ? true : normalizedStatus === statusFilter;
@@ -177,7 +305,9 @@ function AdminRequestsPage() {
           ? true
           : String(request.title || "").toLowerCase().includes(keyword) ||
             String(request.content || "").toLowerCase().includes(keyword) ||
-            String(request.category || "").toLowerCase().includes(keyword);
+            String(request.category || "").toLowerCase().includes(keyword) ||
+            String(request.assigned_name || "").toLowerCase().includes(keyword) ||
+            String(request.selected_assigned_name || "").toLowerCase().includes(keyword);
 
       return matchesStatus && matchesCategory && matchesKeyword;
     });
@@ -237,7 +367,7 @@ function AdminRequestsPage() {
               <p style={badgeStyle}>관리자 요청 관리</p>
               <h1 style={titleStyle}>전체 요청 관리</h1>
               <p style={descStyle}>
-                전체 요청을 검색하고 상태와 카테고리별로 확인할 수 있어요.
+                전체 요청의 상태를 바꾸고 담당자를 바로 배정할 수 있어요.
               </p>
             </div>
 
@@ -268,7 +398,7 @@ function AdminRequestsPage() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="제목, 내용, 카테고리 검색"
+                placeholder="제목, 내용, 카테고리, 담당자 검색"
                 style={inputStyle}
               />
             </div>
@@ -281,11 +411,11 @@ function AdminRequestsPage() {
                 style={selectStyle}
               >
                 <option value="all">전체 상태</option>
-                <option value="pending">접수대기</option>
-                <option value="assigned">배정완료</option>
-                <option value="in_progress">작업중</option>
-                <option value="completed">완료</option>
-                <option value="cancelled">취소됨</option>
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -306,7 +436,7 @@ function AdminRequestsPage() {
           </div>
 
           <div style={countRowStyle}>
-            총 <strong>{filteredRequests.length}</strong>개의 요청이 보여요.
+            총 <strong>{filteredRequests.length}</strong>개의 요청이 보여요. 담당자 계정은 <strong>{workers.length}</strong>명 등록돼 있어요.
           </div>
         </section>
 
@@ -315,42 +445,95 @@ function AdminRequestsPage() {
             <div style={emptyStyle}>조건에 맞는 요청이 없습니다.</div>
           ) : (
             <div style={requestListStyle}>
-              {filteredRequests.map((request) => (
-                <button
-                  key={request.id}
-                  type="button"
-                  onClick={() =>
-                    navigate(`/requests/${request.id}`, {
-                      state: { request, from: "/admin/requests" },
-                    })
-                  }
-                  style={requestCardStyle}
-                >
-                  <div style={requestTopStyle}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={requestTitleStyle}>{request.title || "제목 없음"}</h3>
-                      <p style={requestPreviewStyle}>
-                        {parsePreviewText(request.content)}
-                      </p>
+              {filteredRequests.map((request) => {
+                const selectedStatus = request.normalized_status || normalizeStatus(request.status);
+                const isSaving = savingRequestId === request.id;
+
+                return (
+                  <div key={request.id} style={requestCardStyle}>
+                    <div style={requestTopStyle}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/requests/${request.id}`, {
+                            state: { request, from: "/admin/requests" },
+                          })
+                        }
+                        style={requestInfoButtonStyle}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={requestTitleStyle}>{request.title || "제목 없음"}</h3>
+                          <p style={requestPreviewStyle}>{parsePreviewText(request.content)}</p>
+                        </div>
+
+                        <span style={{ ...badgePillStyle, ...getStatusStyle(selectedStatus) }}>
+                          {getStatusText(selectedStatus)}
+                        </span>
+                      </button>
+
+                      <div style={adminActionWrapStyle}>
+                        <div style={adminFieldStyle}>
+                          <label style={smallLabelStyle}>담당자 배정</label>
+                          <select
+                            value={request.selected_assigned_to || ""}
+                            onChange={(e) => handleWorkerChange(request.id, e.target.value)}
+                            style={adminSelectStyle}
+                            disabled={isSaving}
+                          >
+                            <option value="">담당자 선택 안 함</option>
+                            {workers.map((worker) => (
+                              <option key={worker.id} value={worker.id}>
+                                {getWorkerDisplayName(worker)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={assignedPreviewStyle}>
+                          현재 담당자: {request.selected_assigned_name || request.assigned_name || "미배정"}
+                        </div>
+
+                        <div style={adminFieldStyle}>
+                          <label style={smallLabelStyle}>상태 변경</label>
+                          <select
+                            value={selectedStatus}
+                            onChange={(e) => handleStatusChange(request.id, e.target.value)}
+                            style={adminSelectStyle}
+                            disabled={isSaving}
+                          >
+                            {statusOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveRequest(request.id)}
+                          style={saveButtonStyle}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? "저장 중..." : "변경사항 저장"}
+                        </button>
+                      </div>
                     </div>
 
-                    <span style={{ ...badgePillStyle, ...getStatusStyle(request.status) }}>
-                      {getStatusText(request.status)}
-                    </span>
+                    <div style={metaRowStyle}>
+                      <span>카테고리: {request.category || "미분류"}</span>
+                      <span>
+                        등록일:{" "}
+                        {request.created_at
+                          ? new Date(request.created_at).toLocaleDateString("ko-KR")
+                          : "-"}
+                      </span>
+                      <span>요청 ID: {request.id}</span>
+                      <span>담당자 ID: {request.selected_assigned_to || request.assigned_to || "-"}</span>
+                    </div>
                   </div>
-
-                  <div style={metaRowStyle}>
-                    <span>카테고리: {request.category || "미분류"}</span>
-                    <span>
-                      등록일:{" "}
-                      {request.created_at
-                        ? new Date(request.created_at).toLocaleDateString("ko-KR")
-                        : "-"}
-                    </span>
-                    <span>ID: {request.id}</span>
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -503,10 +686,24 @@ const requestCardStyle = {
   borderRadius: "20px",
   background: "#FFFFFF",
   padding: "18px",
-  cursor: "pointer",
 };
 
 const requestTopStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: "16px",
+  flexWrap: "wrap",
+};
+
+const requestInfoButtonStyle = {
+  flex: 1,
+  minWidth: "260px",
+  textAlign: "left",
+  border: "none",
+  background: "transparent",
+  padding: 0,
+  cursor: "pointer",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
@@ -547,6 +744,56 @@ const badgePillStyle = {
   fontSize: "12px",
   fontWeight: 700,
   whiteSpace: "nowrap",
+};
+
+const adminActionWrapStyle = {
+  minWidth: "250px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+};
+
+const adminFieldStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+};
+
+const smallLabelStyle = {
+  fontSize: "12px",
+  fontWeight: 700,
+  color: "#475569",
+};
+
+const adminSelectStyle = {
+  height: "44px",
+  borderRadius: "14px",
+  border: "1px solid #CBD5E1",
+  padding: "0 12px",
+  fontSize: "14px",
+  outline: "none",
+  background: "#FFFFFF",
+};
+
+const assignedPreviewStyle = {
+  fontSize: "13px",
+  color: "#475569",
+  background: "#F8FAFC",
+  border: "1px solid #E2E8F0",
+  borderRadius: "12px",
+  padding: "10px 12px",
+  lineHeight: 1.5,
+};
+
+const saveButtonStyle = {
+  border: "none",
+  borderRadius: "14px",
+  background: "#2563EB",
+  color: "#FFFFFF",
+  fontSize: "14px",
+  fontWeight: 700,
+  padding: "12px 16px",
+  cursor: "pointer",
 };
 
 export default AdminRequestsPage;

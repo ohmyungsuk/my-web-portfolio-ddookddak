@@ -9,17 +9,44 @@ function OAuthCallback() {
   useEffect(() => {
     let mounted = true;
 
+    const clearOAuthTemp = () => {
+      sessionStorage.removeItem("oauth_in_progress");
+      sessionStorage.removeItem("oauth_provider");
+      sessionStorage.removeItem("oauth_mode");
+      sessionStorage.removeItem("signup_role");
+    };
+
+    const getSafeUserName = (user) => {
+      const rawName =
+        user?.user_metadata?.name ||
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.preferred_username ||
+        user?.user_metadata?.nickname ||
+        (user?.email ? user.email.split("@")[0] : "사용자");
+
+      return String(rawName || "사용자").trim() || "사용자";
+    };
+
+    const getSafeUsername = (user) => {
+      const rawUsername =
+        user?.user_metadata?.preferred_username ||
+        user?.user_metadata?.nickname ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.full_name ||
+        (user?.email ? user.email.split("@")[0] : "user");
+
+      return String(rawUsername || "user").trim() || "user";
+    };
+
     const handleOAuthCallback = async () => {
       try {
         const href = window.location.href;
 
-        // HashRouter(#/oauth/callback) + Supabase OAuth(#access_token=...)
-        // 조합 때문에 access_token을 직접 파싱
         const tokenMarker = "#access_token=";
         const tokenStart = href.indexOf(tokenMarker);
 
         if (tokenStart !== -1) {
-          const tokenString = href.slice(tokenStart + 1); // access_token=...&refresh_token=...
+          const tokenString = href.slice(tokenStart + 1);
           const params = new URLSearchParams(tokenString);
 
           const access_token = params.get("access_token");
@@ -42,7 +69,6 @@ function OAuthCallback() {
           }
         }
 
-        // 혹시 code 방식이면 이것도 처리
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
 
@@ -80,32 +106,78 @@ function OAuthCallback() {
         }
 
         const user = session.user;
+        const oauthMode = sessionStorage.getItem("oauth_mode");
+        const signupRole = sessionStorage.getItem("signup_role");
+
+        const safeUsername = getSafeUsername(user);
+        const safeName = getSafeUserName(user);
+        const desiredRole =
+          oauthMode === "signup" && (signupRole === "worker" || signupRole === "user")
+            ? signupRole
+            : "user";
+
+        if (mounted) {
+          setMessage("프로필 정보를 준비하는 중입니다...");
+        }
+
+        const { data: existingProfile, error: profileReadError } = await supabase
+          .from("profiles")
+          .select("id, username, name, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileReadError) {
+          console.error("프로필 조회 오류:", profileReadError);
+        }
+
+        const finalRole =
+          existingProfile?.role || desiredRole || "user";
+
+        const { error: profileUpsertError } = await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            username: existingProfile?.username || safeUsername,
+            name: existingProfile?.name || safeName,
+            role: finalRole,
+          },
+          { onConflict: "id" }
+        );
+
+        if (profileUpsertError) {
+          console.error("프로필 저장 오류:", profileUpsertError);
+          if (mounted) {
+            setMessage("프로필 저장 중 오류가 발생했습니다.");
+            setTimeout(() => navigate("/login"), 1500);
+          }
+          return;
+        }
 
         const loginUser = {
           id: user.id,
+          supabaseUserId: user.id,
           email: user.email || "",
-          username:
-            user.user_metadata?.preferred_username ||
-            user.user_metadata?.name ||
-            user.user_metadata?.full_name ||
-            user.user_metadata?.nickname ||
-            (user.email ? user.email.split("@")[0] : "사용자"),
-          nickname:
-            user.user_metadata?.nickname ||
-            user.user_metadata?.name ||
-            "사용자",
+          username: existingProfile?.username || safeUsername,
+          nickname: existingProfile?.name || safeName,
           provider: user.app_metadata?.provider || "oauth",
+          role: finalRole,
         };
 
         localStorage.setItem("loginUser", JSON.stringify(loginUser));
-        localStorage.setItem("role", "user");
+        localStorage.setItem("role", finalRole);
+
+        clearOAuthTemp();
 
         if (mounted) {
-          setMessage("로그인 성공! 메인으로 이동합니다.");
+          setMessage(
+            oauthMode === "signup"
+              ? "회원가입이 완료되었습니다. 메인으로 이동합니다."
+              : "로그인 성공! 메인으로 이동합니다."
+          );
           setTimeout(() => navigate("/"), 800);
         }
       } catch (err) {
         console.error("OAuth 콜백 처리 오류:", err);
+        clearOAuthTemp();
         if (mounted) {
           setMessage("로그인 처리 중 문제가 생겼습니다.");
           setTimeout(() => navigate("/login"), 1500);

@@ -16,6 +16,7 @@ function Signup({ onSwitchToLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordCheck, setPasswordCheck] = useState("");
+  const [signupRole, setSignupRole] = useState("user");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -29,6 +30,7 @@ function Signup({ onSwitchToLogin }) {
     sessionStorage.removeItem("oauth_in_progress");
     sessionStorage.removeItem("oauth_provider");
     sessionStorage.removeItem("oauth_mode");
+    sessionStorage.removeItem("signup_role");
   };
 
   useEffect(() => {
@@ -62,6 +64,7 @@ function Signup({ onSwitchToLogin }) {
       sessionStorage.setItem("oauth_in_progress", "true");
       sessionStorage.setItem("oauth_provider", provider);
       sessionStorage.setItem("oauth_mode", "signup");
+      sessionStorage.setItem("signup_role", signupRole);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -74,6 +77,7 @@ function Signup({ onSwitchToLogin }) {
         sessionStorage.removeItem("oauth_in_progress");
         sessionStorage.removeItem("oauth_provider");
         sessionStorage.removeItem("oauth_mode");
+        sessionStorage.removeItem("signup_role");
         setErrorMessage(`${provider} 회원가입 중 오류가 발생했습니다.`);
         setLoading(false);
       }
@@ -81,6 +85,7 @@ function Signup({ onSwitchToLogin }) {
       sessionStorage.removeItem("oauth_in_progress");
       sessionStorage.removeItem("oauth_provider");
       sessionStorage.removeItem("oauth_mode");
+      sessionStorage.removeItem("signup_role");
       setErrorMessage(error.message || "소셜 회원가입 중 문제가 발생했습니다.");
       setLoading(false);
     }
@@ -120,12 +125,17 @@ function Signup({ onSwitchToLogin }) {
     try {
       setLoading(true);
 
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
+      const trimmedName = name.trim();
+      const trimmedEmail = email.trim().toLowerCase();
+      const username = trimmedEmail.split("@")[0];
+
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
         password,
         options: {
           data: {
-            name: name.trim(),
+            name: trimmedName,
+            role: signupRole,
           },
           emailRedirectTo: redirectTo,
         },
@@ -133,14 +143,35 @@ function Signup({ onSwitchToLogin }) {
 
       if (error) throw error;
 
+      const createdUser = data?.user;
+
+      if (createdUser?.id) {
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          {
+            id: createdUser.id,
+            username,
+            name: trimmedName,
+            role: signupRole,
+          },
+          { onConflict: "id" }
+        );
+
+        if (profileError) {
+          throw profileError;
+        }
+      }
+
       setSuccessMessage(
-        "회원가입이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
+        signupRole === "worker"
+          ? "전문가 회원가입이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
+          : "회원가입이 완료되었습니다. 이메일 인증이 켜져 있으면 메일함에서 인증을 진행해주세요."
       );
 
       setName("");
       setEmail("");
       setPassword("");
       setPasswordCheck("");
+      setSignupRole("user");
     } catch (error) {
       setErrorMessage(error.message || "회원가입 중 문제가 발생했습니다.");
     } finally {
@@ -328,6 +359,17 @@ function Signup({ onSwitchToLogin }) {
     backgroundColor: "#ffffff",
   };
 
+  const roleButtonStyle = (isSelected) => ({
+    height: "48px",
+    borderRadius: "12px",
+    border: isSelected ? "1.5px solid #2F80ED" : "1px solid #d9e2ec",
+    background: isSelected ? "#EFF6FF" : "#ffffff",
+    color: isSelected ? "#1D4ED8" : "#334155",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+  });
+
   const submitButtonStyle = {
     width: "100%",
     height: "50px",
@@ -484,6 +526,54 @@ function Signup({ onSwitchToLogin }) {
         ) : (
           <form onSubmit={handleSignup} style={emailFormStyle}>
             <div>
+              <label style={labelStyle}>회원 유형</label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                }}
+              >
+                <HoverButton
+                  type="button"
+                  onClick={() => setSignupRole("user")}
+                  style={roleButtonStyle(signupRole === "user")}
+                  hoverStyle={{
+                    backgroundColor: "#F8FBFF",
+                    color: "#2F80ED",
+                  }}
+                >
+                  일반 회원
+                </HoverButton>
+
+                <HoverButton
+                  type="button"
+                  onClick={() => setSignupRole("worker")}
+                  style={roleButtonStyle(signupRole === "worker")}
+                  hoverStyle={{
+                    backgroundColor: "#F8FBFF",
+                    color: "#2F80ED",
+                  }}
+                >
+                  전문가 회원
+                </HoverButton>
+              </div>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: "13px",
+                  color: "#64748B",
+                  lineHeight: 1.5,
+                }}
+              >
+                {signupRole === "worker"
+                  ? "전문가 회원으로 가입하면 배정 요청을 확인할 수 있어요."
+                  : "일반 회원으로 가입하면 요청 등록과 내 요청 관리를 할 수 있어요."}
+              </p>
+            </div>
+
+            <div>
               <label style={labelStyle}>이름</label>
               <input
                 type="text"
@@ -541,7 +631,11 @@ function Signup({ onSwitchToLogin }) {
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}
             >
-              {loading ? "가입 중..." : "이메일 회원가입"}
+              {loading
+                ? "가입 중..."
+                : signupRole === "worker"
+                  ? "전문가 회원가입"
+                  : "일반 회원가입"}
             </HoverButton>
 
             <HoverButton
