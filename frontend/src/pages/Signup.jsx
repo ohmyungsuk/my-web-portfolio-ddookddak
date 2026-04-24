@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
@@ -30,6 +30,17 @@ function Signup({ onSwitchToLogin }) {
     sessionStorage.removeItem("oauth_provider");
     sessionStorage.removeItem("oauth_mode");
   }, []);
+
+  const passwordChecks = useMemo(() => {
+    const value = password || "";
+
+    return {
+      minLength: value.length >= 8,
+      hasLetter: /[A-Za-z]/.test(value),
+      hasNumber: /[0-9]/.test(value),
+      hasSpecial: /[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|`~]/.test(value),
+    };
+  }, [password]);
 
   const validatePassword = (value) => {
     if (value.length < 8) {
@@ -67,9 +78,7 @@ function Signup({ onSwitchToLogin }) {
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
     } catch (error) {
       sessionStorage.removeItem("oauth_in_progress");
       sessionStorage.removeItem("oauth_provider");
@@ -88,8 +97,6 @@ function Signup({ onSwitchToLogin }) {
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
-
-    console.log("회원가입 role 확인:", signupRole);
 
     if (!trimmedName) {
       setErrorMessage("이름을 입력해주세요.");
@@ -168,11 +175,6 @@ function Signup({ onSwitchToLogin }) {
         setLoading(false);
         return;
       }
-
-      console.log("profiles 저장값:", {
-        email: trimmedEmail,
-        role: signupRole,
-      });
 
       const { error: profileError } = await supabase.from("profiles").upsert(
         {
@@ -298,12 +300,27 @@ function Signup({ onSwitchToLogin }) {
     gap: "10px",
   };
 
-  const roleDescStyle = {
+  const roleGuideBoxStyle = {
     marginTop: "10px",
+    padding: "13px 14px",
+    borderRadius: "14px",
+    background: "#FAFCFF",
+    border: "1px solid #E7EEF8",
+    textAlign: "left",
+  };
+
+  const roleGuideTitleStyle = {
+    margin: "0 0 6px",
+    fontSize: "13px",
+    fontWeight: "800",
+    color: TEXT_DARK,
+  };
+
+  const roleGuideTextStyle = {
+    margin: 0,
     fontSize: "13px",
     lineHeight: 1.6,
     color: TEXT_MUTED,
-    textAlign: "left",
   };
 
   const baseButtonStyle = {
@@ -395,15 +412,33 @@ function Signup({ onSwitchToLogin }) {
     backgroundColor: "#ffffff",
   };
 
-  const guideBoxStyle = {
+  const passwordChecklistStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "7px",
     padding: "12px 14px",
-    borderRadius: "12px",
-    background: "#F8FBFF",
-    border: "1px solid #E1ECF8",
-    color: "#475569",
-    fontSize: "13px",
-    lineHeight: 1.5,
+    borderRadius: "14px",
+    background: "#FAFCFF",
+    border: "1px solid #E7EEF8",
   };
+
+  const checklistRowStyle = (passed) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "13px",
+    color: passed ? "#2563EB" : "#64748B",
+    fontWeight: passed ? "700" : "500",
+    lineHeight: 1.5,
+  });
+
+  const checklistDotStyle = (passed) => ({
+    width: "8px",
+    height: "8px",
+    borderRadius: "999px",
+    background: passed ? "#2563EB" : "#CBD5E1",
+    flexShrink: 0,
+  });
 
   const errorBoxStyle = {
     padding: "12px 14px",
@@ -451,10 +486,16 @@ function Signup({ onSwitchToLogin }) {
     flexShrink: 0,
   };
 
-  const roleText =
+  const roleGuide =
     signupRole === "worker"
-      ? "전문가 회원으로 가입하면 맡은 작업 확인과 작업 수락 흐름을 사용할 수 있어요."
-      : "일반 회원으로 가입하면 요청 등록과 내 요청 관리 기능을 사용할 수 있어요.";
+      ? {
+          title: "전문가 회원 안내",
+          text: "전문가 회원은 맡은 작업 보기, 요청 수락, 작업 진행과 완료 처리 같은 전문가 전용 흐름을 사용할 수 있어요.",
+        }
+      : {
+          title: "일반 회원 안내",
+          text: "일반 회원은 요청 등록, 내 요청 목록 확인, 요청 상세 확인처럼 요청을 맡기는 사용자 흐름으로 이용하게 돼요.",
+        };
 
   return (
     <div style={pageStyle}>
@@ -519,7 +560,10 @@ function Signup({ onSwitchToLogin }) {
                 </HoverButton>
               </div>
 
-              <div style={roleDescStyle}>{roleText}</div>
+              <div style={roleGuideBoxStyle}>
+                <p style={roleGuideTitleStyle}>{roleGuide.title}</p>
+                <p style={roleGuideTextStyle}>{roleGuide.text}</p>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -603,10 +647,6 @@ function Signup({ onSwitchToLogin }) {
           </>
         ) : (
           <form onSubmit={handleSignup} style={formStyle}>
-            <div style={guideBoxStyle}>
-              비밀번호는 8자 이상이며, 영문 / 숫자 / 특수문자를 각각 1개 이상 포함해야 해요.
-            </div>
-
             <div>
               <label style={labelStyle}>이름</label>
               <input
@@ -640,6 +680,25 @@ function Signup({ onSwitchToLogin }) {
               />
             </div>
 
+            <div style={passwordChecklistStyle}>
+              <div style={checklistRowStyle(passwordChecks.minLength)}>
+                <span style={checklistDotStyle(passwordChecks.minLength)} />
+                8자 이상 입력
+              </div>
+              <div style={checklistRowStyle(passwordChecks.hasLetter)}>
+                <span style={checklistDotStyle(passwordChecks.hasLetter)} />
+                영문 1개 이상 포함
+              </div>
+              <div style={checklistRowStyle(passwordChecks.hasNumber)}>
+                <span style={checklistDotStyle(passwordChecks.hasNumber)} />
+                숫자 1개 이상 포함
+              </div>
+              <div style={checklistRowStyle(passwordChecks.hasSpecial)}>
+                <span style={checklistDotStyle(passwordChecks.hasSpecial)} />
+                특수문자 1개 이상 포함
+              </div>
+            </div>
+
             <div>
               <label style={labelStyle}>비밀번호 확인</label>
               <input
@@ -663,7 +722,7 @@ function Signup({ onSwitchToLogin }) {
                 boxShadow: "0 14px 28px rgba(31, 111, 214, 0.22)",
               }}
             >
-              {loading ? "가입 중..." : "이메일로 회원가입"}
+              {loading ? "가입 중..." : "이메일 회원가입"}
             </HoverButton>
 
             <HoverButton
