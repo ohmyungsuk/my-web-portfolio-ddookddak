@@ -2,6 +2,7 @@ import MyPage from "./pages/MyPage";
 import AdminPage from "./pages/AdminPage";
 import AdminRequestsPage from "./pages/AdminRequestsPage";
 import RequestEditPage from "./pages/RequestEditPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import { useEffect, useMemo, useState } from "react";
 import {
   Navigate,
@@ -125,6 +126,7 @@ function App() {
       "/mypage",
       "/admin",
       "/admin/requests",
+      "/admin/users",
     ];
 
     const isDetailPage =
@@ -241,6 +243,15 @@ function App() {
           }
         />
 
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAuth isLoggedIn={isLoggedIn}>
+                <AdminUsersPage />
+              </RequireAuth>
+            }
+          />
+
         <Route
           path="/login"
           element={
@@ -252,6 +263,15 @@ function App() {
                 onLoginSuccess={() => navigate("/", { replace: true })}
               />
             )
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <RequireAuth isLoggedIn={isLoggedIn}>
+              <AdminUsersPage />
+            </RequireAuth>
           }
         />
 

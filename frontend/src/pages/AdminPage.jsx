@@ -252,6 +252,15 @@ function AdminPage() {
               >
                 전체 요청 관리
               </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/admin/users")}
+                style={secondaryButtonStyle}
+              >
+                회원 관리
+              </button>
+
               <button
                 type="button"
                 onClick={() => navigate("/")}

@@ -111,10 +111,7 @@ function OAuthCallback() {
 
         const safeUsername = getSafeUsername(user);
         const safeName = getSafeUserName(user);
-        const desiredRole =
-          oauthMode === "signup" && (signupRole === "worker" || signupRole === "user")
-            ? signupRole
-            : "user";
+        const provider = user.app_metadata?.provider || "oauth";
 
         if (mounted) {
           setMessage("프로필 정보를 준비하는 중입니다...");
@@ -122,7 +119,7 @@ function OAuthCallback() {
 
         const { data: existingProfile, error: profileReadError } = await supabase
           .from("profiles")
-          .select("id, username, name, role")
+          .select("id, username, name, role, email, provider, auth_created_at")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -130,14 +127,21 @@ function OAuthCallback() {
           console.error("프로필 조회 오류:", profileReadError);
         }
 
-        const finalRole =
-          existingProfile?.role || desiredRole || "user";
+        let finalRole = existingProfile?.role || "user";
+
+        if (!existingProfile?.role && oauthMode === "signup") {
+          finalRole = signupRole === "worker" ? "worker" : "user";
+        }
 
         const { error: profileUpsertError } = await supabase.from("profiles").upsert(
           {
             id: user.id,
             username: existingProfile?.username || safeUsername,
             name: existingProfile?.name || safeName,
+            email: user.email || existingProfile?.email || "",
+            provider: existingProfile?.provider || provider,
+            auth_created_at:
+              existingProfile?.auth_created_at || user.created_at || new Date().toISOString(),
             role: finalRole,
           },
           { onConflict: "id" }
@@ -156,9 +160,10 @@ function OAuthCallback() {
           id: user.id,
           supabaseUserId: user.id,
           email: user.email || "",
+          name: existingProfile?.name || safeName,
           username: existingProfile?.username || safeUsername,
           nickname: existingProfile?.name || safeName,
-          provider: user.app_metadata?.provider || "oauth",
+          provider,
           role: finalRole,
         };
 
@@ -168,11 +173,15 @@ function OAuthCallback() {
         clearOAuthTemp();
 
         if (mounted) {
-          setMessage(
-            oauthMode === "signup"
-              ? "회원가입이 완료되었습니다. 메인으로 이동합니다."
-              : "로그인 성공! 메인으로 이동합니다."
-          );
+          if (oauthMode === "signup" && existingProfile?.id) {
+            setMessage("이미 가입된 계정입니다. 로그인 처리합니다.");
+          } else {
+            setMessage(
+              oauthMode === "signup"
+                ? "회원가입이 완료되었습니다. 메인으로 이동합니다."
+                : "로그인 성공! 메인으로 이동합니다."
+            );
+          }
           setTimeout(() => navigate("/"), 800);
         }
       } catch (err) {
