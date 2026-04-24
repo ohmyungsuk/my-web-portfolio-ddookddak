@@ -108,10 +108,15 @@ function OAuthCallback() {
         const user = session.user;
         const oauthMode = sessionStorage.getItem("oauth_mode");
         const signupRole = sessionStorage.getItem("signup_role");
+        const provider = user.app_metadata?.provider || "oauth";
 
         const safeUsername = getSafeUsername(user);
         const safeName = getSafeUserName(user);
-        const provider = user.app_metadata?.provider || "oauth";
+
+        const desiredRole =
+          oauthMode === "signup" && (signupRole === "worker" || signupRole === "user")
+            ? signupRole
+            : "user";
 
         if (mounted) {
           setMessage("프로필 정보를 준비하는 중입니다...");
@@ -127,25 +132,27 @@ function OAuthCallback() {
           console.error("프로필 조회 오류:", profileReadError);
         }
 
-        let finalRole = existingProfile?.role || "user";
+        const finalRole =
+          oauthMode === "signup"
+            ? desiredRole
+            : existingProfile?.role || "user";
 
-        if (!existingProfile?.role && oauthMode === "signup") {
-          finalRole = signupRole === "worker" ? "worker" : "user";
-        }
+        const payload = {
+          id: user.id,
+          username: existingProfile?.username || safeUsername,
+          name: existingProfile?.name || safeName,
+          email: user.email || existingProfile?.email || "",
+          provider: existingProfile?.provider || provider,
+          auth_created_at:
+            existingProfile?.auth_created_at ||
+            user.created_at ||
+            new Date().toISOString(),
+          role: finalRole,
+        };
 
-        const { error: profileUpsertError } = await supabase.from("profiles").upsert(
-          {
-            id: user.id,
-            username: existingProfile?.username || safeUsername,
-            name: existingProfile?.name || safeName,
-            email: user.email || existingProfile?.email || "",
-            provider: existingProfile?.provider || provider,
-            auth_created_at:
-              existingProfile?.auth_created_at || user.created_at || new Date().toISOString(),
-            role: finalRole,
-          },
-          { onConflict: "id" }
-        );
+        const { error: profileUpsertError } = await supabase
+          .from("profiles")
+          .upsert(payload, { onConflict: "id" });
 
         if (profileUpsertError) {
           console.error("프로필 저장 오류:", profileUpsertError);
@@ -159,22 +166,22 @@ function OAuthCallback() {
         const loginUser = {
           id: user.id,
           supabaseUserId: user.id,
-          email: user.email || "",
-          name: existingProfile?.name || safeName,
-          username: existingProfile?.username || safeUsername,
-          nickname: existingProfile?.name || safeName,
-          provider,
-          role: finalRole,
+          email: payload.email,
+          name: payload.name,
+          username: payload.username,
+          nickname: payload.name,
+          provider: payload.provider,
+          role: payload.role,
         };
 
         localStorage.setItem("loginUser", JSON.stringify(loginUser));
-        localStorage.setItem("role", finalRole);
+        localStorage.setItem("role", payload.role);
 
         clearOAuthTemp();
 
         if (mounted) {
           if (oauthMode === "signup" && existingProfile?.id) {
-            setMessage("이미 가입된 계정입니다. 로그인 처리합니다.");
+            setMessage("기존 계정을 찾았습니다. 선택한 회원 유형으로 로그인 처리합니다.");
           } else {
             setMessage(
               oauthMode === "signup"
@@ -182,7 +189,8 @@ function OAuthCallback() {
                 : "로그인 성공! 메인으로 이동합니다."
             );
           }
-          setTimeout(() => navigate("/"), 800);
+
+          setTimeout(() => navigate("/"), 900);
         }
       } catch (err) {
         console.error("OAuth 콜백 처리 오류:", err);
