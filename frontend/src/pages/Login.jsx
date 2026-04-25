@@ -16,6 +16,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 480);
 
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
@@ -25,6 +26,15 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     sessionStorage.removeItem("oauth_in_progress");
     sessionStorage.removeItem("oauth_provider");
     sessionStorage.removeItem("oauth_mode");
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 480);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const handleOAuthLogin = async (provider) => {
@@ -106,7 +116,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "28px 16px",
+    padding: isMobile ? "18px 12px" : "28px 16px",
     boxSizing: "border-box",
     fontFamily:
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -116,8 +126,8 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     width: "100%",
     maxWidth: "460px",
     background: "#ffffff",
-    borderRadius: "28px",
-    padding: "30px 28px 24px",
+    borderRadius: isMobile ? "22px" : "28px",
+    padding: isMobile ? "24px 18px 20px" : "30px 28px 24px",
     border: `1px solid ${CARD_BORDER}`,
     boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
     boxSizing: "border-box",
@@ -125,7 +135,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
 
   const headerStyle = {
     textAlign: "center",
-    marginBottom: "22px",
+    marginBottom: isMobile ? "18px" : "22px",
   };
 
   const brandWrapStyle = {
@@ -135,26 +145,26 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     alignItems: "center",
     gap: "10px",
     cursor: "pointer",
-    marginBottom: "18px",
+    marginBottom: isMobile ? "14px" : "18px",
   };
 
   const brandMarkStyle = {
-    width: "38px",
-    height: "38px",
-    borderRadius: "13px",
+    width: isMobile ? "34px" : "38px",
+    height: isMobile ? "34px" : "38px",
+    borderRadius: isMobile ? "11px" : "13px",
     background: BRAND_COLOR,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "#ffffff",
     fontWeight: "900",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     flexShrink: 0,
     boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
   };
 
   const brandTextStyle = {
-    fontSize: "22px",
+    fontSize: isMobile ? "20px" : "22px",
     fontWeight: "900",
     color: BRAND_COLOR,
     letterSpacing: "-0.4px",
@@ -162,8 +172,8 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   };
 
   const titleStyle = {
-    margin: "0 0 10px",
-    fontSize: "18px",
+    margin: "0 0 8px",
+    fontSize: isMobile ? "17px" : "18px",
     fontWeight: "800",
     color: TEXT_DARK,
     lineHeight: 1.4,
@@ -172,16 +182,16 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
 
   const descStyle = {
     margin: 0,
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
     lineHeight: 1.6,
   };
 
   const baseButtonStyle = {
     width: "100%",
-    height: "50px",
+    height: isMobile ? "48px" : "50px",
     borderRadius: "14px",
-    fontSize: "15px",
+    fontSize: isMobile ? "14px" : "15px",
     fontWeight: "700",
     cursor: "pointer",
     display: "flex",
@@ -233,24 +243,24 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
   const formStyle = {
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: isMobile ? "12px" : "14px",
   };
 
   const labelStyle = {
     display: "block",
     marginBottom: "8px",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: "700",
     color: "#334155",
   };
 
   const inputStyle = {
     width: "100%",
-    height: "50px",
+    height: isMobile ? "48px" : "50px",
     borderRadius: "13px",
     border: "1px solid #D9E2EC",
     padding: "0 14px",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     boxSizing: "border-box",
     outline: "none",
     color: TEXT_DARK,
@@ -262,14 +272,14 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     borderRadius: "12px",
     background: "#FFF1F2",
     color: "#BE123C",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.5,
   };
 
   const footerStyle = {
-    marginTop: "18px",
+    marginTop: isMobile ? "16px" : "18px",
     textAlign: "center",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
   };
 
@@ -277,7 +287,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
     border: "none",
     background: "transparent",
     color: BRAND_COLOR,
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: "700",
     cursor: "pointer",
     padding: 0,
@@ -295,7 +305,9 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
           </div>
 
           <h1 style={titleStyle}>
-            {mode === "choice" ? "로그인 방법을 선택해주세요" : "이메일로 로그인"}
+            {mode === "choice"
+              ? "로그인 방법을 선택해주세요"
+              : "이메일로 로그인"}
           </h1>
           <p style={descStyle}>
             {mode === "choice"
@@ -305,7 +317,9 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
         </div>
 
         {mode === "choice" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
             <HoverButton
               onClick={() => setMode("email")}
               disabled={loading}
@@ -322,9 +336,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               onClick={() => handleOAuthLogin("google")}
               disabled={loading}
               style={whiteButtonStyle}
-              hoverStyle={{
-                color: BRAND_COLOR,
-              }}
+              hoverStyle={{ color: BRAND_COLOR }}
             >
               <span style={iconBoxStyle}>
                 <svg
@@ -358,9 +370,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
               onClick={() => handleOAuthLogin("kakao")}
               disabled={loading}
               style={kakaoButtonStyle}
-              hoverStyle={{
-                filter: "brightness(0.97)",
-              }}
+              hoverStyle={{ filter: "brightness(0.97)" }}
             >
               <span style={iconBoxStyle}>
                 <svg
@@ -425,9 +435,7 @@ function Login({ onSwitchToSignup, onLoginSuccess }) {
             <HoverButton
               onClick={() => setMode("choice")}
               style={whiteButtonStyle}
-              hoverStyle={{
-                color: BRAND_COLOR,
-              }}
+              hoverStyle={{ color: BRAND_COLOR }}
             >
               다른 방법 선택
             </HoverButton>

@@ -20,6 +20,7 @@ function Signup({ onSwitchToLogin }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 480);
 
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
@@ -29,6 +30,15 @@ function Signup({ onSwitchToLogin }) {
     sessionStorage.removeItem("oauth_in_progress");
     sessionStorage.removeItem("oauth_provider");
     sessionStorage.removeItem("oauth_mode");
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 480);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const passwordChecks = useMemo(() => {
@@ -132,11 +142,12 @@ function Signup({ onSwitchToLogin }) {
     try {
       setLoading(true);
 
-      const { data: existingProfile, error: existingProfileError } = await supabase
-        .from("profiles")
-        .select("id, provider")
-        .eq("email", trimmedEmail)
-        .maybeSingle();
+      const { data: existingProfile, error: existingProfileError } =
+        await supabase
+          .from("profiles")
+          .select("id, provider")
+          .eq("email", trimmedEmail)
+          .maybeSingle();
 
       if (existingProfileError) {
         throw existingProfileError;
@@ -170,7 +181,10 @@ function Signup({ onSwitchToLogin }) {
         throw new Error("회원가입 사용자 정보를 가져오지 못했습니다.");
       }
 
-      if (Array.isArray(createdUser.identities) && createdUser.identities.length === 0) {
+      if (
+        Array.isArray(createdUser.identities) &&
+        createdUser.identities.length === 0
+      ) {
         setErrorMessage("이미 가입된 이메일입니다. 로그인으로 진행해주세요.");
         setLoading(false);
         return;
@@ -186,12 +200,14 @@ function Signup({ onSwitchToLogin }) {
           provider: "email",
           auth_created_at: createdUser.created_at || new Date().toISOString(),
         },
-        { onConflict: "id" }
+        { onConflict: "id" },
       );
 
       if (profileError) throw profileError;
 
-      setSuccessMessage("회원가입이 완료되었습니다. 이메일 인증이 필요하면 메일함을 확인해주세요.");
+      setSuccessMessage(
+        "회원가입이 완료되었습니다. 이메일 인증이 필요하면 메일함을 확인해주세요.",
+      );
       setName("");
       setEmail("");
       setPassword("");
@@ -211,7 +227,7 @@ function Signup({ onSwitchToLogin }) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "28px 16px",
+    padding: isMobile ? "18px 12px" : "28px 16px",
     boxSizing: "border-box",
     fontFamily:
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -221,8 +237,8 @@ function Signup({ onSwitchToLogin }) {
     width: "100%",
     maxWidth: "460px",
     background: "#ffffff",
-    borderRadius: "28px",
-    padding: "30px 28px 24px",
+    borderRadius: isMobile ? "22px" : "28px",
+    padding: isMobile ? "24px 18px 20px" : "30px 28px 24px",
     border: `1px solid ${CARD_BORDER}`,
     boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
     boxSizing: "border-box",
@@ -230,7 +246,7 @@ function Signup({ onSwitchToLogin }) {
 
   const headerStyle = {
     textAlign: "center",
-    marginBottom: "22px",
+    marginBottom: isMobile ? "18px" : "22px",
   };
 
   const brandWrapStyle = {
@@ -240,26 +256,26 @@ function Signup({ onSwitchToLogin }) {
     alignItems: "center",
     gap: "10px",
     cursor: "pointer",
-    marginBottom: "18px",
+    marginBottom: isMobile ? "14px" : "18px",
   };
 
   const brandMarkStyle = {
-    width: "38px",
-    height: "38px",
-    borderRadius: "13px",
+    width: isMobile ? "34px" : "38px",
+    height: isMobile ? "34px" : "38px",
+    borderRadius: isMobile ? "11px" : "13px",
     background: BRAND_COLOR,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "#ffffff",
     fontWeight: "900",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     flexShrink: 0,
     boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
   };
 
   const brandTextStyle = {
-    fontSize: "22px",
+    fontSize: isMobile ? "20px" : "22px",
     fontWeight: "900",
     color: BRAND_COLOR,
     letterSpacing: "-0.4px",
@@ -267,8 +283,8 @@ function Signup({ onSwitchToLogin }) {
   };
 
   const titleStyle = {
-    margin: "0 0 10px",
-    fontSize: "18px",
+    margin: "0 0 8px",
+    fontSize: isMobile ? "17px" : "18px",
     fontWeight: "800",
     color: TEXT_DARK,
     lineHeight: 1.4,
@@ -277,7 +293,7 @@ function Signup({ onSwitchToLogin }) {
 
   const descStyle = {
     margin: 0,
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
     lineHeight: 1.6,
   };
@@ -288,7 +304,7 @@ function Signup({ onSwitchToLogin }) {
 
   const roleLabelStyle = {
     marginBottom: "10px",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: "700",
     color: "#334155",
     textAlign: "left",
@@ -302,7 +318,7 @@ function Signup({ onSwitchToLogin }) {
 
   const roleGuideBoxStyle = {
     marginTop: "10px",
-    padding: "13px 14px",
+    padding: isMobile ? "12px 12px" : "13px 14px",
     borderRadius: "14px",
     background: "#FAFCFF",
     border: "1px solid #E7EEF8",
@@ -311,23 +327,23 @@ function Signup({ onSwitchToLogin }) {
 
   const roleGuideTitleStyle = {
     margin: "0 0 6px",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     fontWeight: "800",
     color: TEXT_DARK,
   };
 
   const roleGuideTextStyle = {
     margin: 0,
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.6,
     color: TEXT_MUTED,
   };
 
   const baseButtonStyle = {
     width: "100%",
-    height: "50px",
+    height: isMobile ? "48px" : "50px",
     borderRadius: "14px",
-    fontSize: "15px",
+    fontSize: isMobile ? "14px" : "15px",
     fontWeight: "700",
     cursor: "pointer",
     display: "flex",
@@ -369,43 +385,45 @@ function Signup({ onSwitchToLogin }) {
 
   const selectedRoleButtonStyle = {
     ...baseButtonStyle,
-    height: "46px",
+    height: isMobile ? "44px" : "46px",
     border: `1px solid ${BRAND_COLOR}`,
     background: "#ffffff",
     color: BRAND_COLOR,
     boxShadow: "none",
+    fontSize: isMobile ? "13px" : "14px",
   };
 
   const unselectedRoleButtonStyle = {
     ...baseButtonStyle,
-    height: "46px",
+    height: isMobile ? "44px" : "46px",
     border: `1px solid ${CARD_BORDER}`,
     background: "#ffffff",
     color: TEXT_DARK,
     boxShadow: "none",
+    fontSize: isMobile ? "13px" : "14px",
   };
 
   const formStyle = {
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: isMobile ? "12px" : "14px",
   };
 
   const labelStyle = {
     display: "block",
     marginBottom: "8px",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: "700",
     color: "#334155",
   };
 
   const inputStyle = {
     width: "100%",
-    height: "50px",
+    height: isMobile ? "48px" : "50px",
     borderRadius: "13px",
     border: "1px solid #D9E2EC",
     padding: "0 14px",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     boxSizing: "border-box",
     outline: "none",
     color: TEXT_DARK,
@@ -426,7 +444,7 @@ function Signup({ onSwitchToLogin }) {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     color: passed ? "#2563EB" : "#64748B",
     fontWeight: passed ? "700" : "500",
     lineHeight: 1.5,
@@ -445,7 +463,7 @@ function Signup({ onSwitchToLogin }) {
     borderRadius: "12px",
     background: "#FFF1F2",
     color: "#BE123C",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.5,
   };
 
@@ -454,14 +472,14 @@ function Signup({ onSwitchToLogin }) {
     borderRadius: "12px",
     background: "#ECFDF3",
     color: "#047857",
-    fontSize: "13px",
+    fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.5,
   };
 
   const footerStyle = {
-    marginTop: "18px",
+    marginTop: isMobile ? "16px" : "18px",
     textAlign: "center",
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
   };
 
@@ -469,7 +487,7 @@ function Signup({ onSwitchToLogin }) {
     border: "none",
     background: "transparent",
     color: BRAND_COLOR,
-    fontSize: "14px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: "700",
     cursor: "pointer",
     padding: 0,
@@ -507,7 +525,9 @@ function Signup({ onSwitchToLogin }) {
           </div>
 
           <h1 style={titleStyle}>
-            {mode === "choice" ? "회원가입 방법을 선택해주세요" : "이메일로 회원가입"}
+            {mode === "choice"
+              ? "회원가입 방법을 선택해주세요"
+              : "이메일로 회원가입"}
           </h1>
 
           <p style={descStyle}>
@@ -531,11 +551,7 @@ function Signup({ onSwitchToLogin }) {
                       : unselectedRoleButtonStyle
                   }
                   hoverStyle={
-                    signupRole === "user"
-                      ? {}
-                      : {
-                          color: BRAND_COLOR,
-                        }
+                    signupRole === "user" ? {} : { color: BRAND_COLOR }
                   }
                 >
                   일반 회원
@@ -549,11 +565,7 @@ function Signup({ onSwitchToLogin }) {
                       : unselectedRoleButtonStyle
                   }
                   hoverStyle={
-                    signupRole === "worker"
-                      ? {}
-                      : {
-                          color: BRAND_COLOR,
-                        }
+                    signupRole === "worker" ? {} : { color: BRAND_COLOR }
                   }
                 >
                   전문가 회원
@@ -566,7 +578,9 @@ function Signup({ onSwitchToLogin }) {
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
               <HoverButton
                 onClick={() => setMode("email")}
                 disabled={loading}
@@ -583,9 +597,7 @@ function Signup({ onSwitchToLogin }) {
                 onClick={() => handleOAuthSignup("google")}
                 disabled={loading}
                 style={whiteButtonStyle}
-                hoverStyle={{
-                  color: BRAND_COLOR,
-                }}
+                hoverStyle={{ color: BRAND_COLOR }}
               >
                 <span style={iconBoxStyle}>
                   <svg
@@ -619,9 +631,7 @@ function Signup({ onSwitchToLogin }) {
                 onClick={() => handleOAuthSignup("kakao")}
                 disabled={loading}
                 style={kakaoButtonStyle}
-                hoverStyle={{
-                  filter: "brightness(0.97)",
-                }}
+                hoverStyle={{ filter: "brightness(0.97)" }}
               >
                 <span style={iconBoxStyle}>
                   <svg
@@ -642,7 +652,9 @@ function Signup({ onSwitchToLogin }) {
               </HoverButton>
 
               {errorMessage && <div style={errorBoxStyle}>{errorMessage}</div>}
-              {successMessage && <div style={successBoxStyle}>{successMessage}</div>}
+              {successMessage && (
+                <div style={successBoxStyle}>{successMessage}</div>
+              )}
             </div>
           </>
         ) : (
@@ -678,24 +690,31 @@ function Signup({ onSwitchToLogin }) {
                 onChange={(e) => setPassword(e.target.value)}
                 style={inputStyle}
               />
-            </div>
 
-            <div style={passwordChecklistStyle}>
-              <div style={checklistRowStyle(passwordChecks.minLength)}>
-                <span style={checklistDotStyle(passwordChecks.minLength)} />
-                8자 이상 입력
-              </div>
-              <div style={checklistRowStyle(passwordChecks.hasLetter)}>
-                <span style={checklistDotStyle(passwordChecks.hasLetter)} />
-                영문 1개 이상 포함
-              </div>
-              <div style={checklistRowStyle(passwordChecks.hasNumber)}>
-                <span style={checklistDotStyle(passwordChecks.hasNumber)} />
-                숫자 1개 이상 포함
-              </div>
-              <div style={checklistRowStyle(passwordChecks.hasSpecial)}>
-                <span style={checklistDotStyle(passwordChecks.hasSpecial)} />
-                특수문자 1개 이상 포함
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "7px",
+                  marginTop: "10px",
+                }}
+              >
+                <div style={checklistRowStyle(passwordChecks.minLength)}>
+                  <span style={checklistDotStyle(passwordChecks.minLength)} />
+                  8자 이상 입력
+                </div>
+                <div style={checklistRowStyle(passwordChecks.hasLetter)}>
+                  <span style={checklistDotStyle(passwordChecks.hasLetter)} />
+                  영문 1개 이상 포함
+                </div>
+                <div style={checklistRowStyle(passwordChecks.hasNumber)}>
+                  <span style={checklistDotStyle(passwordChecks.hasNumber)} />
+                  숫자 1개 이상 포함
+                </div>
+                <div style={checklistRowStyle(passwordChecks.hasSpecial)}>
+                  <span style={checklistDotStyle(passwordChecks.hasSpecial)} />
+                  특수문자 1개 이상 포함
+                </div>
               </div>
             </div>
 
@@ -711,7 +730,9 @@ function Signup({ onSwitchToLogin }) {
             </div>
 
             {errorMessage && <div style={errorBoxStyle}>{errorMessage}</div>}
-            {successMessage && <div style={successBoxStyle}>{successMessage}</div>}
+            {successMessage && (
+              <div style={successBoxStyle}>{successMessage}</div>
+            )}
 
             <HoverButton
               type="submit"
@@ -728,9 +749,7 @@ function Signup({ onSwitchToLogin }) {
             <HoverButton
               onClick={() => setMode("choice")}
               style={whiteButtonStyle}
-              hoverStyle={{
-                color: BRAND_COLOR,
-              }}
+              hoverStyle={{ color: BRAND_COLOR }}
             >
               다른 방법 선택
             </HoverButton>
