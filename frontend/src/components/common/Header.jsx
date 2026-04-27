@@ -1,5 +1,87 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { GrNotification } from "react-icons/gr";
 import { Link, useNavigate } from "react-router-dom";
+
+function HeaderNotificationButton({
+  isMobile,
+  isHovered,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
+}) {
+  const BRAND_COLOR = "#2F80ED";
+  const TEXT_BODY = "#2F3438";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      style={{
+        width: isMobile ? "34px" : "38px",
+        height: isMobile ? "34px" : "38px",
+        border: "none",
+        outline: "none",
+        boxShadow: "none",
+        background: "transparent",
+        padding: 0,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "999px",
+        color: isHovered ? BRAND_COLOR : TEXT_BODY,
+        transition: "color 0.18s ease, background-color 0.18s ease",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      aria-label="알림"
+    >
+      <GrNotification size={isMobile ? 18 : 20} />
+    </button>
+  );
+}
+
+function HeaderDropdownButton({
+  children,
+  onClick,
+  danger = false,
+  textBody = "#2F3438",
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      style={{
+        width: "100%",
+        background: danger ? "#fee2e2" : "transparent",
+        color: danger ? "#dc2626" : textBody,
+        border: "none",
+        padding: "10px 12px",
+        borderRadius: "8px",
+        fontSize: "14px",
+        fontWeight: "500",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "background-color 0.12s ease",
+        outline: "none",
+        boxShadow: "none",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = danger ? "#fecaca" : "#f8fafc";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = danger
+          ? "#fee2e2"
+          : "transparent";
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 function Header({
   isLoggedIn,
@@ -18,6 +100,7 @@ function Header({
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [hoveredTextButton, setHoveredTextButton] = useState("");
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
+  const [hoveredNotification, setHoveredNotification] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
@@ -69,11 +152,13 @@ function Header({
       onGoHome();
       return;
     }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const moveToSection = (id) => {
     const target = document.getElementById(id);
+
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
     }
@@ -81,12 +166,19 @@ function Header({
 
   const closeAndRun = (action) => {
     setProfileOpen(false);
-    if (action) action();
+
+    if (action) {
+      action();
+    }
   };
 
   const goAdminPage = () => {
     setProfileOpen(false);
     navigate("/admin");
+  };
+
+  const handleNotificationClick = () => {
+    alert("알림 기능은 아직 준비 중입니다.");
   };
 
   const topMenuButton = {
@@ -126,42 +218,21 @@ function Header({
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
-  function DropdownButton({ children, onClick, danger = false }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        onMouseDown={(e) => e.currentTarget.blur()}
-        style={{
-          width: "100%",
-          background: danger ? "#fee2e2" : "transparent",
-          color: danger ? "#dc2626" : TEXT_BODY,
-          border: "none",
-          padding: "10px 12px",
-          borderRadius: "8px",
-          fontSize: "14px",
-          fontWeight: "500",
-          cursor: "pointer",
-          textAlign: "left",
-          transition: "background-color 0.12s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = danger ? "#fecaca" : "#f8fafc";
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = danger ? "#fee2e2" : "transparent";
-        }}
-      >
-        {children}
-      </button>
-    );
-  }
+  const renderNotificationButton = () => (
+    <HeaderNotificationButton
+      isMobile={isMobile}
+      isHovered={hoveredNotification}
+      onMouseEnter={() => setHoveredNotification(true)}
+      onMouseLeave={() => setHoveredNotification(false)}
+      onClick={handleNotificationClick}
+    />
+  );
 
   const renderDropdownMenu = () => (
     <div
       style={{
         position: "absolute",
-        top: "42px",
+        top: isMobile ? "42px" : "42px",
         right: 0,
         width: "220px",
         backgroundColor: "#ffffff",
@@ -169,6 +240,7 @@ function Header({
         borderRadius: "14px",
         boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
         padding: "10px",
+        zIndex: 100,
       }}
     >
       <div
@@ -188,6 +260,7 @@ function Header({
         >
           {displayName}
         </div>
+
         <div
           style={{
             fontSize: "12px",
@@ -199,35 +272,51 @@ function Header({
         </div>
       </div>
 
-      <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
+      <HeaderDropdownButton
+        onClick={() => closeAndRun(onGoMyPage)}
+        textBody={TEXT_BODY}
+      >
         마이페이지
-      </DropdownButton>
+      </HeaderDropdownButton>
 
       {!isWorker && (
-        <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
+        <HeaderDropdownButton
+          onClick={() => closeAndRun(onGoMyRequests)}
+          textBody={TEXT_BODY}
+        >
           내 요청 목록
-        </DropdownButton>
+        </HeaderDropdownButton>
       )}
 
-      <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
+      <HeaderDropdownButton
+        onClick={() => closeAndRun(onGoAllRequests)}
+        textBody={TEXT_BODY}
+      >
         전체 요청 보기
-      </DropdownButton>
+      </HeaderDropdownButton>
 
       {(isWorker || isAdmin) && (
-        <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
+        <HeaderDropdownButton
+          onClick={() => closeAndRun(onGoAssignedRequests)}
+          textBody={TEXT_BODY}
+        >
           맡은 작업 보기
-        </DropdownButton>
+        </HeaderDropdownButton>
       )}
 
       {isAdmin && (
-        <DropdownButton onClick={goAdminPage}>
+        <HeaderDropdownButton onClick={goAdminPage} textBody={TEXT_BODY}>
           관리자 페이지
-        </DropdownButton>
+        </HeaderDropdownButton>
       )}
 
-      <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
+      <HeaderDropdownButton
+        onClick={() => closeAndRun(onLogout)}
+        danger
+        textBody={TEXT_BODY}
+      >
         로그아웃
-      </DropdownButton>
+      </HeaderDropdownButton>
     </div>
   );
 
@@ -317,7 +406,13 @@ function Header({
             </Link>
 
             {!isMobile && (
-              <nav style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+              <nav
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "32px",
+                }}
+              >
                 {[
                   { key: "home", text: "홈", onClick: goTop },
                   {
@@ -428,36 +523,7 @@ function Header({
                 paddingLeft: "16px",
               }}
             >
-              <button
-                type="button"
-                onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
-                onMouseDown={(e) => e.currentTarget.blur()}
-                style={{
-                  width: "24px",
-                  height: "24px",
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  padding: 0,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg
-                  width="21"
-                  height="21"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4.8 17.2C4.48 17.52 4.71 18 5.16 18H18.84C19.29 18 19.52 17.52 19.2 17.2L18 16Z"
-                    fill={TEXT_BODY}
-                  />
-                </svg>
-              </button>
+              {renderNotificationButton()}
 
               <div style={{ position: "relative" }} ref={profileRef}>
                 <button
@@ -467,12 +533,14 @@ function Header({
                   style={{
                     border: "none",
                     outline: "none",
+                    boxShadow: "none",
                     background: "none",
                     padding: 0,
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                     cursor: "pointer",
+                    WebkitTapHighlightColor: "transparent",
                   }}
                 >
                   <div
@@ -491,7 +559,15 @@ function Header({
                   >
                     {String(displayName).slice(0, 1)}
                   </div>
-                  <span style={{ fontSize: "13px", color: "#8A8F94" }}>▾</span>
+
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "#8A8F94",
+                    }}
+                  >
+                    ▾
+                  </span>
                 </button>
 
                 {profileOpen && renderDropdownMenu()}
@@ -534,36 +610,7 @@ function Header({
             >
               {isLoggedIn ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
-                    onMouseDown={(e) => e.currentTarget.blur()}
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      padding: 0,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4.8 17.2C4.48 17.52 4.71 18 5.16 18H18.84C19.29 18 19.52 17.52 19.2 17.2L18 16Z"
-                        fill={TEXT_BODY}
-                      />
-                    </svg>
-                  </button>
+                  {renderNotificationButton()}
 
                   <div style={{ position: "relative" }} ref={profileRef}>
                     <button
@@ -576,12 +623,14 @@ function Header({
                         borderRadius: "50%",
                         border: "none",
                         outline: "none",
+                        boxShadow: "none",
                         background: "#F1F5F9",
                         color: BRAND_COLOR,
                         cursor: "pointer",
                         padding: 0,
                         fontWeight: "700",
                         fontSize: "12px",
+                        WebkitTapHighlightColor: "transparent",
                       }}
                     >
                       {String(displayName).slice(0, 1)}
