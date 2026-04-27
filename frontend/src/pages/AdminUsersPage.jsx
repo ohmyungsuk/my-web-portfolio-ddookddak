@@ -2,131 +2,273 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-function AdminUsersPage() {
+const BRAND = "#2F80ED";
+const BRAND_HOVER = "#1F6FD6";
+const TEXT = "#0F172A";
+const SUB = "#64748B";
+const BG = "#F4F7FB";
+const CARD = "#FFFFFF";
+const BORDER = "#DBE4F0";
+const SOFT = "#F8FBFF";
+const DANGER = "#EF4444";
+
+function getWindowWidth() {
+  if (typeof window === "undefined") return 1024;
+  return window.innerWidth;
+}
+
+function normalizeRole(role) {
+  const value = String(role || "").trim().toLowerCase();
+
+  if (value === "admin") return "admin";
+  if (value === "worker") return "worker";
+  return "user";
+}
+
+function getRoleText(role) {
+  const normalized = normalizeRole(role);
+
+  if (normalized === "admin") return "관리자";
+  if (normalized === "worker") return "전문가";
+  return "일반 회원";
+}
+
+function getProviderText(provider) {
+  const value = String(provider || "").trim().toLowerCase();
+
+  if (value === "google") return "구글";
+  if (value === "kakao") return "카카오";
+  if (value === "email") return "이메일";
+  return "알 수 없음";
+}
+
+function getDisplayName(user) {
+  return user?.name || user?.username || user?.email || "이름 없음";
+}
+
+function getRoleStyle(role) {
+  const normalized = normalizeRole(role);
+
+  if (normalized === "admin") {
+    return {
+      backgroundColor: "#FEF2F2",
+      color: "#DC2626",
+      borderColor: "#FECACA",
+    };
+  }
+
+  if (normalized === "worker") {
+    return {
+      backgroundColor: "#EEF2FF",
+      color: "#4F46E5",
+      borderColor: "#C7D2FE",
+    };
+  }
+
+  return {
+    backgroundColor: "#F1F5F9",
+    color: "#475569",
+    borderColor: "#E2E8F0",
+  };
+}
+
+function getProviderStyle(provider) {
+  const value = String(provider || "").trim().toLowerCase();
+
+  if (value === "google") {
+    return {
+      backgroundColor: "#FFF7ED",
+      color: "#C2410C",
+      borderColor: "#FED7AA",
+    };
+  }
+
+  if (value === "kakao") {
+    return {
+      backgroundColor: "#FEF9C3",
+      color: "#854D0E",
+      borderColor: "#FDE68A",
+    };
+  }
+
+  if (value === "email") {
+    return {
+      backgroundColor: "#EFF6FF",
+      color: "#2563EB",
+      borderColor: "#BFDBFE",
+    };
+  }
+
+  return {
+    backgroundColor: "#F8FAFC",
+    color: "#64748B",
+    borderColor: "#E2E8F0",
+  };
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function HoverButton({
+  children,
+  onClick,
+  baseStyle,
+  hoverStyle = {},
+  disabled = false,
+  type = "button",
+}) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      style={{
+        ...baseStyle,
+        ...(isHover && !disabled ? hoverStyle : {}),
+        opacity: disabled ? 0.68 : 1,
+        cursor: disabled ? "not-allowed" : baseStyle?.cursor || "pointer",
+        outline: "none",
+        outlineOffset: 0,
+        WebkitTapHighlightColor: "transparent",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        userSelect: "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function HoverCard({ children, baseStyle, hoverStyle = {} }) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      style={{
+        ...baseStyle,
+        ...(isHover ? hoverStyle : {}),
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, styles }) {
+  return (
+    <div style={styles.statCard}>
+      <div style={styles.statLabel}>{label}</div>
+      <div style={styles.statValue}>{value}</div>
+      <div style={styles.statSub}>{sub}</div>
+    </div>
+  );
+}
+
+export default function AdminUsersPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loginUser, setLoginUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [providerFilter, setProviderFilter] = useState("all");
   const [savingUserId, setSavingUserId] = useState(null);
+  const [message, setMessage] = useState("");
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
 
-  const loginUser = useMemo(() => {
-    try {
-      const savedUser = localStorage.getItem("loginUser");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      console.error("loginUser 파싱 실패:", error);
-      return null;
-    }
-  }, []);
-
-  const normalizeRole = (role) => {
-    const value = String(role || "").trim().toLowerCase();
-
-    if (value === "admin") return "admin";
-    if (value === "worker") return "worker";
-    return "user";
-  };
-
-  const getRoleText = (role) => {
-    switch (normalizeRole(role)) {
-      case "admin":
-        return "관리자";
-      case "worker":
-        return "전문가";
-      default:
-        return "일반 회원";
-    }
-  };
-
-  const getProviderText = (provider) => {
-    const value = String(provider || "").trim().toLowerCase();
-
-    if (value === "google") return "구글";
-    if (value === "kakao") return "카카오";
-    if (value === "email") return "이메일";
-    return "알 수 없음";
-  };
-
-  const getRoleStyle = (role) => {
-    switch (normalizeRole(role)) {
-      case "admin":
-        return {
-          background: "#FEF2F2",
-          color: "#DC2626",
-          border: "1px solid #FECACA",
-        };
-      case "worker":
-        return {
-          background: "#F5F3FF",
-          color: "#7C3AED",
-          border: "1px solid #DDD6FE",
-        };
-      default:
-        return {
-          background: "#F8FAFC",
-          color: "#475569",
-          border: "1px solid #E2E8F0",
-        };
-    }
-  };
-
-  const getDisplayName = (user) => {
-    return user?.name || user?.username || user?.email || "이름 없음";
-  };
+  const isMobile = windowWidth <= 900;
+  const isSmallMobile = windowWidth <= 480;
 
   const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("auth_created_at", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("auth_created_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("회원 목록 조회 실패:", error);
-        return;
-      }
+    if (error) throw error;
 
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("회원 목록 불러오기 실패:", error);
-    }
+    setUsers(Array.isArray(data) ? data : []);
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(getWindowWidth());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     const checkAdminAndLoad = async () => {
       try {
-        if (!loginUser?.id && !loginUser?.supabaseUserId) {
+        setLoading(true);
+        setMessage("");
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        let currentUser = user || null;
+        let currentUserId = user?.id || null;
+
+        if (userError || !currentUserId) {
+          try {
+            const savedUser = localStorage.getItem("loginUser");
+            const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+
+            currentUser = parsedUser || null;
+            currentUserId = parsedUser?.supabaseUserId || parsedUser?.id || null;
+          } catch (error) {
+            console.error("loginUser 파싱 실패:", error);
+          }
+        }
+
+        if (!currentUserId) {
           navigate("/login", { replace: true });
           return;
         }
 
-        const userId = loginUser?.supabaseUserId || loginUser?.id;
+        if (!mounted) return;
+        setLoginUser(currentUser);
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
-          .eq("id", userId)
-          .single();
+          .eq("id", currentUserId)
+          .maybeSingle();
 
-        if (profileError) {
-          console.error("관리자 권한 확인 실패:", profileError);
-          if (mounted) {
-            setIsAdmin(false);
-            setLoading(false);
-          }
-          return;
-        }
+        if (profileError) throw profileError;
 
         const admin = normalizeRole(profile?.role) === "admin";
 
         if (!mounted) return;
-
         setIsAdmin(admin);
 
         if (!admin) {
@@ -140,10 +282,12 @@ function AdminUsersPage() {
           setLoading(false);
         }
       } catch (error) {
-        console.error("관리자 사용자 페이지 로딩 실패:", error);
+        console.error("관리자 회원관리 페이지 로딩 실패:", error);
+
         if (mounted) {
-          setLoading(false);
+          setMessage(error.message || "회원 목록을 불러오지 못했습니다.");
           setIsAdmin(false);
+          setLoading(false);
         }
       }
     };
@@ -153,41 +297,74 @@ function AdminUsersPage() {
     return () => {
       mounted = false;
     };
-  }, [loginUser, navigate]);
+  }, [navigate]);
+
+  const summary = useMemo(() => {
+    return {
+      total: users.length,
+      normal: users.filter((user) => normalizeRole(user.role) === "user")
+        .length,
+      worker: users.filter((user) => normalizeRole(user.role) === "worker")
+        .length,
+      admin: users.filter((user) => normalizeRole(user.role) === "admin")
+        .length,
+    };
+  }, [users]);
+
+  const providerOptions = useMemo(() => {
+    const providers = users
+      .map((user) => String(user?.provider || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    return ["all", ...Array.from(new Set(providers))];
+  }, [users]);
 
   const filteredUsers = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
     return users.filter((user) => {
       const normalizedRole = normalizeRole(user?.role);
+      const normalizedProvider = String(user?.provider || "")
+        .trim()
+        .toLowerCase();
 
       const matchesRole =
         roleFilter === "all" ? true : normalizedRole === roleFilter;
 
-      const matchesKeyword =
-        keyword === ""
-          ? true
-          : String(user?.name || "").toLowerCase().includes(keyword) ||
-            String(user?.username || "").toLowerCase().includes(keyword) ||
-            String(user?.email || "").toLowerCase().includes(keyword) ||
-            String(user?.provider || "").toLowerCase().includes(keyword) ||
-            String(user?.id || "").toLowerCase().includes(keyword);
+      const matchesProvider =
+        providerFilter === "all" ? true : normalizedProvider === providerFilter;
 
-      return matchesRole && matchesKeyword;
+      const searchTarget = [
+        user?.name,
+        user?.username,
+        user?.email,
+        user?.provider,
+        user?.id,
+        getRoleText(user?.role),
+        getProviderText(user?.provider),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesKeyword = keyword === "" || searchTarget.includes(keyword);
+
+      return matchesRole && matchesProvider && matchesKeyword;
     });
-  }, [users, roleFilter, searchKeyword]);
+  }, [users, roleFilter, providerFilter, searchKeyword]);
 
   const handleRoleChange = (userId, nextRole) => {
     setUsers((prev) =>
       prev.map((user) =>
-        user.id === userId ? { ...user, role: nextRole } : user
-      )
+        user.id === userId ? { ...user, role: normalizeRole(nextRole) } : user,
+      ),
     );
   };
 
   const handleSaveRole = async (user) => {
     try {
       setSavingUserId(user.id);
+      setMessage("");
 
       const nextRole = normalizeRole(user.role);
 
@@ -196,27 +373,447 @@ function AdminUsersPage() {
         .update({ role: nextRole })
         .eq("id", user.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      alert("역할이 저장되었습니다.");
+      setMessage("역할이 저장되었습니다.");
     } catch (error) {
       console.error("역할 저장 실패:", error);
-      alert("역할 저장 중 문제가 발생했습니다.");
+      setMessage(error.message || "역할 저장 중 문제가 발생했습니다.");
       await fetchUsers();
     } finally {
       setSavingUserId(null);
     }
   };
 
+  const styles = {
+    page: {
+      minHeight: "100dvh",
+      background: BG,
+      padding: isMobile ? "88px 14px 28px" : "104px 24px 52px",
+      boxSizing: "border-box",
+      fontFamily:
+        '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+    container: {
+      maxWidth: "1180px",
+      margin: "0 auto",
+    },
+    pageTitle: {
+      margin: "0 0 18px",
+      fontSize: isMobile ? "21px" : "25px",
+      fontWeight: 850,
+      color: TEXT,
+      letterSpacing: "-0.4px",
+      lineHeight: 1.35,
+    },
+    shell: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 310px",
+      gap: isMobile ? "14px" : "18px",
+      alignItems: "start",
+    },
+    mainCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: isMobile ? "20px" : "24px",
+      padding: isSmallMobile ? "15px" : isMobile ? "16px" : "22px",
+      boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
+      boxSizing: "border-box",
+    },
+    heroCard: {
+      background: "linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%)",
+      border: `1px solid ${BORDER}`,
+      borderRadius: isMobile ? "18px" : "20px",
+      padding: isMobile ? "16px" : "20px",
+      marginBottom: "16px",
+      boxSizing: "border-box",
+    },
+    eyebrow: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "7px 11px",
+      borderRadius: "999px",
+      background: "#EAF2FF",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 850,
+      marginBottom: "12px",
+    },
+    heroTitle: {
+      margin: 0,
+      fontSize: isMobile ? "23px" : "28px",
+      fontWeight: 850,
+      color: TEXT,
+      lineHeight: 1.35,
+      letterSpacing: "-0.6px",
+      wordBreak: "keep-all",
+    },
+    heroSub: {
+      marginTop: "10px",
+      fontSize: isMobile ? "13px" : "14px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 500,
+      wordBreak: "keep-all",
+    },
+    statGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))",
+      gap: "10px",
+      marginTop: "16px",
+    },
+    statCard: {
+      background: "#FFFFFF",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "16px",
+      padding: isMobile ? "14px" : "15px",
+      boxSizing: "border-box",
+    },
+    statLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 750,
+      marginBottom: "7px",
+    },
+    statValue: {
+      fontSize: isMobile ? "21px" : "23px",
+      color: TEXT,
+      fontWeight: 850,
+      letterSpacing: "-0.35px",
+      lineHeight: 1.2,
+    },
+    statSub: {
+      marginTop: "6px",
+      fontSize: "12px",
+      color: SUB,
+      lineHeight: 1.5,
+      fontWeight: 500,
+      wordBreak: "keep-all",
+    },
+    controlsCard: {
+      background: SOFT,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "18px",
+      padding: isMobile ? "14px" : "16px",
+      marginBottom: "18px",
+      boxSizing: "border-box",
+    },
+    controlLabel: {
+      fontSize: "13px",
+      color: TEXT,
+      fontWeight: 800,
+      marginBottom: "10px",
+    },
+    filterBar: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 170px 170px",
+      gap: "10px",
+    },
+    input: {
+      width: "100%",
+      height: "48px",
+      padding: "0 15px",
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 500,
+      outline: "none",
+      boxSizing: "border-box",
+      WebkitAppearance: "none",
+      appearance: "none",
+    },
+    select: {
+      width: "100%",
+      height: "48px",
+      padding: "0 14px",
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 500,
+      outline: "none",
+      boxSizing: "border-box",
+    },
+    countText: {
+      marginTop: "12px",
+      fontSize: "13px",
+      color: SUB,
+      lineHeight: 1.6,
+      fontWeight: 600,
+      wordBreak: "keep-all",
+    },
+    message: {
+      marginBottom: "14px",
+      padding: "12px 14px",
+      borderRadius: "14px",
+      fontSize: "13px",
+      fontWeight: 650,
+      lineHeight: 1.6,
+      border: "1px solid #D9E6FF",
+      background: "#F8FBFF",
+      color: BRAND_HOVER,
+      wordBreak: "keep-all",
+      boxSizing: "border-box",
+    },
+    listWrap: {
+      display: "grid",
+      gap: "14px",
+    },
+    emptyCard: {
+      background: "#FFFFFF",
+      border: `1px dashed ${BORDER}`,
+      borderRadius: "18px",
+      padding: "34px 20px",
+      textAlign: "center",
+      color: SUB,
+      fontSize: "14px",
+      lineHeight: 1.8,
+      fontWeight: 550,
+      wordBreak: "keep-all",
+    },
+    userCard: {
+      background: "#FFFFFF",
+      border: "1px solid #E6EDF5",
+      borderRadius: "20px",
+      padding: isMobile ? "16px" : "18px",
+      transition:
+        "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
+      boxShadow: "0 8px 22px rgba(15, 23, 42, 0.035)",
+      boxSizing: "border-box",
+    },
+    userTop: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: isMobile ? "flex-start" : "center",
+      flexDirection: isMobile ? "column" : "row",
+      gap: "12px",
+      marginBottom: "14px",
+    },
+    nameArea: {
+      minWidth: 0,
+    },
+    userName: {
+      margin: 0,
+      fontSize: isMobile ? "18px" : "19px",
+      fontWeight: 850,
+      color: TEXT,
+      lineHeight: 1.45,
+      letterSpacing: "-0.3px",
+      wordBreak: "break-word",
+    },
+    userSub: {
+      marginTop: "6px",
+      fontSize: "13px",
+      color: SUB,
+      fontWeight: 550,
+      wordBreak: "break-all",
+    },
+    badgeRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flexWrap: "wrap",
+    },
+    badge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "8px 12px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: 800,
+      whiteSpace: "nowrap",
+      border: "1px solid transparent",
+      boxSizing: "border-box",
+    },
+    metaGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+      gap: "10px",
+      marginBottom: "14px",
+    },
+    metaBox: {
+      background: "#FBFDFF",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "15px",
+      padding: "12px 14px",
+      boxSizing: "border-box",
+    },
+    metaLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 750,
+      marginBottom: "6px",
+    },
+    metaValue: {
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 750,
+      lineHeight: 1.55,
+      wordBreak: "break-word",
+    },
+    idValue: {
+      fontSize: "13px",
+      color: TEXT,
+      fontWeight: 650,
+      lineHeight: 1.55,
+      wordBreak: "break-all",
+    },
+    actionBox: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 160px",
+      gap: "10px",
+      alignItems: "end",
+      paddingTop: "14px",
+      borderTop: "1px solid #EDF2F7",
+    },
+    actionLabel: {
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 800,
+      marginBottom: "8px",
+    },
+    saveBtn: {
+      width: "100%",
+      minHeight: "48px",
+      border: "1px solid transparent",
+      borderRadius: "14px",
+      background: BRAND,
+      color: "#FFFFFF",
+      fontSize: "14px",
+      fontWeight: 800,
+      cursor: "pointer",
+      outline: "none",
+      outlineOffset: 0,
+      boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      boxSizing: "border-box",
+    },
+    sideCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: isMobile ? "20px" : "24px",
+      padding: isMobile ? "16px" : "18px",
+      boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
+      position: isMobile ? "static" : "sticky",
+      top: "94px",
+      boxSizing: "border-box",
+    },
+    sideBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "7px 10px",
+      borderRadius: "999px",
+      background: "#EEF4FF",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 850,
+      marginBottom: "12px",
+    },
+    sideTitle: {
+      margin: 0,
+      fontSize: "19px",
+      fontWeight: 850,
+      color: TEXT,
+      letterSpacing: "-0.3px",
+    },
+    sideDesc: {
+      margin: "8px 0 16px",
+      fontSize: "13px",
+      lineHeight: 1.7,
+      color: SUB,
+      fontWeight: 500,
+      wordBreak: "keep-all",
+    },
+    primaryBtn: {
+      width: "100%",
+      minHeight: "48px",
+      border: "1px solid transparent",
+      borderRadius: "14px",
+      background: BRAND,
+      color: "#FFFFFF",
+      fontSize: "14px",
+      fontWeight: 800,
+      cursor: "pointer",
+      outline: "none",
+      outlineOffset: 0,
+      boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      boxSizing: "border-box",
+    },
+    whiteBtn: {
+      width: "100%",
+      minHeight: "48px",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "14px",
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 800,
+      cursor: "pointer",
+      outline: "none",
+      outlineOffset: 0,
+      boxShadow: "none",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease",
+      boxSizing: "border-box",
+    },
+    miniInfo: {
+      marginTop: "16px",
+      paddingTop: "16px",
+      borderTop: `1px solid ${BORDER}`,
+      display: "grid",
+      gap: "10px",
+    },
+    miniItem: {
+      background: "#F8FBFF",
+      borderRadius: "15px",
+      padding: "12px 14px",
+      border: `1px solid ${BORDER}`,
+      boxSizing: "border-box",
+    },
+    miniLabel: {
+      fontSize: "12px",
+      fontWeight: 750,
+      color: SUB,
+      marginBottom: "4px",
+    },
+    miniValue: {
+      fontSize: "14px",
+      fontWeight: 750,
+      color: TEXT,
+      lineHeight: 1.55,
+      wordBreak: "break-word",
+    },
+    loadingWrap: {
+      background: "#FFFFFF",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "18px",
+      padding: "30px 20px",
+      textAlign: "center",
+      color: SUB,
+      fontSize: "15px",
+      fontWeight: 700,
+      boxSizing: "border-box",
+    },
+    dangerText: {
+      color: DANGER,
+      fontWeight: 750,
+    },
+  };
+
   if (loading) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div style={sectionCardStyle}>
-            <h1 style={titleStyle}>회원 관리 불러오는 중...</h1>
-            <p style={descStyle}>회원 목록과 역할 정보를 확인하고 있습니다.</p>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.loadingWrap}>
+            회원 목록과 역할 정보를 불러오는 중입니다...
           </div>
         </div>
       </div>
@@ -225,30 +822,43 @@ function AdminUsersPage() {
 
   if (!isAdmin) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div style={sectionCardStyle}>
-            <h1 style={titleStyle}>관리자만 접근할 수 있어요</h1>
-            <p style={descStyle}>
-              현재 계정은 관리자 권한이 없어서 회원 관리 페이지를 볼 수 없습니다.
-            </p>
-
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.loadingWrap}>
+            관리자만 접근할 수 있어요.
+            {message && (
+              <div style={{ marginTop: "8px", fontSize: "13px" }}>
+                {message}
+              </div>
+            )}
+            <div
+              style={{
+                display: "grid",
+                gap: "10px",
+                maxWidth: "260px",
+                margin: "18px auto 0",
+              }}
+            >
+              <HoverButton
                 onClick={() => navigate("/admin")}
-                style={secondaryButtonStyle}
+                baseStyle={styles.primaryBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  boxShadow: "0 14px 24px rgba(31, 111, 214, 0.22)",
+                }}
               >
-                관리자 메인으로 가기
-              </button>
+                관리자 메인
+              </HoverButton>
 
-              <button
-                type="button"
+              <HoverButton
                 onClick={() => navigate("/")}
-                style={primaryButtonStyle}
+                baseStyle={styles.whiteBtn}
+                hoverStyle={{
+                  color: BRAND,
+                }}
               >
-                홈으로 가기
-              </button>
+                메인으로 돌아가기
+              </HoverButton>
             </div>
           </div>
         </div>
@@ -257,410 +867,297 @@ function AdminUsersPage() {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <section style={sectionCardStyle}>
-          <div style={topHeaderStyle}>
-            <div>
-              <p style={badgeStyle}>관리자 회원 관리</p>
-              <h1 style={titleStyle}>전체 회원 관리</h1>
-              <p style={descStyle}>
-                회원 목록을 확인하고 역할과 가입방식을 관리할 수 있어요.
-              </p>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <h1 style={styles.pageTitle}>회원 관리</h1>
+
+        <div style={styles.shell}>
+          <div style={styles.mainCard}>
+            <div style={styles.heroCard}>
+              <div style={styles.eyebrow}>관리자 회원 관리</div>
+
+              <h2 style={styles.heroTitle}>
+                전체 회원과 역할 정보를 관리해요
+              </h2>
+
+              <div style={styles.heroSub}>
+                회원 목록을 확인하고, 일반 회원/전문가/관리자 역할을 변경할 수
+                있어요.
+              </div>
+
+              <div style={styles.statGrid}>
+                <StatCard
+                  label="전체 회원"
+                  value={`${summary.total}명`}
+                  sub="등록된 전체 회원"
+                  styles={styles}
+                />
+
+                <StatCard
+                  label="일반 회원"
+                  value={`${summary.normal}명`}
+                  sub="요청을 등록하는 회원"
+                  styles={styles}
+                />
+
+                <StatCard
+                  label="전문가"
+                  value={`${summary.worker}명`}
+                  sub="요청을 수락하는 회원"
+                  styles={styles}
+                />
+
+                <StatCard
+                  label="관리자"
+                  value={`${summary.admin}명`}
+                  sub="서비스를 관리하는 계정"
+                  styles={styles}
+                />
+              </div>
             </div>
 
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
-                onClick={() => navigate("/admin")}
-                style={secondaryButtonStyle}
-              >
-                관리자 메인
-              </button>
+            <div style={styles.controlsCard}>
+              <div style={styles.controlLabel}>검색 및 필터</div>
 
-              <button
-                type="button"
-                onClick={() => navigate("/admin/requests")}
-                style={primaryButtonStyle}
-              >
-                요청 관리로 가기
-              </button>
+              <div style={styles.filterBar}>
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="이름, 아이디, 이메일, 가입방식, 회원 ID 검색"
+                  style={styles.input}
+                />
+
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  style={styles.select}
+                >
+                  <option value="all">전체 역할</option>
+                  <option value="user">일반 회원</option>
+                  <option value="worker">전문가</option>
+                  <option value="admin">관리자</option>
+                </select>
+
+                <select
+                  value={providerFilter}
+                  onChange={(e) => setProviderFilter(e.target.value)}
+                  style={styles.select}
+                >
+                  {providerOptions.map((provider) => (
+                    <option key={provider} value={provider}>
+                      {provider === "all"
+                        ? "전체 가입방식"
+                        : getProviderText(provider)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.countText}>
+                총 <strong>{filteredUsers.length}</strong>명의 회원이 보여요.
+              </div>
             </div>
-          </div>
-        </section>
 
-        <section style={sectionCardStyle}>
-          <div style={filterGridStyle}>
-            <div style={filterBoxStyle}>
-              <label style={labelStyle}>검색</label>
-              <input
-                type="text"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="이름, 아이디, 이메일, 가입방식, 회원 ID 검색"
-                style={inputStyle}
-              />
-            </div>
+            {message && <div style={styles.message}>{message}</div>}
 
-            <div style={filterBoxStyle}>
-              <label style={labelStyle}>역할</label>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                style={selectStyle}
-              >
-                <option value="all">전체 역할</option>
-                <option value="user">일반 회원</option>
-                <option value="worker">전문가</option>
-                <option value="admin">관리자</option>
-              </select>
-            </div>
-          </div>
+            <div style={styles.listWrap}>
+              {filteredUsers.length === 0 ? (
+                <div style={styles.emptyCard}>조건에 맞는 회원이 없어요.</div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const saving = savingUserId === user.id;
+                  const joinedAt = user?.auth_created_at || user?.created_at;
+                  const isMe =
+                    loginUser?.id === user.id ||
+                    loginUser?.supabaseUserId === user.id;
 
-          <div style={countRowStyle}>
-            총 <strong>{filteredUsers.length}</strong>명의 회원이 보여요.
-          </div>
-        </section>
-
-        <section style={sectionCardStyle}>
-          {filteredUsers.length === 0 ? (
-            <div style={emptyStyle}>조건에 맞는 회원이 없습니다.</div>
-          ) : (
-            <div style={userListStyle}>
-              {filteredUsers.map((user) => (
-                <div key={user.id} style={userCardStyle}>
-                  <div style={userTopStyle}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={nameRowStyle}>
-                        <h3 style={userNameStyle}>{getDisplayName(user)}</h3>
-                        <span
-                          style={{
-                            ...roleBadgeStyle,
-                            ...getRoleStyle(user.role),
-                          }}
-                        >
-                          {getRoleText(user.role)}
-                        </span>
-                      </div>
-
-                      <div style={metaGridStyle}>
-                        <div>
-                          <span style={metaLabelStyle}>아이디</span>
-                          <p style={metaValueStyle}>{user?.username || "-"}</p>
-                        </div>
-
-                        <div>
-                          <span style={metaLabelStyle}>이름</span>
-                          <p style={metaValueStyle}>{user?.name || "-"}</p>
-                        </div>
-
-                        <div>
-                          <span style={metaLabelStyle}>이메일</span>
-                          <p style={metaValueStyle}>{user?.email || "-"}</p>
-                        </div>
-
-                        <div>
-                          <span style={metaLabelStyle}>가입방식</span>
-                          <p style={metaValueStyle}>{getProviderText(user?.provider)}</p>
-                        </div>
-
-                        <div>
-                          <span style={metaLabelStyle}>회원 ID</span>
-                          <p style={metaValueStyle}>{user?.id || "-"}</p>
-                        </div>
-
-                        <div>
-                          <span style={metaLabelStyle}>가입일</span>
-                          <p style={metaValueStyle}>
-                            {user?.auth_created_at
-                              ? new Date(user.auth_created_at).toLocaleDateString("ko-KR")
-                              : user?.created_at
-                              ? new Date(user.created_at).toLocaleDateString("ko-KR")
-                              : "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={actionRowStyle}>
-                    <div style={roleEditorStyle}>
-                      <label style={smallLabelStyle}>역할 변경</label>
-                      <select
-                        value={normalizeRole(user.role)}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        style={roleSelectStyle}
-                      >
-                        <option value="user">일반 회원</option>
-                        <option value="worker">전문가</option>
-                        <option value="admin">관리자</option>
-                      </select>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSaveRole(user)}
-                      disabled={savingUserId === user.id}
-                      style={{
-                        ...saveButtonStyle,
-                        opacity: savingUserId === user.id ? 0.7 : 1,
-                        cursor: savingUserId === user.id ? "default" : "pointer",
+                  return (
+                    <HoverCard
+                      key={user.id}
+                      baseStyle={styles.userCard}
+                      hoverStyle={{
+                        transform: isMobile ? "none" : "translateY(-3px)",
+                        boxShadow: "0 16px 34px rgba(15, 23, 42, 0.08)",
+                        borderColor: "#D7E6FB",
                       }}
                     >
-                      {savingUserId === user.id ? "저장 중..." : "역할 저장"}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div style={styles.userTop}>
+                        <div style={styles.nameArea}>
+                          <h3 style={styles.userName}>
+                            {getDisplayName(user)}
+                            {isMe ? " (나)" : ""}
+                          </h3>
+                          <div style={styles.userSub}>
+                            {user?.email || "이메일 정보 없음"}
+                          </div>
+                        </div>
+
+                        <div style={styles.badgeRow}>
+                          <span
+                            style={{
+                              ...styles.badge,
+                              ...getRoleStyle(user.role),
+                            }}
+                          >
+                            {getRoleText(user.role)}
+                          </span>
+
+                          <span
+                            style={{
+                              ...styles.badge,
+                              ...getProviderStyle(user.provider),
+                            }}
+                          >
+                            {getProviderText(user.provider)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={styles.metaGrid}>
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>아이디</div>
+                          <div style={styles.metaValue}>
+                            {user?.username || "-"}
+                          </div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>이름</div>
+                          <div style={styles.metaValue}>{user?.name || "-"}</div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>가입일</div>
+                          <div style={styles.metaValue}>
+                            {formatDate(joinedAt)}
+                          </div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>가입방식</div>
+                          <div style={styles.metaValue}>
+                            {getProviderText(user?.provider)}
+                          </div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>현재 역할</div>
+                          <div style={styles.metaValue}>
+                            {getRoleText(user?.role)}
+                          </div>
+                        </div>
+
+                        <div style={styles.metaBox}>
+                          <div style={styles.metaLabel}>회원 ID</div>
+                          <div style={styles.idValue}>{user?.id || "-"}</div>
+                        </div>
+                      </div>
+
+                      <div style={styles.actionBox}>
+                        <div>
+                          <div style={styles.actionLabel}>역할 변경</div>
+                          <select
+                            value={normalizeRole(user.role)}
+                            onChange={(e) =>
+                              handleRoleChange(user.id, e.target.value)
+                            }
+                            style={styles.select}
+                            disabled={saving}
+                          >
+                            <option value="user">일반 회원</option>
+                            <option value="worker">전문가</option>
+                            <option value="admin">관리자</option>
+                          </select>
+                        </div>
+
+                        <HoverButton
+                          onClick={() => handleSaveRole(user)}
+                          disabled={saving}
+                          baseStyle={styles.saveBtn}
+                          hoverStyle={{
+                            background: BRAND_HOVER,
+                            boxShadow:
+                              "0 14px 24px rgba(31, 111, 214, 0.22)",
+                          }}
+                        >
+                          {saving ? "저장 중..." : "역할 저장"}
+                        </HoverButton>
+                      </div>
+                    </HoverCard>
+                  );
+                })
+              )}
             </div>
-          )}
-        </section>
+          </div>
+
+          <div style={styles.sideCard}>
+            <div style={styles.sideBadge}>관리자 메뉴</div>
+
+            <h3 style={styles.sideTitle}>회원 관리 요약</h3>
+
+            <p style={styles.sideDesc}>
+              회원 역할과 가입방식을 확인하고, 요청 관리 화면으로 이동할 수
+              있어요.
+            </p>
+
+            <div style={{ display: "grid", gap: "10px" }}>
+              <HoverButton
+                onClick={() => navigate("/admin/requests")}
+                baseStyle={styles.primaryBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  boxShadow: "0 14px 24px rgba(31, 111, 214, 0.22)",
+                }}
+              >
+                요청 관리로 가기
+              </HoverButton>
+
+              <HoverButton
+                onClick={() => navigate("/admin")}
+                baseStyle={styles.whiteBtn}
+                hoverStyle={{
+                  color: BRAND,
+                }}
+              >
+                관리자 메인
+              </HoverButton>
+
+              <HoverButton
+                onClick={() => navigate("/")}
+                baseStyle={styles.whiteBtn}
+                hoverStyle={{
+                  color: BRAND,
+                }}
+              >
+                메인으로 돌아가기
+              </HoverButton>
+            </div>
+
+            <div style={styles.miniInfo}>
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>전체 회원</div>
+                <div style={styles.miniValue}>{summary.total}명</div>
+              </div>
+
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>일반 회원</div>
+                <div style={styles.miniValue}>{summary.normal}명</div>
+              </div>
+
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>전문가</div>
+                <div style={styles.miniValue}>{summary.worker}명</div>
+              </div>
+
+              <div style={styles.miniItem}>
+                <div style={styles.miniLabel}>관리자</div>
+                <div style={styles.miniValue}>{summary.admin}명</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-const pageStyle = {
-  minHeight: "100vh",
-  background: "#F8FAFC",
-};
-
-const containerStyle = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "108px 20px 56px",
-};
-
-const sectionCardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E2E8F0",
-  borderRadius: "24px",
-  padding: "24px",
-  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-  marginBottom: "20px",
-};
-
-const topHeaderStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: "16px",
-  flexWrap: "wrap",
-};
-
-const badgeStyle = {
-  margin: 0,
-  marginBottom: "10px",
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#2563EB",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: "30px",
-  fontWeight: 800,
-  color: "#0F172A",
-  lineHeight: 1.3,
-};
-
-const descStyle = {
-  margin: "10px 0 0",
-  fontSize: "15px",
-  color: "#475569",
-  lineHeight: 1.6,
-};
-
-const buttonRowStyle = {
-  display: "flex",
-  gap: "10px",
-  flexWrap: "wrap",
-};
-
-const primaryButtonStyle = {
-  border: "none",
-  borderRadius: "14px",
-  background: "#2563EB",
-  color: "#FFFFFF",
-  fontSize: "14px",
-  fontWeight: 700,
-  padding: "12px 18px",
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle = {
-  border: "1px solid #CBD5E1",
-  borderRadius: "14px",
-  background: "#FFFFFF",
-  color: "#0F172A",
-  fontSize: "14px",
-  fontWeight: 700,
-  padding: "12px 18px",
-  cursor: "pointer",
-};
-
-const filterGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: "14px",
-};
-
-const filterBoxStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-};
-
-const labelStyle = {
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#334155",
-};
-
-const inputStyle = {
-  height: "46px",
-  borderRadius: "14px",
-  border: "1px solid #CBD5E1",
-  padding: "0 14px",
-  fontSize: "14px",
-  outline: "none",
-};
-
-const selectStyle = {
-  height: "46px",
-  borderRadius: "14px",
-  border: "1px solid #CBD5E1",
-  padding: "0 14px",
-  fontSize: "14px",
-  outline: "none",
-  background: "#FFFFFF",
-};
-
-const countRowStyle = {
-  marginTop: "16px",
-  fontSize: "14px",
-  color: "#475569",
-};
-
-const emptyStyle = {
-  padding: "28px 16px",
-  borderRadius: "18px",
-  background: "#F8FAFC",
-  border: "1px dashed #CBD5E1",
-  color: "#64748B",
-  textAlign: "center",
-  fontSize: "15px",
-};
-
-const userListStyle = {
-  display: "grid",
-  gap: "14px",
-};
-
-const userCardStyle = {
-  border: "1px solid #E2E8F0",
-  borderRadius: "20px",
-  background: "#FFFFFF",
-  padding: "20px",
-};
-
-const userTopStyle = {
-  display: "flex",
-  gap: "16px",
-  alignItems: "flex-start",
-};
-
-const nameRowStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  flexWrap: "wrap",
-  marginBottom: "14px",
-};
-
-const userNameStyle = {
-  margin: 0,
-  fontSize: "20px",
-  fontWeight: 800,
-  color: "#0F172A",
-  lineHeight: 1.4,
-};
-
-const roleBadgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "999px",
-  padding: "7px 12px",
-  fontSize: "12px",
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-};
-
-const metaGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: "12px",
-};
-
-const metaLabelStyle = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 700,
-  color: "#64748B",
-  marginBottom: "4px",
-};
-
-const metaValueStyle = {
-  margin: 0,
-  fontSize: "14px",
-  color: "#0F172A",
-  lineHeight: 1.5,
-  wordBreak: "break-all",
-};
-
-const actionRowStyle = {
-  marginTop: "18px",
-  paddingTop: "18px",
-  borderTop: "1px solid #E2E8F0",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-end",
-  gap: "14px",
-  flexWrap: "wrap",
-};
-
-const roleEditorStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-  minWidth: "220px",
-};
-
-const smallLabelStyle = {
-  fontSize: "12px",
-  fontWeight: 700,
-  color: "#64748B",
-};
-
-const roleSelectStyle = {
-  height: "44px",
-  borderRadius: "12px",
-  border: "1px solid #CBD5E1",
-  padding: "0 12px",
-  fontSize: "14px",
-  outline: "none",
-  background: "#FFFFFF",
-};
-
-const saveButtonStyle = {
-  border: "none",
-  borderRadius: "12px",
-  background: "#2563EB",
-  color: "#FFFFFF",
-  fontSize: "14px",
-  fontWeight: 700,
-  padding: "12px 18px",
-};
-
-export default AdminUsersPage;

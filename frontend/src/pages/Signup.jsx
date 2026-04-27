@@ -11,6 +11,12 @@ function Signup({ onSwitchToLogin }) {
   const TEXT_MUTED = "#64748B";
   const CARD_BORDER = "#E5EDF6";
 
+  const getWindowWidth = () => {
+    if (typeof window === "undefined") return 1024;
+    return window.innerWidth;
+  };
+
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
   const [mode, setMode] = useState("choice");
   const [signupRole, setSignupRole] = useState("user");
   const [name, setName] = useState("");
@@ -20,13 +26,16 @@ function Signup({ onSwitchToLogin }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 480);
+
+  const isMobile = windowWidth <= 640;
+  const isSmallMobile = windowWidth <= 380;
 
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}#/oauth/callback`;
 
   useEffect(() => {
     setLoading(false);
     setErrorMessage("");
+
     sessionStorage.removeItem("oauth_in_progress");
     sessionStorage.removeItem("oauth_provider");
     sessionStorage.removeItem("oauth_mode");
@@ -34,7 +43,7 @@ function Signup({ onSwitchToLogin }) {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 480);
+      setWindowWidth(getWindowWidth());
     };
 
     window.addEventListener("resize", handleResize);
@@ -56,15 +65,19 @@ function Signup({ onSwitchToLogin }) {
     if (value.length < 8) {
       return "비밀번호는 8자 이상이어야 합니다.";
     }
+
     if (!/[A-Za-z]/.test(value)) {
       return "비밀번호에 영문을 1개 이상 포함해주세요.";
     }
+
     if (!/[0-9]/.test(value)) {
       return "비밀번호에 숫자를 1개 이상 포함해주세요.";
     }
+
     if (!/[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|`~]/.test(value)) {
       return "비밀번호에 특수문자를 1개 이상 포함해주세요.";
     }
+
     return "";
   };
 
@@ -94,6 +107,7 @@ function Signup({ onSwitchToLogin }) {
       sessionStorage.removeItem("oauth_provider");
       sessionStorage.removeItem("oauth_mode");
       sessionStorage.removeItem("signup_role");
+
       setErrorMessage(error.message || "소셜 회원가입 중 문제가 발생했습니다.");
       setLoading(false);
     }
@@ -208,6 +222,7 @@ function Signup({ onSwitchToLogin }) {
       setSuccessMessage(
         "회원가입이 완료되었습니다. 이메일 인증이 필요하면 메일함을 확인해주세요.",
       );
+
       setName("");
       setEmail("");
       setPassword("");
@@ -222,12 +237,13 @@ function Signup({ onSwitchToLogin }) {
   };
 
   const pageStyle = {
-    minHeight: "100vh",
-    background: "#F3F6FA",
+    minHeight: "100dvh",
+    background:
+      "linear-gradient(180deg, #F8FBFF 0%, #F3F6FA 52%, #EEF4FB 100%)",
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     justifyContent: "center",
-    padding: isMobile ? "18px 12px" : "28px 16px",
+    padding: isMobile ? "22px 14px" : "32px 18px",
     boxSizing: "border-box",
     fontFamily:
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -238,15 +254,21 @@ function Signup({ onSwitchToLogin }) {
     maxWidth: "460px",
     background: "#ffffff",
     borderRadius: isMobile ? "22px" : "28px",
-    padding: isMobile ? "24px 18px 20px" : "30px 28px 24px",
+    padding: isSmallMobile
+      ? "22px 16px 18px"
+      : isMobile
+      ? "26px 20px 22px"
+      : "32px 30px 26px",
     border: `1px solid ${CARD_BORDER}`,
-    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
+    boxShadow: isMobile
+      ? "0 12px 28px rgba(15, 23, 42, 0.07)"
+      : "0 18px 46px rgba(15, 23, 42, 0.08)",
     boxSizing: "border-box",
   };
 
   const headerStyle = {
     textAlign: "center",
-    marginBottom: isMobile ? "18px" : "22px",
+    marginBottom: isMobile ? "20px" : "24px",
   };
 
   const brandWrapStyle = {
@@ -256,13 +278,14 @@ function Signup({ onSwitchToLogin }) {
     alignItems: "center",
     gap: "10px",
     cursor: "pointer",
-    marginBottom: isMobile ? "14px" : "18px",
+    marginBottom: isMobile ? "16px" : "18px",
+    WebkitTapHighlightColor: "transparent",
   };
 
   const brandMarkStyle = {
-    width: isMobile ? "34px" : "38px",
-    height: isMobile ? "34px" : "38px",
-    borderRadius: isMobile ? "11px" : "13px",
+    width: isMobile ? "36px" : "40px",
+    height: isMobile ? "36px" : "40px",
+    borderRadius: isMobile ? "12px" : "14px",
     background: BRAND_COLOR,
     display: "flex",
     alignItems: "center",
@@ -271,24 +294,24 @@ function Signup({ onSwitchToLogin }) {
     fontWeight: "900",
     fontSize: isMobile ? "12px" : "13px",
     flexShrink: 0,
-    boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
+    boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
   };
 
   const brandTextStyle = {
-    fontSize: isMobile ? "20px" : "22px",
+    fontSize: isMobile ? "21px" : "23px",
     fontWeight: "900",
     color: BRAND_COLOR,
-    letterSpacing: "-0.4px",
+    letterSpacing: "-0.5px",
     lineHeight: 1,
   };
 
   const titleStyle = {
     margin: "0 0 8px",
-    fontSize: isMobile ? "17px" : "18px",
-    fontWeight: "800",
+    fontSize: isMobile ? "18px" : "19px",
+    fontWeight: "850",
     color: TEXT_DARK,
-    lineHeight: 1.4,
-    letterSpacing: "-0.3px",
+    lineHeight: 1.38,
+    letterSpacing: "-0.35px",
   };
 
   const descStyle = {
@@ -296,16 +319,17 @@ function Signup({ onSwitchToLogin }) {
     fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
     lineHeight: 1.6,
+    wordBreak: "keep-all",
   };
 
   const roleSectionStyle = {
-    marginBottom: "16px",
+    marginBottom: isMobile ? "14px" : "16px",
   };
 
   const roleLabelStyle = {
     marginBottom: "10px",
     fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "700",
+    fontWeight: "750",
     color: "#334155",
     textAlign: "left",
   };
@@ -313,7 +337,7 @@ function Signup({ onSwitchToLogin }) {
   const roleButtonRowStyle = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "10px",
+    gap: isSmallMobile ? "8px" : "10px",
   };
 
   const roleGuideBoxStyle = {
@@ -328,7 +352,7 @@ function Signup({ onSwitchToLogin }) {
   const roleGuideTitleStyle = {
     margin: "0 0 6px",
     fontSize: isMobile ? "12px" : "13px",
-    fontWeight: "800",
+    fontWeight: "850",
     color: TEXT_DARK,
   };
 
@@ -337,14 +361,17 @@ function Signup({ onSwitchToLogin }) {
     fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.6,
     color: TEXT_MUTED,
+    wordBreak: "keep-all",
   };
+
+  const buttonHeight = isMobile ? "48px" : "50px";
 
   const baseButtonStyle = {
     width: "100%",
-    height: isMobile ? "48px" : "50px",
+    minHeight: buttonHeight,
     borderRadius: "14px",
     fontSize: isMobile ? "14px" : "15px",
-    fontWeight: "700",
+    fontWeight: "750",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -352,16 +379,20 @@ function Signup({ onSwitchToLogin }) {
     gap: "10px",
     boxSizing: "border-box",
     outline: "none",
+    outlineOffset: 0,
     appearance: "none",
     WebkitAppearance: "none",
+    MozAppearance: "none",
     WebkitTapHighlightColor: "transparent",
+    userSelect: "none",
+    touchAction: "manipulation",
     transition:
-      "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease",
+      "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease, transform 0.18s ease",
   };
 
   const primaryButtonStyle = {
     ...baseButtonStyle,
-    border: "none",
+    border: "1px solid transparent",
     background: BRAND_COLOR,
     color: "#ffffff",
     boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
@@ -377,7 +408,7 @@ function Signup({ onSwitchToLogin }) {
 
   const kakaoButtonStyle = {
     ...baseButtonStyle,
-    border: "none",
+    border: "1px solid transparent",
     background: "#FEE500",
     color: "#191919",
     boxShadow: "none",
@@ -385,7 +416,7 @@ function Signup({ onSwitchToLogin }) {
 
   const selectedRoleButtonStyle = {
     ...baseButtonStyle,
-    height: isMobile ? "44px" : "46px",
+    minHeight: isMobile ? "44px" : "46px",
     border: `1px solid ${BRAND_COLOR}`,
     background: "#ffffff",
     color: BRAND_COLOR,
@@ -395,12 +426,18 @@ function Signup({ onSwitchToLogin }) {
 
   const unselectedRoleButtonStyle = {
     ...baseButtonStyle,
-    height: isMobile ? "44px" : "46px",
+    minHeight: isMobile ? "44px" : "46px",
     border: `1px solid ${CARD_BORDER}`,
     background: "#ffffff",
     color: TEXT_DARK,
     boxShadow: "none",
     fontSize: isMobile ? "13px" : "14px",
+  };
+
+  const buttonGroupStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: isMobile ? "10px" : "12px",
   };
 
   const formStyle = {
@@ -413,28 +450,31 @@ function Signup({ onSwitchToLogin }) {
     display: "block",
     marginBottom: "8px",
     fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "700",
+    fontWeight: "750",
     color: "#334155",
   };
 
   const inputStyle = {
     width: "100%",
-    height: isMobile ? "48px" : "50px",
+    height: buttonHeight,
     borderRadius: "13px",
     border: "1px solid #D9E2EC",
     padding: "0 14px",
-    fontSize: isMobile ? "13px" : "14px",
+    fontSize: isMobile ? "14px" : "14px",
     boxSizing: "border-box",
     outline: "none",
     color: TEXT_DARK,
     backgroundColor: "#ffffff",
+    WebkitAppearance: "none",
+    appearance: "none",
   };
 
   const passwordChecklistStyle = {
     display: "flex",
     flexDirection: "column",
     gap: "7px",
-    padding: "12px 14px",
+    marginTop: "10px",
+    padding: isMobile ? "11px 12px" : "12px 14px",
     borderRadius: "14px",
     background: "#FAFCFF",
     border: "1px solid #E7EEF8",
@@ -445,8 +485,8 @@ function Signup({ onSwitchToLogin }) {
     alignItems: "center",
     gap: "8px",
     fontSize: isMobile ? "12px" : "13px",
-    color: passed ? "#2563EB" : "#64748B",
-    fontWeight: passed ? "700" : "500",
+    color: passed ? BRAND_COLOR : TEXT_MUTED,
+    fontWeight: passed ? "750" : "500",
     lineHeight: 1.5,
   });
 
@@ -454,7 +494,7 @@ function Signup({ onSwitchToLogin }) {
     width: "8px",
     height: "8px",
     borderRadius: "999px",
-    background: passed ? "#2563EB" : "#CBD5E1",
+    background: passed ? BRAND_COLOR : "#CBD5E1",
     flexShrink: 0,
   });
 
@@ -465,6 +505,7 @@ function Signup({ onSwitchToLogin }) {
     color: "#BE123C",
     fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.5,
+    wordBreak: "keep-all",
   };
 
   const successBoxStyle = {
@@ -474,10 +515,11 @@ function Signup({ onSwitchToLogin }) {
     color: "#047857",
     fontSize: isMobile ? "12px" : "13px",
     lineHeight: 1.5,
+    wordBreak: "keep-all",
   };
 
   const footerStyle = {
-    marginTop: isMobile ? "16px" : "18px",
+    marginTop: isMobile ? "18px" : "20px",
     textAlign: "center",
     fontSize: isMobile ? "13px" : "14px",
     color: TEXT_MUTED,
@@ -488,10 +530,13 @@ function Signup({ onSwitchToLogin }) {
     background: "transparent",
     color: BRAND_COLOR,
     fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "700",
+    fontWeight: "800",
     cursor: "pointer",
-    padding: 0,
+    padding: "0",
     outline: "none",
+    boxShadow: "none",
+    appearance: "none",
+    WebkitAppearance: "none",
     WebkitTapHighlightColor: "transparent",
   };
 
@@ -578,9 +623,7 @@ function Signup({ onSwitchToLogin }) {
               </div>
             </div>
 
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
+            <div style={buttonGroupStyle}>
               <HoverButton
                 onClick={() => setMode("email")}
                 disabled={loading}
@@ -597,7 +640,9 @@ function Signup({ onSwitchToLogin }) {
                 onClick={() => handleOAuthSignup("google")}
                 disabled={loading}
                 style={whiteButtonStyle}
-                hoverStyle={{ color: BRAND_COLOR }}
+                hoverStyle={{
+                  color: BRAND_COLOR,
+                }}
               >
                 <span style={iconBoxStyle}>
                   <svg
@@ -631,7 +676,9 @@ function Signup({ onSwitchToLogin }) {
                 onClick={() => handleOAuthSignup("kakao")}
                 disabled={loading}
                 style={kakaoButtonStyle}
-                hoverStyle={{ filter: "brightness(0.97)" }}
+                hoverStyle={{
+                  filter: "brightness(0.97)",
+                }}
               >
                 <span style={iconBoxStyle}>
                   <svg
@@ -666,6 +713,7 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="이름을 입력하세요"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
                 style={inputStyle}
               />
             </div>
@@ -677,6 +725,7 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="example@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 style={inputStyle}
               />
             </div>
@@ -688,29 +737,26 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="비밀번호를 입력하세요"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
                 style={inputStyle}
               />
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "7px",
-                  marginTop: "10px",
-                }}
-              >
+              <div style={passwordChecklistStyle}>
                 <div style={checklistRowStyle(passwordChecks.minLength)}>
                   <span style={checklistDotStyle(passwordChecks.minLength)} />
                   8자 이상 입력
                 </div>
+
                 <div style={checklistRowStyle(passwordChecks.hasLetter)}>
                   <span style={checklistDotStyle(passwordChecks.hasLetter)} />
                   영문 1개 이상 포함
                 </div>
+
                 <div style={checklistRowStyle(passwordChecks.hasNumber)}>
                   <span style={checklistDotStyle(passwordChecks.hasNumber)} />
                   숫자 1개 이상 포함
                 </div>
+
                 <div style={checklistRowStyle(passwordChecks.hasSpecial)}>
                   <span style={checklistDotStyle(passwordChecks.hasSpecial)} />
                   특수문자 1개 이상 포함
@@ -725,6 +771,7 @@ function Signup({ onSwitchToLogin }) {
                 placeholder="비밀번호를 다시 입력하세요"
                 value={passwordCheck}
                 onChange={(e) => setPasswordCheck(e.target.value)}
+                autoComplete="new-password"
                 style={inputStyle}
               />
             </div>
@@ -747,9 +794,15 @@ function Signup({ onSwitchToLogin }) {
             </HoverButton>
 
             <HoverButton
-              onClick={() => setMode("choice")}
+              onClick={() => {
+                setErrorMessage("");
+                setSuccessMessage("");
+                setMode("choice");
+              }}
               style={whiteButtonStyle}
-              hoverStyle={{ color: BRAND_COLOR }}
+              hoverStyle={{
+                color: BRAND_COLOR,
+              }}
             >
               다른 방법 선택
             </HoverButton>
@@ -763,7 +816,9 @@ function Signup({ onSwitchToLogin }) {
               onSwitchToLogin ? onSwitchToLogin() : navigate("/login")
             }
             style={footerLinkStyle}
-            hoverStyle={{ color: BRAND_HOVER }}
+            hoverStyle={{
+              color: BRAND_HOVER,
+            }}
           >
             로그인
           </HoverButton>
@@ -798,12 +853,13 @@ function HoverButton({
         opacity: disabled ? 0.65 : 1,
         cursor: disabled ? "not-allowed" : style?.cursor || "pointer",
         outline: "none",
+        outlineOffset: 0,
         boxShadow: style?.boxShadow || "none",
+        border: style?.border || "none",
         WebkitTapHighlightColor: "transparent",
         appearance: "none",
         WebkitAppearance: "none",
-        transition:
-          "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease",
+        MozAppearance: "none",
         ...(isHover && !disabled ? hoverStyle : {}),
       }}
     >

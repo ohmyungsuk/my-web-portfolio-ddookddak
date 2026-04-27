@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { getCategoryIcon } from "../utils/categoryIcons.js";
 
 const CATEGORY_DATA = [
   {
@@ -771,6 +772,15 @@ export default function RequestCreateFlow() {
       color: #0f172a;
     }
 
+    .dd-category-icon-img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+    }
+
     .dd-flow-main {
       max-width: 1160px;
       margin: 0 auto;
@@ -844,10 +854,10 @@ export default function RequestCreateFlow() {
       font-weight: 800;
       cursor: pointer;
       transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
-        background 0.18s ease;
+        transition:
+          transform 0.18s ease,
+          box-shadow 0.18s ease,
+          background 0.18s ease;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.7),
         0 8px 20px rgba(15, 23, 42, 0.05);
@@ -1600,6 +1610,11 @@ export default function RequestCreateFlow() {
     border-radius: 24px;
   }
 
+  .dd-category-icon-img {
+    width: 24px;
+    height: 24px;
+  }
+
   .dd-icon-row {
     gap: 10px;
     justify-content: flex-start;
@@ -1889,11 +1904,15 @@ export default function RequestCreateFlow() {
                 <span
                   className="dd-icon-symbol"
                   style={{
-                    "--icon-bg": category.bg,
-                    "--icon-color": category.color,
+                    "--icon-bg": "#EFF6FF",
                   }}
                 >
-                  <span className="dd-icon-glyph">{category.icon}</span>
+                  <img
+                    src={getCategoryIcon(category.title)}
+                    alt={category.title}
+                    className="dd-category-icon-img"
+                    draggable="false"
+                  />
                 </span>
                 <span className="dd-icon-label">{category.title}</span>
               </button>

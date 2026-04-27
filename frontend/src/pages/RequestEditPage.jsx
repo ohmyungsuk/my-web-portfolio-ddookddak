@@ -2,33 +2,40 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
+const BRAND = "#2F80ED";
+const BRAND_HOVER = "#1F6FD6";
+const TEXT = "#0F172A";
+const SUB = "#64748B";
+const BG = "#F4F7FB";
+const CARD = "#FFFFFF";
+const BORDER = "#DBE4F0";
+const SOFT = "#F8FBFF";
+const DANGER = "#EF4444";
+const DANGER_HOVER = "#DC2626";
+
+function getWindowWidth() {
+  if (typeof window === "undefined") return 1024;
+  return window.innerWidth;
+}
+
 function parseDescription(description) {
   const raw = description || "";
   const lines = raw.split("\n");
 
-  const placeType =
-    lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "";
-
-  const issueType =
-    lines
-      .find((line) => line.startsWith("도움이 필요한 내용:"))
-      ?.replace("도움이 필요한 내용:", "")
-      .trim() || "";
-
-  const schedule =
-    lines.find((line) => line.startsWith("희망 일정:"))?.replace("희망 일정:", "").trim() || "";
-
-  const detailText =
-    lines
-      .find((line) => line.startsWith("상세 설명:"))
-      ?.replace("상세 설명:", "")
-      .trim() || "";
+  const getValue = (label) => {
+    return (
+      lines
+        .find((line) => line.startsWith(label))
+        ?.replace(label, "")
+        .trim() || ""
+    );
+  };
 
   return {
-    placeType,
-    issueType,
-    schedule,
-    detailText,
+    placeType: getValue("공간 유형:"),
+    issueType: getValue("도움이 필요한 내용:"),
+    schedule: getValue("희망 일정:"),
+    detailText: getValue("상세 설명:"),
   };
 }
 
@@ -59,16 +66,33 @@ function HoverButton({
       onMouseEnter={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
       onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
       onFocus={(e) => e.currentTarget.blur()}
       style={{
         ...baseStyle,
         ...(isHover && !disabled ? hoverStyle : {}),
-        opacity: disabled ? 0.72 : 1,
+        opacity: disabled ? 0.68 : 1,
+        cursor: disabled ? "not-allowed" : baseStyle?.cursor || "pointer",
+        outline: "none",
+        outlineOffset: 0,
         WebkitTapHighlightColor: "transparent",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        userSelect: "none",
       }}
     >
       {children}
     </button>
+  );
+}
+
+function Field({ label, children, styles }) {
+  return (
+    <div style={styles.field}>
+      <label style={styles.label}>{label}</label>
+      {children}
+    </div>
   );
 }
 
@@ -80,9 +104,11 @@ export default function RequestEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loginUser, setLoginUser] = useState(null);
-  const [originalRequest, setOriginalRequest] = useState(location.state?.request || null);
+  const [originalRequest, setOriginalRequest] = useState(
+    location.state?.request || null,
+  );
   const [message, setMessage] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
 
   const [form, setForm] = useState({
     title: "",
@@ -93,17 +119,27 @@ export default function RequestEditPage() {
     detailText: "",
   });
 
-  const BRAND = "#3b82f6";
-  const BRAND_HOVER = "#2563eb";
-  const BG = "#f4f7fb";
-  const CARD = "#ffffff";
-  const BORDER = "#dbe4f0";
-  const TEXT = "#1e293b";
-  const SUB = "#64748b";
-  const SOFT = "#f8fbff";
+  const isMobile = windowWidth <= 900;
+  const isSmallMobile = windowWidth <= 480;
+
+  const categoryOptions = [
+    "전기/조명",
+    "설비/배관",
+    "누수/방수",
+    "도어락/출입문",
+    "에어컨/환기",
+    "CCTV/네트워크",
+    "유리/창호",
+    "가전/생활수리",
+    "청소/철거",
+    "기타 유지보수",
+  ];
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    const handleResize = () => {
+      setWindowWidth(getWindowWidth());
+    };
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -146,7 +182,12 @@ export default function RequestEditPage() {
           return;
         }
 
-        if (requestData.user_id !== user.id) {
+        const requestOwnerId = requestData?.user_id
+          ? String(requestData.user_id)
+          : "";
+        const loginUserId = user?.id ? String(user.id) : "";
+
+        if (!requestOwnerId || !loginUserId || requestOwnerId !== loginUserId) {
           setMessage("본인이 작성한 요청만 수정할 수 있습니다.");
           setLoading(false);
           return;
@@ -201,11 +242,13 @@ export default function RequestEditPage() {
       });
       return;
     }
+
     navigate("/requests/my");
   };
 
   const handleSave = async () => {
     if (!originalRequest || !loginUser) return;
+
     if (!canSave) {
       setMessage("필수 항목을 먼저 입력해주세요.");
       return;
@@ -215,14 +258,19 @@ export default function RequestEditPage() {
       setSaving(true);
       setMessage("");
 
-      const content = buildDescription(form);
+      const content = buildDescription({
+        placeType: form.placeType.trim(),
+        issueType: form.issueType.trim(),
+        schedule: form.schedule.trim(),
+        detailText: form.detailText.trim(),
+      });
 
-        const { data, error } = await supabase
+      const { data, error } = await supabase
         .from("requests")
         .update({
-            title: form.title.trim(),
-            category: form.category.trim(),
-            content,
+          title: form.title.trim(),
+          category: form.category.trim(),
+          content,
         })
         .eq("id", originalRequest.id)
         .eq("user_id", loginUser.id)
@@ -245,12 +293,18 @@ export default function RequestEditPage() {
     }
   };
 
+  const handleGoLogin = () => {
+    navigate("/login");
+  };
+
   const styles = {
     page: {
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: BG,
-      padding: isMobile ? "92px 12px 28px" : "104px 20px 48px",
+      padding: isMobile ? "88px 14px 28px" : "104px 24px 52px",
       boxSizing: "border-box",
+      fontFamily:
+        '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
     container: {
       maxWidth: "980px",
@@ -258,50 +312,66 @@ export default function RequestEditPage() {
     },
     pageTitle: {
       margin: "0 0 18px",
-      fontSize: isMobile ? "22px" : "24px",
-      fontWeight: 700,
+      fontSize: isMobile ? "21px" : "25px",
+      fontWeight: 850,
       color: TEXT,
-      letterSpacing: "-0.3px",
+      letterSpacing: "-0.4px",
       lineHeight: 1.35,
     },
     card: {
       background: CARD,
       border: `1px solid ${BORDER}`,
-      borderRadius: "22px",
-      padding: isMobile ? "16px" : "22px",
-      boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+      borderRadius: isMobile ? "20px" : "24px",
+      padding: isSmallMobile ? "15px" : isMobile ? "16px" : "22px",
+      boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
+      boxSizing: "border-box",
     },
     heroCard: {
-      background: "#f7fbff",
+      background: "linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%)",
       border: `1px solid ${BORDER}`,
-      borderRadius: "18px",
-      padding: isMobile ? "16px" : "18px",
+      borderRadius: isMobile ? "18px" : "20px",
+      padding: isMobile ? "16px" : "20px",
       marginBottom: "18px",
+      boxSizing: "border-box",
+    },
+    eyebrow: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "7px 11px",
+      borderRadius: "999px",
+      background: "#EAF2FF",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 850,
+      marginBottom: "12px",
     },
     heroTitle: {
       margin: 0,
-      fontSize: isMobile ? "24px" : "20px",
-      fontWeight: 700,
+      fontSize: isMobile ? "22px" : "27px",
+      fontWeight: 850,
       color: TEXT,
-      lineHeight: 1.4,
-      letterSpacing: "-0.3px",
+      lineHeight: 1.35,
+      letterSpacing: "-0.6px",
+      wordBreak: "keep-all",
     },
     heroSub: {
-      marginTop: "8px",
-      fontSize: "14px",
+      marginTop: "10px",
+      fontSize: isMobile ? "13px" : "14px",
       lineHeight: 1.7,
       color: SUB,
       fontWeight: 500,
+      wordBreak: "keep-all",
     },
     section: {
-      marginTop: "18px",
+      marginTop: "20px",
     },
     sectionTitle: {
       margin: "0 0 12px",
-      fontSize: "17px",
-      fontWeight: 700,
+      fontSize: isMobile ? "17px" : "18px",
+      fontWeight: 850,
       color: TEXT,
-      letterSpacing: "-0.2px",
+      letterSpacing: "-0.25px",
     },
     grid: {
       display: "grid",
@@ -319,33 +389,67 @@ export default function RequestEditPage() {
     },
     label: {
       fontSize: "13px",
-      color: SUB,
-      fontWeight: 600,
+      color: "#334155",
+      fontWeight: 800,
     },
     input: {
       width: "100%",
-      height: "48px",
+      height: "50px",
       borderRadius: "14px",
       border: `1px solid ${BORDER}`,
-      background: "#ffffff",
+      background: "#FFFFFF",
       padding: "0 14px",
       fontSize: "14px",
       color: TEXT,
       outline: "none",
+      outlineOffset: 0,
       boxSizing: "border-box",
+      WebkitAppearance: "none",
+      appearance: "none",
+    },
+    select: {
+      width: "100%",
+      height: "50px",
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      background: "#FFFFFF",
+      padding: "0 14px",
+      fontSize: "14px",
+      color: TEXT,
+      outline: "none",
+      outlineOffset: 0,
+      boxSizing: "border-box",
+      WebkitAppearance: "none",
+      appearance: "none",
     },
     textarea: {
       width: "100%",
-      minHeight: "120px",
+      minHeight: isMobile ? "140px" : "160px",
       borderRadius: "14px",
       border: `1px solid ${BORDER}`,
-      background: "#ffffff",
+      background: "#FFFFFF",
       padding: "14px",
       fontSize: "14px",
       color: TEXT,
       outline: "none",
+      outlineOffset: 0,
       resize: "vertical",
       lineHeight: 1.7,
+      boxSizing: "border-box",
+      WebkitAppearance: "none",
+      appearance: "none",
+    },
+    guideBox: {
+      marginTop: "12px",
+      padding: "13px 14px",
+      borderRadius: "14px",
+      background: SOFT,
+      border: `1px solid ${BORDER}`,
+      color: SUB,
+      fontSize: "13px",
+      lineHeight: 1.7,
+      fontWeight: 550,
+      wordBreak: "keep-all",
       boxSizing: "border-box",
     },
     message: {
@@ -353,11 +457,13 @@ export default function RequestEditPage() {
       padding: "12px 14px",
       borderRadius: "12px",
       fontSize: "13px",
-      fontWeight: 600,
+      fontWeight: 700,
       lineHeight: 1.6,
-      border: "1px solid #ffd8d8",
-      background: "#fff5f5",
-      color: "#dc2626",
+      border: "1px solid #FFD8D8",
+      background: "#FFF5F5",
+      color: "#DC2626",
+      wordBreak: "keep-all",
+      boxSizing: "border-box",
     },
     actionRow: {
       marginTop: "18px",
@@ -367,59 +473,121 @@ export default function RequestEditPage() {
     },
     secondaryBtn: {
       width: "100%",
-      height: "48px",
-      border: "1px solid #dbe4f0",
+      minHeight: "50px",
+      border: `1px solid ${BORDER}`,
       borderRadius: "14px",
-      background: "#ffffff",
+      background: "#FFFFFF",
       color: TEXT,
       fontSize: "14px",
-      fontWeight: 700,
+      fontWeight: 800,
       cursor: "pointer",
       outline: "none",
-      boxShadow: "0 8px 16px rgba(15, 23, 42, 0.04)",
-      transition: "all 0.18s ease",
+      outlineOffset: 0,
+      boxShadow: "none",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease",
+      boxSizing: "border-box",
     },
     primaryBtn: {
       width: "100%",
-      height: "50px",
-      border: "none",
+      minHeight: "50px",
+      border: "1px solid transparent",
       borderRadius: "14px",
       background: BRAND,
-      color: "#ffffff",
+      color: "#FFFFFF",
       fontSize: "15px",
-      fontWeight: 700,
+      fontWeight: 800,
       cursor: "pointer",
       outline: "none",
-      boxShadow: "0 8px 16px rgba(59, 130, 246, 0.16)",
-      transition: "all 0.18s ease",
+      outlineOffset: 0,
+      boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      boxSizing: "border-box",
+    },
+    dangerBtn: {
+      width: "100%",
+      minHeight: "50px",
+      border: "1px solid transparent",
+      borderRadius: "14px",
+      background: DANGER,
+      color: "#FFFFFF",
+      fontSize: "15px",
+      fontWeight: 800,
+      cursor: "pointer",
+      outline: "none",
+      outlineOffset: 0,
+      boxShadow: "0 10px 22px rgba(239, 68, 68, 0.16)",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      boxSizing: "border-box",
     },
     loadingWrap: {
       maxWidth: "900px",
       margin: "40px auto",
-      background: "#fff",
+      background: "#FFFFFF",
       border: `1px solid ${BORDER}`,
       borderRadius: "20px",
-      padding: "30px",
+      padding: isMobile ? "24px 18px" : "30px",
       textAlign: "center",
       fontSize: "15px",
-      fontWeight: 600,
+      fontWeight: 700,
       color: SUB,
+      lineHeight: 1.7,
+      boxSizing: "border-box",
+    },
+    loadingAction: {
+      marginTop: "16px",
+      display: "grid",
+      gap: "10px",
+      maxWidth: "260px",
+      marginLeft: "auto",
+      marginRight: "auto",
     },
   };
 
   if (loading) {
     return (
       <div style={styles.page}>
-        <div style={styles.loadingWrap}>수정할 요청 정보를 불러오는 중입니다...</div>
+        <div style={styles.loadingWrap}>
+          수정할 요청 정보를 불러오는 중입니다...
+        </div>
       </div>
     );
   }
 
-  if (!originalRequest || message === "본인이 작성한 요청만 수정할 수 있습니다.") {
+  if (!originalRequest) {
+    const needLogin = message.includes("로그인");
+
     return (
       <div style={styles.page}>
         <div style={styles.loadingWrap}>
           {message || "수정할 요청 정보를 찾을 수 없습니다."}
+
+          <div style={styles.loadingAction}>
+            {needLogin && (
+              <HoverButton
+                onClick={handleGoLogin}
+                baseStyle={styles.primaryBtn}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+                }}
+              >
+                로그인하러 가기
+              </HoverButton>
+            )}
+
+            <HoverButton
+              onClick={() => navigate("/requests/my")}
+              baseStyle={styles.secondaryBtn}
+              hoverStyle={{
+                color: BRAND,
+              }}
+            >
+              내 요청 목록으로 돌아가기
+            </HoverButton>
+          </div>
         </div>
       </div>
     );
@@ -432,54 +600,59 @@ export default function RequestEditPage() {
 
         <div style={styles.card}>
           <div style={styles.heroCard}>
-            <h2 style={styles.heroTitle}>등록한 요청 내용을 수정해보세요</h2>
+            <div style={styles.eyebrow}>요청 내용 수정</div>
+            <h2 style={styles.heroTitle}>등록한 요청 내용을 다시 정리해요</h2>
             <div style={styles.heroSub}>
-              제목, 카테고리, 공간 유형, 요청 내용, 희망 일정, 상세 설명을 수정할 수 있어요.
+              제목, 카테고리, 공간 유형, 요청 내용, 희망 일정, 상세 설명을
+              수정할 수 있어요.
             </div>
           </div>
 
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>기본 정보</h3>
+
             <div style={styles.grid}>
-              <div style={styles.field}>
-                <label style={styles.label}>제목</label>
+              <Field label="제목" styles={styles}>
                 <input
                   style={styles.input}
                   value={form.title}
                   onChange={(e) => handleChange("title", e.target.value)}
                   placeholder="요청 제목을 입력해주세요"
                 />
-              </div>
+              </Field>
 
-              <div style={styles.field}>
-                <label style={styles.label}>카테고리</label>
-                <input
-                  style={styles.input}
+              <Field label="카테고리" styles={styles}>
+                <select
+                  style={styles.select}
                   value={form.category}
                   onChange={(e) => handleChange("category", e.target.value)}
-                  placeholder="예: 전기/조명"
-                />
-              </div>
+                >
+                  <option value="">카테고리를 선택해주세요</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-              <div style={styles.field}>
-                <label style={styles.label}>공간 유형</label>
+              <Field label="공간 유형" styles={styles}>
                 <input
                   style={styles.input}
                   value={form.placeType}
                   onChange={(e) => handleChange("placeType", e.target.value)}
-                  placeholder="예: 가정집"
+                  placeholder="예: 가정집, 상가/매장, 사무실"
                 />
-              </div>
+              </Field>
 
-              <div style={styles.field}>
-                <label style={styles.label}>희망 일정</label>
+              <Field label="희망 일정" styles={styles}>
                 <input
                   style={styles.input}
                   value={form.schedule}
                   onChange={(e) => handleChange("schedule", e.target.value)}
-                  placeholder="예: 가능한 빨리"
+                  placeholder="예: 가능한 빨리, 이번 주말, 2주 이내"
                 />
-              </div>
+              </Field>
             </div>
           </div>
 
@@ -505,6 +678,11 @@ export default function RequestEditPage() {
                 placeholder="현재 상황을 자세히 적어주세요"
               />
             </div>
+
+            <div style={styles.guideBox}>
+              필수 항목은 제목, 카테고리, 공간 유형, 도움이 필요한 내용, 희망
+              일정이에요.
+            </div>
           </div>
 
           {message && <div style={styles.message}>{message}</div>}
@@ -514,10 +692,7 @@ export default function RequestEditPage() {
               onClick={handleBack}
               baseStyle={styles.secondaryBtn}
               hoverStyle={{
-                background: SOFT,
                 color: BRAND,
-                transform: isMobile ? "none" : "translateY(-1px)",
-                boxShadow: "0 10px 18px rgba(59, 130, 246, 0.10)",
               }}
             >
               취소하고 돌아가기
@@ -529,8 +704,7 @@ export default function RequestEditPage() {
               baseStyle={styles.primaryBtn}
               hoverStyle={{
                 background: BRAND_HOVER,
-                transform: isMobile ? "none" : "translateY(-1px)",
-                boxShadow: "0 10px 18px rgba(37, 99, 235, 0.20)",
+                boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
               }}
             >
               {saving ? "저장 중..." : "수정 저장하기"}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="ac_body" x1="4" y1="8" x2="44" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#80DEEA"/>
+      <stop offset="100%" stop-color="#00838F"/>
+    </linearGradient>
+  </defs>
+  <!-- AC body -->
+  <rect x="4" y="8" width="40" height="20" rx="7" fill="url(#ac_body)"/>
+  <!-- Top shine -->
+  <rect x="6" y="10" width="36" height="8" rx="5" fill="white" fill-opacity="0.22"/>
+  <!-- Vents -->
+  <rect x="7" y="18" width="34" height="2" rx="1" fill="white" fill-opacity="0.55"/>
+  <rect x="7" y="22" width="34" height="2" rx="1" fill="white" fill-opacity="0.38"/>
+  <rect x="7" y="26" width="34" height="1.5" rx="0.7" fill="white" fill-opacity="0.22"/>
+  <!-- LED dot -->
+  <circle cx="40" cy="13" r="2.5" fill="#00E5FF"/>
+  <circle cx="40" cy="13" r="1.2" fill="white"/>
+  <!-- Wind lines -->
+  <path d="M6 35 Q12 32 18 35 Q24 38 30 35 Q35 33 40 35" stroke="#00838F" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <path d="M10 42 Q16 39 22 42 Q28 45 34 42" stroke="#4DD0E1" stroke-width="2" stroke-linecap="round" fill="none"/>
+</svg>

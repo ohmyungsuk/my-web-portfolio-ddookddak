@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getCategoryIcon } from "../utils/categoryIcons.js";
 
 function LandingPage({
   onGoLogin,
@@ -15,6 +16,7 @@ function LandingPage({
   const BRAND_COLOR = "#2F80ED";
   const BRAND_HOVER = "#1F6FD6";
   const BRAND_SOFT = "#EAF3FF";
+  const ICON_BG = "#EFF6FF";
   const PAGE_BG =
     "linear-gradient(180deg, #fbfcfe 0%, #f5f7fb 52%, #fafbfd 100%)";
   const TEXT_DARK = "#0F172A";
@@ -136,14 +138,14 @@ function LandingPage({
   };
 
   const categoryItems = [
-    { title: "전기", icon: "⚡", color: BRAND_COLOR, bg: "#EEF4FF" },
-    { title: "설비", icon: "🛠️", color: "#0F766E", bg: "#ECFEFF" },
-    { title: "누수", icon: "💧", color: BRAND_COLOR, bg: "#EFF6FF" },
-    { title: "도어락", icon: "🔐", color: "#7C3AED", bg: "#F5F3FF" },
-    { title: "에어컨", icon: "❄️", color: BRAND_COLOR, bg: "#EFF6FF" },
-    { title: "CCTV", icon: "📷", color: "#EA580C", bg: "#FFF7ED" },
-    { title: "간판", icon: "🪧", color: "#DB2777", bg: "#FDF2F8" },
-    { title: "기타", icon: "📦", color: "#475569", bg: "#F8FAFC" },
+    { title: "전기", bg: ICON_BG },
+    { title: "설비", bg: ICON_BG },
+    { title: "누수", bg: ICON_BG },
+    { title: "도어락", bg: ICON_BG },
+    { title: "에어컨", bg: ICON_BG },
+    { title: "CCTV", bg: ICON_BG },
+    { title: "간판", bg: ICON_BG },
+    { title: "기타", bg: ICON_BG },
   ];
 
   const featuredRequests = [
@@ -151,28 +153,28 @@ function LandingPage({
       eyebrow: "빠른 접수",
       title: "전기 점검 · 차단기 문제",
       subtitle: "긴급한 전기 관련 요청을 빠르게 등록하고 흐름을 바로 확인",
-      image: "⚡",
+      iconKey: "전기",
       bg: "linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%)",
     },
     {
       eyebrow: "생활 수리",
       title: "누수 · 설비 · 배관 요청",
       subtitle: "반복적으로 자주 발생하는 생활 수리 항목을 한 번에 정리",
-      image: "💧",
+      iconKey: "누수",
       bg: "linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)",
     },
     {
       eyebrow: "출입/보안",
       title: "도어락 · 출입문 수리",
       subtitle: "출입 관련 문제도 간단한 요청으로 바로 접수 가능",
-      image: "🔐",
+      iconKey: "도어락",
       bg: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
     },
     {
       eyebrow: "시설 장비",
       title: "냉난방 · CCTV · 간판",
       subtitle: "시설 장비 관련 요청을 더 체계적으로 관리",
-      image: "📷",
+      iconKey: "CCTV",
       bg: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
     },
   ];
@@ -962,15 +964,25 @@ function LandingPage({
                   height: isMobile ? "52px" : "58px",
                   borderRadius: "18px",
                   backgroundColor: item.bg,
-                  color: item.color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: isMobile ? "22px" : "24px",
-                  boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+                  boxShadow: "0 8px 18px rgba(47, 128, 237, 0.06)",
                 }}
               >
-                {item.icon}
+                <img
+                  src={getCategoryIcon(item.title)}
+                  alt={item.title}
+                  draggable="false"
+                  style={{
+                    width: isMobile ? "24px" : "28px",
+                    height: isMobile ? "24px" : "28px",
+                    objectFit: "contain",
+                    display: "block",
+                    userSelect: "none",
+                    pointerEvents: "none",
+                  }}
+                />
               </div>
 
               <span
@@ -1072,10 +1084,35 @@ function LandingPage({
                   style={{
                     display: "flex",
                     justifyContent: "flex-end",
-                    fontSize: "28px",
                   }}
                 >
-                  {card.image}
+                  <div
+                    style={{
+                      width: isMobile ? "52px" : "58px",
+                      height: isMobile ? "52px" : "58px",
+                      borderRadius: "18px",
+                      background: ICON_BG,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 8px 18px rgba(15, 23, 42, 0.05)",
+                      backdropFilter: "blur(4px)",
+                    }}
+                  >
+                    <img
+                      src={getCategoryIcon(card.iconKey)}
+                      alt={card.title}
+                      draggable="false"
+                      style={{
+                        width: isMobile ? "24px" : "28px",
+                        height: isMobile ? "24px" : "28px",
+                        objectFit: "contain",
+                        display: "block",
+                        userSelect: "none",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 

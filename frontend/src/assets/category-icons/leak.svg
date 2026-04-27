@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="drop_main" x1="24" y1="3" x2="24" y2="45" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#64B5F6"/>
+      <stop offset="100%" stop-color="#1565C0"/>
+    </linearGradient>
+    <linearGradient id="drop_sm" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#90CAF9"/>
+      <stop offset="100%" stop-color="#1E88E5"/>
+    </linearGradient>
+  </defs>
+  <!-- Main drop -->
+  <path d="M24 3C24 3 9 20 9 31C9 39.3 15.7 46 24 46C32.3 46 39 39.3 39 31C39 20 24 3 24 3Z" fill="url(#drop_main)"/>
+  <!-- Shine left -->
+  <path d="M15 26C15 26 12 33 13 38" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.5"/>
+  <!-- Shine ellipse -->
+  <ellipse cx="18" cy="27" rx="2.5" ry="5.5" fill="white" fill-opacity="0.28" transform="rotate(-15 18 27)"/>
+  <!-- Small drop left -->
+  <path d="M7 14C7 14 4 18.5 4 21C4 22.9 5.3 24.5 7 24.5C8.7 24.5 10 22.9 10 21C10 18.5 7 14 7 14Z" fill="url(#drop_sm)"/>
+  <!-- Small drop right -->
+  <path d="M41 18C41 18 38.5 22 38.5 24C38.5 25.6 39.6 27 41 27C42.4 27 43.5 25.6 43.5 24C43.5 22 41 18 41 18Z" fill="url(#drop_sm)"/>
+</svg>

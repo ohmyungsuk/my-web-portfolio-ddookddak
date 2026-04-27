@@ -1,123 +1,190 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
+const BRAND = "#2F80ED";
+const BRAND_HOVER = "#1F6FD6";
+const TEXT = "#0F172A";
+const SUB = "#64748B";
+const BG = "#F4F7FB";
+const CARD = "#FFFFFF";
+const BORDER = "#D9E4F2";
+const BORDER_HOVER = "#AFCBF5";
+const SOFT = "#F8FBFF";
+
+function getWindowWidth() {
+  if (typeof window === "undefined") return 1024;
+  return window.innerWidth;
+}
+
 function normalizeStatus(status) {
-  if (status === "pending" || status === "요청 등록") return "pending";
-  if (status === "quoted" || status === "견적 협의중") return "quoted";
-  if (status === "planned" || status === "작업 예정") return "planned";
-  if (status === "in_progress" || status === "진행중") return "in_progress";
-  if (status === "completed" || status === "완료됨") return "completed";
-  if (status === "cancelled" || status === "취소됨" || status === "요청 취소") return "cancelled";
+  if (status === "pending" || status === "요청 등록" || status === "등록됨") {
+    return "pending";
+  }
+
+  if (
+    status === "assigned" ||
+    status === "배정완료" ||
+    status === "담당자 배정"
+  ) {
+    return "assigned";
+  }
+
+  if (status === "quoted" || status === "견적 협의중") {
+    return "quoted";
+  }
+
+  if (status === "planned" || status === "작업 예정") {
+    return "planned";
+  }
+
+  if (
+    status === "in_progress" ||
+    status === "진행중" ||
+    status === "작업 진행중"
+  ) {
+    return "in_progress";
+  }
+
+  if (status === "completed" || status === "완료됨" || status === "완료") {
+    return "completed";
+  }
+
+  if (status === "cancelled" || status === "취소됨" || status === "요청 취소") {
+    return "cancelled";
+  }
+
   return "unknown";
 }
 
 function getStatusText(status) {
   const normalized = normalizeStatus(status);
+
   if (normalized === "pending") return "요청 등록";
+  if (normalized === "assigned") return "담당자 배정";
   if (normalized === "quoted") return "견적 협의중";
   if (normalized === "planned") return "작업 예정";
-  if (normalized === "in_progress") return "진행중";
-  if (normalized === "completed") return "완료됨";
+  if (normalized === "in_progress") return "작업 진행중";
+  if (normalized === "completed") return "거래 완료";
   if (normalized === "cancelled") return "취소됨";
-  return status || "상태 없음";
+
+  return "상태 없음";
 }
 
-function getStatusStyle(status) {
+function getProgressInfo(status) {
   const normalized = normalizeStatus(status);
 
-  if (normalized === "pending") {
-    return { backgroundColor: "#eff6ff", color: "#1d4ed8" };
-  }
-  if (normalized === "quoted") {
-    return { backgroundColor: "#fff7ed", color: "#c2410c" };
-  }
-  if (normalized === "planned") {
-    return { backgroundColor: "#eef2ff", color: "#4338ca" };
-  }
-  if (normalized === "in_progress") {
-    return { backgroundColor: "#ecfdf3", color: "#15803d" };
-  }
   if (normalized === "completed") {
-    return { backgroundColor: "#f0fdf4", color: "#166534" };
-  }
-  if (normalized === "cancelled") {
-    return { backgroundColor: "#f1f5f9", color: "#475569" };
+    return {
+      percent: 100,
+      activeStep: 2,
+      color: BRAND,
+      message: "요청이 완료됐어요.",
+    };
   }
 
-  return { backgroundColor: "#f1f5f9", color: "#334155" };
+  if (normalized === "cancelled") {
+    return {
+      percent: 100,
+      activeStep: -1,
+      color: "#94A3B8",
+      message: "취소된 요청이에요.",
+    };
+  }
+
+  if (["assigned", "quoted", "planned", "in_progress"].includes(normalized)) {
+    return {
+      percent: 50,
+      activeStep: 1,
+      color: BRAND,
+      message: "담당자가 확인 중이거나 작업이 진행 중이에요.",
+    };
+  }
+
+  return {
+    percent: 8,
+    activeStep: 0,
+    color: "#CBD5E1",
+    message: "전문가의 답변을 기다리고 있어요.",
+  };
 }
 
 function formatDate(value) {
   if (!value) return "-";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
+
+  return `${String(date.getFullYear()).slice(2)}.${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function parseDescription(content) {
   const raw = content || "";
   const lines = raw.split("\n");
 
-  const placeType =
-    lines.find((line) => line.startsWith("공간 유형:"))?.replace("공간 유형:", "").trim() || "-";
+  const getValue = (label) => {
+    return (
+      lines
+        .find((line) => line.startsWith(label))
+        ?.replace(label, "")
+        .trim() || "-"
+    );
+  };
 
-  const issueType =
-    lines
-      .find((line) => line.startsWith("도움이 필요한 내용:"))
-      ?.replace("도움이 필요한 내용:", "")
-      .trim() || "-";
+  const placeType = getValue("공간 유형:");
+  const issueType = getValue("도움이 필요한 내용:");
+  const schedule = getValue("희망 일정:");
 
   const detailText =
     lines
       .find((line) => line.startsWith("상세 설명:"))
       ?.replace("상세 설명:", "")
-      .trim() || raw || "내용이 없습니다.";
+      .trim() ||
+    raw ||
+    "내용이 없습니다.";
 
   return {
     placeType,
     issueType,
+    schedule,
     detailText,
   };
 }
 
-function HoverCard({ children, onClick, baseStyle, hoverStyle = {} }) {
-  const [isHover, setIsHover] = useState(false);
-
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setIsHover(true)}
-      onMouseLeave={() => setIsHover(false)}
-      style={{
-        ...baseStyle,
-        ...(isHover ? hoverStyle : {}),
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function HoverButton({ children, onClick, baseStyle, hoverStyle = {}, disabled = false }) {
+function HoverButton({
+  children,
+  onClick,
+  baseStyle,
+  hoverStyle = {},
+  disabled = false,
+  type = "button",
+}) {
   const [isHover, setIsHover] = useState(false);
 
   return (
     <button
-      type="button"
+      type={type}
       disabled={disabled}
       onClick={onClick}
       onMouseEnter={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
       onMouseDown={(e) => e.currentTarget.blur()}
+      onMouseUp={(e) => e.currentTarget.blur()}
       onFocus={(e) => e.currentTarget.blur()}
       style={{
         ...baseStyle,
         ...(isHover && !disabled ? hoverStyle : {}),
+        opacity: disabled ? 0.65 : 1,
+        cursor: disabled ? "not-allowed" : baseStyle?.cursor || "pointer",
+        outline: "none",
+        outlineOffset: 0,
         WebkitTapHighlightColor: "transparent",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        userSelect: "none",
       }}
     >
       {children}
@@ -125,12 +192,163 @@ function HoverButton({ children, onClick, baseStyle, hoverStyle = {}, disabled =
   );
 }
 
-function StatCard({ label, value, sub, styles }) {
+function RequestCard({ request, onOpen, styles, isMobile }) {
+  const [isHover, setIsHover] = useState(false);
+  const parsed = parseDescription(request.content);
+  const normalizedStatus = normalizeStatus(request.status);
+  const progress = getProgressInfo(request.status);
+
+  const assignedText = request.assigned_username
+    ? `${request.assigned_username} 전문가가 확인 중이에요`
+    : request.assigned_user_id
+      ? "담당자가 배정됐어요"
+      : "전문가의 답변을 기다리고 있어요.";
+
+  const messageText =
+    normalizedStatus === "pending"
+      ? "전문가의 답변을 기다리고 있어요."
+      : normalizedStatus === "completed"
+        ? "요청이 완료됐어요."
+        : normalizedStatus === "cancelled"
+          ? "취소된 요청이에요."
+          : assignedText;
+
   return (
-    <div style={styles.statCard}>
-      <div style={styles.statLabel}>{label}</div>
-      <div style={styles.statValue}>{value}</div>
-      <div style={styles.statSub}>{sub}</div>
+    <div
+      style={{
+        ...styles.card,
+        ...(isHover && !isMobile
+          ? {
+              transform: "translateY(-4px)",
+              boxShadow: "0 18px 36px rgba(47, 128, 237, 0.12)",
+            }
+          : {}),
+      }}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+    >
+      <div style={styles.cardHead}>
+        <div>
+          <div style={styles.titleRow}>
+            <h3 style={styles.cardTitle}>{request.title || "요청 제목 없음"}</h3>
+            {normalizedStatus !== "completed" &&
+              normalizedStatus !== "cancelled" && <span style={styles.redDot} />}
+          </div>
+
+          <div style={styles.dateText}>{formatDate(request.created_at)}</div>
+        </div>
+
+        <span
+          style={{
+            ...styles.statusBadge,
+            color:
+              normalizedStatus === "completed"
+                ? "#166534"
+                : normalizedStatus === "cancelled"
+                  ? "#64748B"
+                  : BRAND,
+            background:
+              normalizedStatus === "completed"
+                ? "#DCFCE7"
+                : normalizedStatus === "cancelled"
+                  ? "#F1F5F9"
+                  : "#EFF6FF",
+            borderColor:
+              normalizedStatus === "completed"
+                ? "#86EFAC"
+                : normalizedStatus === "cancelled"
+                  ? "#E2E8F0"
+                  : "#BFDBFE",
+          }}
+        >
+          {getStatusText(request.status)}
+        </span>
+      </div>
+
+      <div style={styles.progressWrap}>
+        <div style={styles.progressTrack}>
+          <div
+            style={{
+              ...styles.progressBar,
+              width: `${progress.percent}%`,
+              background: progress.color,
+            }}
+          />
+        </div>
+
+        <div style={styles.progressLabels}>
+          <span
+            style={{
+              ...styles.progressLabel,
+              color: progress.activeStep === 0 ? TEXT : SUB,
+              fontWeight: progress.activeStep === 0 ? 800 : 600,
+            }}
+          >
+            요청등록
+          </span>
+
+          <span
+            style={{
+              ...styles.progressLabel,
+              color: progress.activeStep === 1 ? TEXT : SUB,
+              fontWeight: progress.activeStep === 1 ? 800 : 600,
+              textAlign: "center",
+            }}
+          >
+            상담진행
+          </span>
+
+          <span
+            style={{
+              ...styles.progressLabel,
+              color: progress.activeStep === 2 ? TEXT : SUB,
+              fontWeight: progress.activeStep === 2 ? 800 : 600,
+              textAlign: "right",
+            }}
+          >
+            거래완료
+          </span>
+        </div>
+      </div>
+
+      <div style={styles.infoLine}>
+        <span style={styles.infoIcon}>•</span>
+        <span>{messageText}</span>
+      </div>
+
+      <div style={styles.metaGrid}>
+        <div style={styles.metaItem}>
+          <span style={styles.metaLabel}>카테고리</span>
+          <strong style={styles.metaValue}>{request.category || "-"}</strong>
+        </div>
+
+        <div style={styles.metaItem}>
+          <span style={styles.metaLabel}>공간</span>
+          <strong style={styles.metaValue}>
+            {request.location || parsed.placeType}
+          </strong>
+        </div>
+
+        <div style={styles.metaItem}>
+          <span style={styles.metaLabel}>희망 일정</span>
+          <strong style={styles.metaValue}>{parsed.schedule}</strong>
+        </div>
+      </div>
+
+      <div style={styles.previewText}>
+        {parsed.issueType !== "-" ? parsed.issueType : parsed.detailText}
+      </div>
+
+      <HoverButton
+        onClick={() => onOpen(request)}
+        baseStyle={styles.detailButton}
+        hoverStyle={{
+          background: BRAND_HOVER,
+          boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+        }}
+      >
+        자세히 보기
+      </HoverButton>
     </div>
   );
 }
@@ -143,27 +361,24 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [loginUser, setLoginUser] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const BRAND = "#2563eb";
-  const BRAND_HOVER = "#1d4ed8";
-  const BG = "#f6f8fc";
-  const CARD = "#ffffff";
-  const BORDER = "#dbe5f0";
-  const TEXT = "#0f172a";
-  const SUB = "#64748b";
-  const SOFT = "#f8fbff";
+  const isMobile = windowWidth <= 720;
+  const isTablet = windowWidth <= 1100;
+  const gridColumns = isMobile
+    ? "1fr"
+    : isTablet
+      ? "repeat(2, 1fr)"
+      : "repeat(3, 1fr)";
 
   const filterOptions = [
     { key: "all", label: "전체" },
     { key: "pending", label: "요청 등록" },
-    { key: "quoted", label: "견적 협의중" },
-    { key: "planned", label: "작업 예정" },
-    { key: "in_progress", label: "진행중" },
-    { key: "completed", label: "완료됨" },
+    { key: "assigned_group", label: "상담 진행" },
+    { key: "completed", label: "거래 완료" },
     { key: "cancelled", label: "취소됨" },
   ];
 
@@ -181,12 +396,6 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
     { key: "기타 유지보수", label: "기타 유지보수" },
   ];
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 900);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   const fetchMyRequests = async () => {
     try {
       setLoading(true);
@@ -199,6 +408,7 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
 
       if (userError || !user) {
         setMessage("로그인 정보가 없습니다. 다시 로그인해주세요.");
+        setRequests([]);
         setLoading(false);
         return;
       }
@@ -223,6 +433,15 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
   };
 
   useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(getWindowWidth());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     fetchMyRequests();
   }, []);
 
@@ -234,30 +453,52 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
 
   const summary = useMemo(() => {
     const normalized = requests.map((item) => normalizeStatus(item.status));
-    const total = requests.length;
-    const active = normalized.filter((status) =>
-      ["pending", "quoted", "planned", "in_progress"].includes(status)
-    ).length;
-    const completed = normalized.filter((status) => status === "completed").length;
 
-    return { total, active, completed };
+    return {
+      total: requests.length,
+      pending: normalized.filter((status) => status === "pending").length,
+      active: normalized.filter((status) =>
+        ["assigned", "quoted", "planned", "in_progress"].includes(status),
+      ).length,
+      completed: normalized.filter((status) => status === "completed").length,
+    };
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
     return requests.filter((item) => {
+      const normalized = normalizeStatus(item.status);
+
       const statusMatch =
-        selectedFilter === "all" || normalizeStatus(item.status) === selectedFilter;
+        selectedFilter === "all" ||
+        normalized === selectedFilter ||
+        (selectedFilter === "assigned_group" &&
+          ["assigned", "quoted", "planned", "in_progress"].includes(
+            normalized,
+          ));
 
       const categoryMatch =
         categoryFilter === "all" || (item.category || "") === categoryFilter;
 
-      const searchMatch =
-        keyword === "" ||
-        (item.title || "").toLowerCase().includes(keyword) ||
-        (item.category || "").toLowerCase().includes(keyword) ||
-        (item.content || "").toLowerCase().includes(keyword);
+      const parsed = parseDescription(item.content);
+
+      const searchTarget = [
+        item.title,
+        item.category,
+        item.content,
+        item.location,
+        parsed.placeType,
+        parsed.issueType,
+        parsed.schedule,
+        parsed.detailText,
+        item.assigned_username,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const searchMatch = keyword === "" || searchTarget.includes(keyword);
 
       return statusMatch && categoryMatch && searchMatch;
     });
@@ -282,638 +523,533 @@ export default function MyRequestsPage({ onGoHome, onClickRequest }) {
       onGoHome();
       return;
     }
+
     navigate("/");
   };
 
   const styles = {
     page: {
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: BG,
-      padding: isMobile ? "88px 12px 28px" : "104px 20px 48px",
+      padding: isMobile ? "86px 16px 36px" : "104px 42px 56px",
       boxSizing: "border-box",
+      fontFamily:
+        '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
     container: {
-      maxWidth: "1180px",
+      maxWidth: "1160px",
       margin: "0 auto",
     },
-    pageTitle: {
-      margin: "0 0 18px",
-      fontSize: isMobile ? "23px" : "28px",
-      fontWeight: 800,
-      color: TEXT,
-      letterSpacing: "-0.5px",
-      lineHeight: 1.35,
-    },
-    shell: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 300px",
-      gap: "18px",
-      alignItems: "start",
-    },
-    mainCard: {
-      background: CARD,
-      border: `1px solid ${BORDER}`,
-      borderRadius: "26px",
-      padding: isMobile ? "14px" : "22px",
-      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-    },
-    heroCard: {
-      background: "linear-gradient(180deg, #f8fbff 0%, #fdfefe 100%)",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "22px",
-      padding: isMobile ? "18px 16px" : "24px",
-      marginBottom: "18px",
-    },
-    heroTop: {
+    topArea: {
       display: "flex",
-      flexDirection: isMobile ? "column" : "row",
-      justifyContent: "space-between",
       alignItems: isMobile ? "flex-start" : "center",
+      justifyContent: "space-between",
+      flexDirection: isMobile ? "column" : "row",
       gap: "14px",
-      marginBottom: "18px",
+      marginBottom: "22px",
     },
-    heroTitleWrap: {
-      minWidth: 0,
-    },
-    eyebrow: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "7px 11px",
-      borderRadius: "999px",
-      background: "#eaf2ff",
-      color: BRAND,
-      fontSize: "12px",
-      fontWeight: 800,
-      marginBottom: "12px",
-      letterSpacing: "-0.1px",
-    },
-    heroTitle: {
+    title: {
       margin: 0,
-      fontSize: isMobile ? "24px" : "30px",
-      fontWeight: 800,
+      fontSize: isMobile ? "25px" : "30px",
+      fontWeight: 900,
       color: TEXT,
-      lineHeight: 1.32,
       letterSpacing: "-0.7px",
+      lineHeight: 1.25,
     },
-    heroSub: {
-      marginTop: "10px",
+    subTitle: {
+      marginTop: "8px",
       fontSize: "14px",
       color: SUB,
-      lineHeight: 1.75,
-      fontWeight: 500,
+      lineHeight: 1.6,
       wordBreak: "keep-all",
     },
-    statGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+    actionRow: {
+      display: "flex",
       gap: "10px",
+      flexWrap: "wrap",
+      width: isMobile ? "100%" : "auto",
     },
-    statCard: {
-      background: "#fff",
+    topButton: {
+      minHeight: "44px",
+      padding: "0 18px",
+      borderRadius: "13px",
+      border: "1px solid transparent",
+      background: BRAND,
+      color: "#FFFFFF",
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
+      boxSizing: "border-box",
+      width: isMobile ? "100%" : "auto",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    whiteTopButton: {
+      minHeight: "44px",
+      padding: "0 18px",
+      borderRadius: "13px",
+      border: `1px solid ${BORDER}`,
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      boxShadow: "none",
+      boxSizing: "border-box",
+      width: isMobile ? "100%" : "auto",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    summaryBar: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))",
+      gap: "10px",
+      marginBottom: "18px",
+    },
+    summaryItem: {
+      background: "#FFFFFF",
       border: `1px solid ${BORDER}`,
       borderRadius: "18px",
-      padding: isMobile ? "14px" : "16px",
-      boxShadow: "0 6px 16px rgba(15, 23, 42, 0.03)",
+      padding: "16px",
+      boxShadow: "0 10px 24px rgba(15, 23, 42, 0.04)",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
     },
-    statLabel: {
+    summaryLabel: {
       fontSize: "12px",
       color: SUB,
-      fontWeight: 700,
-      marginBottom: "8px",
-    },
-    statValue: {
-      fontSize: isMobile ? "22px" : "24px",
-      color: TEXT,
       fontWeight: 800,
-      letterSpacing: "-0.4px",
-      lineHeight: 1.2,
+      marginBottom: "7px",
     },
-    statSub: {
-      marginTop: "6px",
-      fontSize: "12px",
-      color: SUB,
-      lineHeight: 1.5,
-      fontWeight: 500,
-    },
-    controlsCard: {
-      background: SOFT,
-      border: `1px solid ${BORDER}`,
-      borderRadius: "18px",
-      padding: isMobile ? "14px" : "16px",
-      marginBottom: "4px",
-    },
-    controlLabel: {
-      fontSize: "13px",
+    summaryValue: {
+      fontSize: "24px",
       color: TEXT,
-      fontWeight: 700,
-      marginBottom: "10px",
+      fontWeight: 900,
+      lineHeight: 1.1,
     },
-    filterBar: {
+    filterBox: {
+      background: "#FFFFFF",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: isMobile ? "14px" : "16px",
+      marginBottom: "20px",
+      boxShadow: "0 12px 28px rgba(15, 23, 42, 0.045)",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    filterGrid: {
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 210px",
       gap: "10px",
       marginBottom: "12px",
     },
-    searchInput: {
+    input: {
       width: "100%",
       height: "48px",
-      padding: "0 15px",
       borderRadius: "14px",
       border: `1px solid ${BORDER}`,
-      background: "#ffffff",
+      background: SOFT,
       color: TEXT,
       fontSize: "14px",
-      fontWeight: 500,
+      padding: "0 15px",
       outline: "none",
+      outlineOffset: 0,
       boxSizing: "border-box",
+      WebkitAppearance: "none",
+      appearance: "none",
     },
     select: {
       width: "100%",
       height: "48px",
-      padding: "0 14px",
       borderRadius: "14px",
       border: `1px solid ${BORDER}`,
-      background: "#ffffff",
+      background: SOFT,
       color: TEXT,
       fontSize: "14px",
-      fontWeight: 500,
+      padding: "0 14px",
       outline: "none",
+      outlineOffset: 0,
       boxSizing: "border-box",
     },
-    filterRow: {
+    tabRow: {
       display: "flex",
-      flexWrap: "wrap",
       gap: "8px",
+      flexWrap: "wrap",
     },
-    filterBtn: {
+    tabButton: {
       minHeight: "38px",
       padding: "0 14px",
-      border: "1px solid #d9e4f2",
       borderRadius: "999px",
-      background: "#ffffff",
+      border: `1px solid ${BORDER}`,
+      background: "#FFFFFF",
       color: TEXT,
       fontSize: "13px",
-      fontWeight: 700,
+      fontWeight: 800,
       cursor: "pointer",
-      outline: "none",
       boxShadow: "none",
-      transition: "all 0.18s ease",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
     },
-    filterBtnActive: {
+    activeTabButton: {
       background: BRAND,
-      color: "#ffffff",
+      color: "#FFFFFF",
       border: "1px solid transparent",
-      boxShadow: "0 10px 20px rgba(37, 99, 235, 0.16)",
+      boxShadow: "0 10px 18px rgba(47, 128, 237, 0.16)",
     },
-    listWrap: {
-      display: "grid",
-      gap: "14px",
-      marginTop: "18px",
-    },
-    emptyCard: {
-      background: "#fff",
-      border: `1px dashed ${BORDER}`,
-      borderRadius: "20px",
-      padding: "34px 20px",
-      textAlign: "center",
+    countText: {
+      margin: "0 0 14px",
       color: SUB,
-      fontSize: "14px",
-      lineHeight: 1.8,
-      fontWeight: 500,
+      fontSize: "13px",
+      fontWeight: 650,
     },
-    requestCard: {
-      background: "#fff",
-      border: "1px solid #e6edf5",
-      borderRadius: "22px",
-      padding: isMobile ? "16px" : "18px",
-      cursor: "pointer",
-      transition: "all 0.18s ease",
-      boxShadow: "0 8px 22px rgba(15, 23, 42, 0.035)",
+    grid: {
+      display: "grid",
+      gridTemplateColumns: gridColumns,
+      gap: "12px",
     },
-    requestTop: {
+    card: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "18px",
+      padding: isMobile ? "16px" : "17px",
+      minHeight: "330px",
+      boxShadow: "0 10px 24px rgba(15, 23, 42, 0.045)",
+      transition:
+        "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
+      boxSizing: "border-box",
       display: "flex",
+      flexDirection: "column",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    cardHead: {
+      display: "flex",
+      alignItems: "flex-start",
       justifyContent: "space-between",
-      alignItems: isMobile ? "flex-start" : "center",
-      flexDirection: isMobile ? "column" : "row",
       gap: "10px",
       marginBottom: "14px",
     },
-    requestTitleWrap: {
+    titleRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
       minWidth: 0,
     },
-    requestTitle: {
+    cardTitle: {
       margin: 0,
-      fontSize: isMobile ? "18px" : "19px",
-      fontWeight: 800,
+      fontSize: "18px",
+      fontWeight: 900,
       color: TEXT,
-      lineHeight: 1.45,
-      letterSpacing: "-0.3px",
+      letterSpacing: "-0.35px",
+      lineHeight: 1.35,
       wordBreak: "break-word",
     },
-    requestSub: {
-      marginTop: "6px",
-      fontSize: "13px",
-      color: SUB,
-      fontWeight: 500,
+    redDot: {
+      width: "6px",
+      height: "6px",
+      borderRadius: "999px",
+      background: "#EF4444",
+      flexShrink: 0,
+      marginTop: "-10px",
     },
-    statusPill: {
+    dateText: {
+      marginTop: "6px",
+      color: SUB,
+      fontSize: "13px",
+      fontWeight: 650,
+    },
+    statusBadge: {
+      flexShrink: 0,
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "8px 12px",
+      minHeight: "31px",
+      padding: "0 11px",
       borderRadius: "999px",
+      border: "1px solid transparent",
       fontSize: "12px",
-      fontWeight: 700,
+      fontWeight: 850,
       whiteSpace: "nowrap",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    progressWrap: {
+      marginBottom: "18px",
+    },
+    progressTrack: {
+      width: "100%",
+      height: "8px",
+      borderRadius: "999px",
+      background: "#E9EEF5",
+      overflow: "hidden",
+    },
+    progressBar: {
+      height: "100%",
+      borderRadius: "999px",
+      transition: "width 0.2s ease",
+    },
+    progressLabels: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      marginTop: "7px",
+      gap: "4px",
+    },
+    progressLabel: {
+      fontSize: "11px",
+      lineHeight: 1.3,
+    },
+    infoLine: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      color: TEXT,
+      fontSize: "13px",
+      fontWeight: 700,
+      lineHeight: 1.6,
+      marginBottom: "14px",
+      minHeight: "42px",
+      wordBreak: "keep-all",
+    },
+    infoIcon: {
+      width: "18px",
+      height: "18px",
+      borderRadius: "999px",
+      background: "#EEF4FF",
+      color: BRAND,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "16px",
+      fontWeight: 900,
+      flexShrink: 0,
     },
     metaGrid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-      gap: "10px",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      gap: "7px",
       marginBottom: "12px",
     },
-    metaBox: {
-      background: "#fbfdff",
+    metaItem: {
+      background: SOFT,
       border: `1px solid ${BORDER}`,
-      borderRadius: "16px",
-      padding: "12px 14px",
+      borderRadius: "13px",
+      padding: "10px",
+      minWidth: 0,
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
     },
     metaLabel: {
-      fontSize: "12px",
+      display: "block",
       color: SUB,
-      fontWeight: 700,
-      marginBottom: "6px",
+      fontSize: "11px",
+      fontWeight: 800,
+      marginBottom: "5px",
     },
     metaValue: {
-      fontSize: "14px",
+      display: "block",
       color: TEXT,
-      fontWeight: 700,
-      lineHeight: 1.55,
-      wordBreak: "break-word",
+      fontSize: "12px",
+      fontWeight: 850,
+      lineHeight: 1.35,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
     },
-    previewBox: {
-      background: "#fbfdff",
-      border: `1px solid ${BORDER}`,
+    previewText: {
+      color: SUB,
+      fontSize: "13px",
+      lineHeight: 1.65,
+      fontWeight: 600,
+      wordBreak: "break-word",
+      marginBottom: "16px",
+      minHeight: "42px",
+      display: "-webkit-box",
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: "vertical",
+      overflow: "hidden",
+    },
+    detailButton: {
+      marginTop: "auto",
+      width: "100%",
+      minHeight: "48px",
+      border: "1px solid transparent",
+      borderRadius: "12px",
+      background: BRAND,
+      color: "#FFFFFF",
+      fontSize: "15px",
+      fontWeight: 900,
+      cursor: "pointer",
+      boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    emptyCard: {
+      background: "#FFFFFF",
+      border: `1px dashed ${BORDER}`,
+      borderRadius: "20px",
+      padding: "46px 20px",
+      color: SUB,
+      textAlign: "center",
+      fontSize: "14px",
+      lineHeight: 1.8,
+      fontWeight: 650,
+      gridColumn: "1 / -1",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    message: {
+      background: "#FFF5F5",
+      border: "1px solid #FFD8D8",
+      color: "#DC2626",
       borderRadius: "16px",
       padding: "14px",
-    },
-    previewLabel: {
-      fontSize: "12px",
-      color: SUB,
-      fontWeight: 700,
-      marginBottom: "8px",
-    },
-    previewValue: {
-      fontSize: "14px",
-      color: TEXT,
-      fontWeight: 500,
-      lineHeight: 1.75,
-      wordBreak: "break-word",
-    },
-    footer: {
-      marginTop: "14px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "10px",
-      flexWrap: "wrap",
-      paddingTop: "12px",
-      borderTop: `1px solid #edf2f7`,
-    },
-    footerDate: {
-      fontSize: "12px",
-      color: SUB,
-      fontWeight: 600,
-    },
-    footerLink: {
       fontSize: "13px",
-      color: BRAND,
-      fontWeight: 800,
-    },
-    sideCard: {
-      background: CARD,
-      border: `1px solid ${BORDER}`,
-      borderRadius: "26px",
-      padding: isMobile ? "16px" : "18px",
-      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-      position: isMobile ? "static" : "sticky",
-      top: "94px",
-    },
-    sideBadge: {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "7px 10px",
-      borderRadius: "999px",
-      background: "#eef4ff",
-      color: BRAND,
-      fontSize: "12px",
-      fontWeight: 800,
-      marginBottom: "12px",
-    },
-    sideTitle: {
-      margin: 0,
-      fontSize: "20px",
-      fontWeight: 800,
-      color: TEXT,
-      letterSpacing: "-0.3px",
-    },
-    sideDesc: {
-      margin: "8px 0 16px",
-      fontSize: "13px",
-      lineHeight: 1.75,
-      color: SUB,
-      fontWeight: 500,
-      wordBreak: "keep-all",
-    },
-    sidePrimaryBtn: {
-      width: "100%",
-      height: "48px",
-      border: "none",
-      borderRadius: "14px",
-      background: BRAND,
-      color: "#fff",
-      fontSize: "14px",
       fontWeight: 700,
-      cursor: "pointer",
-      outline: "none",
-      boxShadow: "0 10px 20px rgba(37, 99, 235, 0.16)",
-      transition: "all 0.18s ease",
-    },
-    miniInfo: {
-      marginTop: "16px",
-      paddingTop: "16px",
-      borderTop: `1px solid ${BORDER}`,
-      display: "grid",
-      gap: "10px",
-    },
-    miniItem: {
-      background: "#f8fbff",
-      borderRadius: "16px",
-      padding: "12px 14px",
-      border: `1px solid ${BORDER}`,
-    },
-    miniLabel: {
-      fontSize: "12px",
-      fontWeight: 700,
-      color: SUB,
-      marginBottom: "4px",
-    },
-    miniValue: {
-      fontSize: "14px",
-      fontWeight: 700,
-      color: TEXT,
-      lineHeight: 1.55,
-      wordBreak: "break-word",
-    },
-    loadingWrap: {
-      background: "#fff",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "20px",
-      padding: "30px 20px",
-      textAlign: "center",
-      color: SUB,
-      fontSize: "15px",
-      fontWeight: 700,
-    },
-    errorMessage: {
-      padding: "12px 14px",
-      borderRadius: "14px",
-      fontSize: "13px",
-      fontWeight: 600,
-      lineHeight: 1.6,
-      border: "1px solid #ffd8d8",
-      background: "#fff5f5",
-      color: "#dc2626",
+      marginBottom: "16px",
+      boxSizing: "border-box",
     },
   };
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.pageTitle}>내 요청 목록</h1>
-
-        <div style={styles.shell}>
-          <div style={styles.mainCard}>
-            <div style={styles.heroCard}>
-              <div style={styles.heroTop}>
-                <div style={styles.heroTitleWrap}>
-                  <div style={styles.eyebrow}>내 요청 관리</div>
-                  <h2 style={styles.heroTitle}>내가 등록한 요청을 깔끔하게 모아봐요</h2>
-                  <div style={styles.heroSub}>
-                    최근에 등록한 요청부터 상태별로 빠르게 확인하고,
-                    필요한 건 바로 상세보기로 들어갈 수 있어요.
-                  </div>
-                </div>
-              </div>
-
-              {!loading && !message && (
-                <div style={styles.statGrid}>
-                  <StatCard
-                    label="전체 요청"
-                    value={`${summary.total}개`}
-                    sub="내가 등록한 전체 건수"
-                    styles={styles}
-                  />
-                  <StatCard
-                    label="진행중"
-                    value={`${summary.active}개`}
-                    sub="현재 처리중인 요청"
-                    styles={styles}
-                  />
-                  <StatCard
-                    label="완료"
-                    value={`${summary.completed}개`}
-                    sub="작업이 끝난 요청"
-                    styles={styles}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div style={styles.controlsCard}>
-              <div style={styles.controlLabel}>검색 및 필터</div>
-
-              <div style={styles.filterBar}>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="제목, 내용, 카테고리로 검색"
-                  style={styles.searchInput}
-                />
-
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  style={styles.select}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.filterRow}>
-                {filterOptions.map((option) => {
-                  const isActive = selectedFilter === option.key;
-
-                  return (
-                    <HoverButton
-                      key={option.key}
-                      onClick={() => setSelectedFilter(option.key)}
-                      baseStyle={{
-                        ...styles.filterBtn,
-                        ...(isActive ? styles.filterBtnActive : {}),
-                      }}
-                      hoverStyle={
-                        isActive
-                          ? {
-                              background: BRAND_HOVER,
-                            }
-                          : {
-                              color: BRAND,
-                              border: "1px solid #bfd3f7",
-                            }
-                      }
-                    >
-                      {option.label}
-                    </HoverButton>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div style={styles.listWrap}>
-              {loading && <div style={styles.loadingWrap}>목록을 불러오는 중입니다...</div>}
-
-              {!loading && message && <div style={styles.errorMessage}>{message}</div>}
-
-              {!loading && !message && filteredRequests.length === 0 && (
-                <div style={styles.emptyCard}>
-                  검색어나 필터 조건에 맞는 요청이 없어요.
-                  <br />
-                  다른 검색어 또는 카테고리를 선택해보세요.
-                </div>
-              )}
-
-              {!loading &&
-                !message &&
-                filteredRequests.length > 0 &&
-                filteredRequests.map((request) => {
-                  const parsed = parseDescription(request.content);
-
-                  return (
-                    <HoverCard
-                      key={request.id}
-                      onClick={() => handleOpenDetail(request)}
-                      baseStyle={styles.requestCard}
-                      hoverStyle={{
-                        transform: isMobile ? "none" : "translateY(-3px)",
-                        boxShadow: "0 16px 34px rgba(15, 23, 42, 0.08)",
-                        border: "1px solid #d7e6fb",
-                      }}
-                    >
-                      <div style={styles.requestTop}>
-                        <div style={styles.requestTitleWrap}>
-                          <h3 style={styles.requestTitle}>{request.title}</h3>
-                          <div style={styles.requestSub}>요청 번호 #{request.id}</div>
-                        </div>
-
-                        <span
-                          style={{
-                            ...styles.statusPill,
-                            ...getStatusStyle(request.status),
-                          }}
-                        >
-                          {getStatusText(request.status)}
-                        </span>
-                      </div>
-
-                      <div style={styles.metaGrid}>
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>카테고리</div>
-                          <div style={styles.metaValue}>{request.category || "-"}</div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>공간 유형</div>
-                          <div style={styles.metaValue}>
-                            {request.location || parsed.placeType}
-                          </div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>담당자</div>
-                          <div style={styles.metaValue}>
-                            {request.assigned_username
-                              ? request.assigned_username
-                              : request.assigned_user_id
-                              ? "배정됨"
-                              : "아직 없음"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={styles.previewBox}>
-                        <div style={styles.previewLabel}>요청 내용</div>
-                        <div style={styles.previewValue}>
-                          {parsed.issueType !== "-" ? parsed.issueType : parsed.detailText}
-                        </div>
-                      </div>
-
-                      <div style={styles.footer}>
-                        <div style={styles.footerDate}>
-                          등록일 {formatDate(request.created_at)}
-                        </div>
-                        <div style={styles.footerLink}>상세보기 →</div>
-                      </div>
-                    </HoverCard>
-                  );
-                })}
+        <div style={styles.topArea}>
+          <div>
+            <h1 style={styles.title}>내 요청 목록</h1>
+            <div style={styles.subTitle}>
+              내가 등록한 유지보수 요청을 카드로 빠르게 확인해요.
             </div>
           </div>
 
-          <div style={styles.sideCard}>
-            <div style={styles.sideBadge}>빠른 이동</div>
-            <h3 style={styles.sideTitle}>내 요청 요약</h3>
-            <p style={styles.sideDesc}>
-              진행 상태를 한눈에 보고,
-              <br />
-              홈으로 돌아가서 새 요청도 바로 등록할 수 있어요.
-            </p>
+          <div style={styles.actionRow}>
+            <HoverButton
+              onClick={() => navigate("/requests/new")}
+              baseStyle={styles.topButton}
+              hoverStyle={{
+                background: BRAND_HOVER,
+                boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+              }}
+            >
+              요청 등록
+            </HoverButton>
 
             <HoverButton
               onClick={handleGoHome}
-              baseStyle={styles.sidePrimaryBtn}
+              baseStyle={styles.whiteTopButton}
               hoverStyle={{
-                background: BRAND_HOVER,
-                transform: isMobile ? "none" : "translateY(-1px)",
-                boxShadow: "0 14px 24px rgba(29, 78, 216, 0.22)",
+                color: BRAND,
               }}
             >
-              메인으로 돌아가기
+              메인으로
             </HoverButton>
-
-            <div style={styles.miniInfo}>
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>내 계정</div>
-                <div style={styles.miniValue}>{loginUser?.email || "-"}</div>
-              </div>
-
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>진행중 요청</div>
-                <div style={styles.miniValue}>{summary.active}건</div>
-              </div>
-
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>완료된 요청</div>
-                <div style={styles.miniValue}>{summary.completed}건</div>
-              </div>
-            </div>
           </div>
+        </div>
+
+        <div style={styles.summaryBar}>
+          <div style={styles.summaryItem}>
+            <div style={styles.summaryLabel}>전체 요청</div>
+            <div style={styles.summaryValue}>{summary.total}개</div>
+          </div>
+
+          <div style={styles.summaryItem}>
+            <div style={styles.summaryLabel}>요청 등록</div>
+            <div style={styles.summaryValue}>{summary.pending}개</div>
+          </div>
+
+          <div style={styles.summaryItem}>
+            <div style={styles.summaryLabel}>상담 진행</div>
+            <div style={styles.summaryValue}>{summary.active}개</div>
+          </div>
+
+          <div style={styles.summaryItem}>
+            <div style={styles.summaryLabel}>거래 완료</div>
+            <div style={styles.summaryValue}>{summary.completed}개</div>
+          </div>
+        </div>
+
+        <div style={styles.filterBox}>
+          <div style={styles.filterGrid}>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="제목, 내용, 카테고리로 검색"
+              style={styles.input}
+            />
+
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={styles.select}
+            >
+              {categoryOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.tabRow}>
+            {filterOptions.map((option) => {
+              const isActive = selectedFilter === option.key;
+
+              return (
+                <HoverButton
+                  key={option.key}
+                  onClick={() => setSelectedFilter(option.key)}
+                  baseStyle={{
+                    ...styles.tabButton,
+                    ...(isActive ? styles.activeTabButton : {}),
+                  }}
+                  hoverStyle={
+                    isActive ? { background: BRAND_HOVER } : { color: BRAND }
+                  }
+                >
+                  {option.label}
+                </HoverButton>
+              );
+            })}
+          </div>
+        </div>
+
+        <p style={styles.countText}>
+          총 {filteredRequests.length}개의 요청이 보여요.
+        </p>
+
+        {message && <div style={styles.message}>{message}</div>}
+
+        <div style={styles.grid}>
+          {loading && (
+            <div style={styles.emptyCard}>내 요청을 불러오는 중입니다...</div>
+          )}
+
+          {!loading && !message && filteredRequests.length === 0 && (
+            <div style={styles.emptyCard}>
+              조건에 맞는 요청이 없어요.
+              <br />
+              새 요청을 등록하거나 다른 필터를 선택해보세요.
+            </div>
+          )}
+
+          {!loading &&
+            !message &&
+            filteredRequests.map((request) => (
+              <RequestCard
+                key={request.id}
+                request={request}
+                onOpen={handleOpenDetail}
+                styles={styles}
+                isMobile={isMobile}
+              />
+            ))}
         </div>
       </div>
     </div>

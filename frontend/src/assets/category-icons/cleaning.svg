@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="handle_g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CE93D8"/>
+      <stop offset="100%" stop-color="#7B1FA2"/>
+    </linearGradient>
+    <linearGradient id="head_g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BA68C8"/>
+      <stop offset="100%" stop-color="#6A1B9A"/>
+    </linearGradient>
+  </defs>
+  <!-- Handle -->
+  <rect x="20" y="2" width="7" height="30" rx="3.5" fill="url(#handle_g)" transform="rotate(15 23.5 17)"/>
+  <!-- Handle shine -->
+  <rect x="21.5" y="3" width="2.5" height="28" rx="1.2" fill="white" fill-opacity="0.28" transform="rotate(15 23.5 17)"/>
+  <!-- Broom head -->
+  <rect x="5" y="36" width="38" height="10" rx="6" fill="url(#head_g)"/>
+  <!-- Head highlight -->
+  <rect x="5" y="36" width="38" height="5" rx="5" fill="#CE93D8"/>
+  <!-- Bristles -->
+  <line x1="11" y1="46" x2="10" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="17" y1="46" x2="16" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="23" y1="46" x2="22" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="29" y1="46" x2="28" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="35" y1="46" x2="34" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="41" y1="46" x2="40" y2="48" stroke="#6A1B9A" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Sparkles -->
+  <circle cx="42" cy="16" r="2.5" fill="#CE93D8" fill-opacity="0.7"/>
+  <circle cx="38" cy="8" r="1.6" fill="#E1BEE7" fill-opacity="0.8"/>
+  <circle cx="46" cy="26" r="1.8" fill="#CE93D8" fill-opacity="0.6"/>
+</svg>
