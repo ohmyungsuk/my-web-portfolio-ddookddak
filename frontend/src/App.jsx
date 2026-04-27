@@ -1,8 +1,3 @@
-import MyPage from "./pages/MyPage";
-import AdminPage from "./pages/AdminPage";
-import AdminRequestsPage from "./pages/AdminRequestsPage";
-import RequestEditPage from "./pages/RequestEditPage";
-import AdminUsersPage from "./pages/AdminUsersPage";
 import { useEffect, useMemo, useState } from "react";
 import {
   Navigate,
@@ -11,18 +6,29 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+
 import { supabase } from "./supabaseClient.js";
 
 import Header from "./components/common/Header";
+
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import OAuthCallback from "./pages/OAuthCallback";
+
+import MyPage from "./pages/MyPage";
+
 import RequestCreateFlow from "./pages/RequestCreateFlow";
 import MyRequestsPage from "./pages/MyRequestsPage";
 import AllRequestsPage from "./pages/AllRequestsPage";
 import MyAssignedRequestsPage from "./pages/MyAssignedRequestsPage";
 import RequestDetailPage from "./pages/RequestDetailPage";
-import OAuthCallback from "./pages/OAuthCallback";
+import RequestEditPage from "./pages/RequestEditPage";
+import AiRequestPage from "./pages/AiRequestPage";
+
+import AdminPage from "./pages/AdminPage";
+import AdminRequestsPage from "./pages/AdminRequestsPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -35,91 +41,99 @@ function App() {
   const isLoggedIn = !!session?.user;
 
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  const syncLoginUser = async (newSession) => {
-    if (!mounted) return;
+    const syncLoginUser = async (newSession) => {
+      if (!mounted) return;
 
-    setSession(newSession);
+      setSession(newSession);
 
-    if (!newSession?.user) {
-      localStorage.removeItem("loginUser");
-      localStorage.removeItem("role");
+      if (!newSession?.user) {
+        localStorage.removeItem("loginUser");
+        localStorage.removeItem("role");
+        setLoginUser(null);
+        setAuthReady(true);
+        return;
+      }
+
+      const user = newSession.user;
+
+      const safeName =
+        user.user_metadata?.name ||
+        user.user_metadata?.full_name ||
+        user.user_metadata?.preferred_username ||
+        user.user_metadata?.nickname ||
+        (user.email ? user.email.split("@")[0] : "사용자");
+
+      const safeUsername =
+        user.user_metadata?.preferred_username ||
+        user.user_metadata?.nickname ||
+        user.user_metadata?.name ||
+        user.user_metadata?.full_name ||
+        (user.email ? user.email.split("@")[0] : "user");
+
+      let profile = null;
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, username, name, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("프로필 조회 실패:", error);
+        }
+
+        profile = data || null;
+      } catch (error) {
+        console.error("프로필 조회 실패:", error);
+      }
+
+      const finalRole = profile?.role || "user";
+
+      const nextLoginUser = {
+        id: user.id,
+        supabaseUserId: user.id,
+        email: user.email || "",
+        name: profile?.name || safeName,
+        username: profile?.username || safeUsername,
+        nickname: profile?.name || safeName,
+        provider: user.app_metadata?.provider || "email",
+        role: finalRole,
+      };
+
+      localStorage.setItem("loginUser", JSON.stringify(nextLoginUser));
+      localStorage.setItem("role", finalRole);
+
+      setLoginUser(nextLoginUser);
       setAuthReady(true);
-      return;
-    }
-
-    const user = newSession.user;
-
-    const safeName =
-      user.user_metadata?.name ||
-      user.user_metadata?.full_name ||
-      user.user_metadata?.preferred_username ||
-      user.user_metadata?.nickname ||
-      (user.email ? user.email.split("@")[0] : "사용자");
-
-    const safeUsername =
-      user.user_metadata?.preferred_username ||
-      user.user_metadata?.nickname ||
-      user.user_metadata?.name ||
-      user.user_metadata?.full_name ||
-      (user.email ? user.email.split("@")[0] : "user");
-
-    let profile = null;
-
-    try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, username, name, role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      profile = data || null;
-    } catch (error) {
-      console.error("프로필 조회 실패:", error);
-    }
-
-    const finalRole = profile?.role || "user";
-
-    const loginUser = {
-      id: user.id,
-      supabaseUserId: user.id,
-      email: user.email || "",
-      name: profile?.name || safeName,
-      username: profile?.username || safeUsername,
-      nickname: profile?.name || safeName,
-      provider: user.app_metadata?.provider || "email",
-      role: finalRole,
     };
 
-    localStorage.setItem("loginUser", JSON.stringify(loginUser));
-    localStorage.setItem("role", finalRole);
-    setLoginUser(loginUser);
-    setAuthReady(true);
-  };
+    supabase.auth.getSession().then(({ data }) => {
+      syncLoginUser(data.session);
+    });
 
-  supabase.auth.getSession().then(({ data }) => {
-    syncLoginUser(data.session);
-  });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      syncLoginUser(newSession);
+    });
 
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, newSession) => {
-    syncLoginUser(newSession);
-  });
-
-  return () => {
-    mounted = false;
-    subscription.unsubscribe();
-  };
-}, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!authReady) return;
 
     const authPages = ["/login", "/signup"];
+
     const protectedPages = [
       "/requests/new",
+      "/requests/ai",
       "/requests/my",
       "/requests/all",
       "/requests/assigned",
@@ -129,15 +143,19 @@ function App() {
       "/admin/users",
     ];
 
-    const isDetailPage =
+    const isRequestDetailPage =
       location.pathname.startsWith("/requests/") &&
-      !location.pathname.startsWith("/requests/edit/");
-    const isEditPage = location.pathname.startsWith("/requests/edit/");
+      !location.pathname.startsWith("/requests/edit/") &&
+      !protectedPages.includes(location.pathname);
 
-    const isProtected =
-      protectedPages.includes(location.pathname) || isDetailPage || isEditPage;
+    const isRequestEditPage = location.pathname.startsWith("/requests/edit/");
 
-    if (!isLoggedIn && isProtected) {
+    const isProtectedPage =
+      protectedPages.includes(location.pathname) ||
+      isRequestDetailPage ||
+      isRequestEditPage;
+
+    if (!isLoggedIn && isProtectedPage) {
       navigate("/login", { replace: true });
       return;
     }
@@ -149,15 +167,21 @@ function App() {
 
   const userRole = useMemo(() => {
     const value = String(loginUser?.role || "").trim().toLowerCase();
+
     if (value === "admin") return "admin";
     if (value === "worker") return "worker";
+
     return "user";
   }, [loginUser]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+
     localStorage.removeItem("loginUser");
+    localStorage.removeItem("role");
+
     setLoginUser(null);
+
     navigate("/", { replace: true });
   };
 
@@ -199,13 +223,54 @@ function App() {
 
       <Routes>
         <Route
-          path="/admin/requests"
+          path="/"
           element={
-            <RequireRole isLoggedIn={isLoggedIn} userRole={userRole} allow={["admin"]}>
-              <AdminRequestsPage />
-            </RequireRole>
+            <LandingPage
+              isLoggedIn={isLoggedIn}
+              loginUser={loginUser}
+              onGoLogin={() => navigate("/login")}
+              onGoSignup={() => navigate("/signup")}
+              onGoCreate={() =>
+                isLoggedIn ? navigate("/requests/new") : navigate("/login")
+              }
+              onGoAiRequest={() =>
+                isLoggedIn ? navigate("/requests/ai") : navigate("/login")
+              }
+              onGoMyPage={() => navigate("/mypage")}
+              onGoMyRequests={() => navigate("/requests/my")}
+              onGoAllRequests={() => navigate("/requests/all")}
+              onGoAssignedRequests={() => navigate("/requests/assigned")}
+              onLogout={handleLogout}
+            />
           }
         />
+
+        <Route
+          path="/login"
+          element={
+            isLoggedIn ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Login
+                onSwitchToSignup={() => navigate("/signup")}
+                onLoginSuccess={() => navigate("/", { replace: true })}
+              />
+            )
+          }
+        />
+
+        <Route
+          path="/signup"
+          element={
+            isLoggedIn ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Signup onSwitchToLogin={() => navigate("/login")} />
+            )
+          }
+        />
+
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         <Route
           path="/mypage"
@@ -224,75 +289,19 @@ function App() {
         />
 
         <Route
-          path="/"
-          element={
-            <LandingPage
-              isLoggedIn={isLoggedIn}
-              loginUser={loginUser}
-              onGoLogin={() => navigate("/login")}
-              onGoSignup={() => navigate("/signup")}
-              onGoCreate={() =>
-                isLoggedIn ? navigate("/requests/new") : navigate("/login")
-              }
-              onGoMyPage={() => navigate("/mypage")}
-              onGoMyRequests={() => navigate("/requests/my")}
-              onGoAllRequests={() => navigate("/requests/all")}
-              onGoAssignedRequests={() => navigate("/requests/assigned")}
-              onLogout={handleLogout}
-            />
-          }
-        />
-
-          <Route
-            path="/admin/users"
-            element={
-              <RequireAuth isLoggedIn={isLoggedIn}>
-                <AdminUsersPage />
-              </RequireAuth>
-            }
-          />
-
-        <Route
-          path="/login"
-          element={
-            isLoggedIn ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login
-                onSwitchToSignup={() => navigate("/signup")}
-                onLoginSuccess={() => navigate("/", { replace: true })}
-              />
-            )
-          }
-        />
-
-        <Route
-          path="/admin/users"
+          path="/requests/new"
           element={
             <RequireAuth isLoggedIn={isLoggedIn}>
-              <AdminUsersPage />
+              <RequestCreateFlow />
             </RequireAuth>
           }
         />
 
         <Route
-          path="/signup"
-          element={
-            isLoggedIn ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Signup onSwitchToLogin={() => navigate("/login")} />
-            )
-          }
-        />
-
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
-
-        <Route
-          path="/requests/new"
+          path="/requests/ai"
           element={
             <RequireAuth isLoggedIn={isLoggedIn}>
-              <RequestCreateFlow />
+              <AiRequestPage loginUser={loginUser} />
             </RequireAuth>
           }
         />
@@ -350,6 +359,15 @@ function App() {
         />
 
         <Route
+          path="/requests/edit/:id"
+          element={
+            <RequireAuth isLoggedIn={isLoggedIn}>
+              <RequestEditPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route
           path="/requests/:id"
           element={
             <RequireAuth isLoggedIn={isLoggedIn}>
@@ -361,18 +379,39 @@ function App() {
         <Route
           path="/admin"
           element={
-            <RequireRole isLoggedIn={isLoggedIn} userRole={userRole} allow={["admin"]}>
+            <RequireRole
+              isLoggedIn={isLoggedIn}
+              userRole={userRole}
+              allow={["admin"]}
+            >
               <AdminPage />
             </RequireRole>
           }
         />
 
         <Route
-          path="/requests/edit/:id"
+          path="/admin/requests"
           element={
-            <RequireAuth isLoggedIn={isLoggedIn}>
-              <RequestEditPage />
-            </RequireAuth>
+            <RequireRole
+              isLoggedIn={isLoggedIn}
+              userRole={userRole}
+              allow={["admin"]}
+            >
+              <AdminRequestsPage />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <RequireRole
+              isLoggedIn={isLoggedIn}
+              userRole={userRole}
+              allow={["admin"]}
+            >
+              <AdminUsersPage />
+            </RequireRole>
           }
         />
 
@@ -386,6 +425,7 @@ function RequireAuth({ isLoggedIn, children }) {
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
+
   return children;
 }
 

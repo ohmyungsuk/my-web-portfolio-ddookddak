@@ -1712,6 +1712,218 @@ export default function RequestCreateFlow() {
     grid-template-columns: 1fr;
   }
 }
+
+    /* ===== 상단 카테고리 아이콘 영역 최종 정리: 큰 카드 배경 제거 ===== */
+    .dd-icon-banner {
+      width: 100% !important;
+      max-width: 1120px !important;
+      margin: 14px auto 18px !important;
+      padding: 0 10px !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+
+    .dd-icon-row {
+      display: grid !important;
+      grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: start !important;
+      justify-content: center !important;
+      width: 100% !important;
+      padding: 4px 0 16px !important;
+      overflow: visible !important;
+      cursor: default !important;
+      user-select: none !important;
+      scrollbar-width: none !important;
+    }
+
+    .dd-icon-row::-webkit-scrollbar {
+      display: none !important;
+    }
+
+    .dd-icon-row.dragging {
+      cursor: default !important;
+    }
+
+    .dd-icon-pill {
+      position: relative !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: auto !important;
+      min-height: 0 !important;
+      padding: 4px 2px 13px !important;
+      border: none !important;
+      border-radius: 16px !important;
+      background: transparent !important;
+      color: #334155 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 7px !important;
+      cursor: pointer !important;
+      text-align: center !important;
+      overflow: visible !important;
+      outline: none !important;
+      flex: initial !important;
+      scroll-snap-align: none !important;
+      transition: transform 0.18s ease, background-color 0.18s ease !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .dd-icon-pill:hover {
+      transform: translateY(-1px) !important;
+      background: rgba(239, 246, 255, 0.5) !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .dd-icon-pill:focus,
+    .dd-icon-pill:focus-visible,
+    .dd-icon-pill:active {
+      outline: none !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .dd-icon-pill.active {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      margin-bottom: 0 !important;
+    }
+
+    .dd-icon-pill::after {
+      content: "" !important;
+      position: absolute !important;
+      left: 50% !important;
+      bottom: 2px !important;
+      width: 0 !important;
+      height: 3px !important;
+      border-radius: 999px !important;
+      background: #2f80ed !important;
+      transform: translateX(-50%) !important;
+      transition: width 0.18s ease !important;
+    }
+
+    .dd-icon-pill.active::after {
+      width: 34px !important;
+    }
+
+    .dd-icon-symbol {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      border-radius: 14px !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow: visible !important;
+      color: inherit !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    .dd-icon-pill:hover .dd-icon-symbol,
+    .dd-icon-pill.active .dd-icon-symbol {
+      background: rgba(239, 246, 255, 0.7) !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .dd-category-icon-img {
+      width: 32px !important;
+      height: 32px !important;
+      object-fit: contain !important;
+      display: block !important;
+      user-select: none !important;
+      pointer-events: none !important;
+    }
+
+    .dd-icon-label,
+    .dd-icon-pill span:last-child {
+      display: block !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      font-size: 13px !important;
+      line-height: 1.25 !important;
+      font-weight: 800 !important;
+      color: #334155 !important;
+      text-align: center !important;
+      word-break: keep-all !important;
+      white-space: normal !important;
+    }
+
+    .dd-icon-pill.active .dd-icon-label,
+    .dd-icon-pill.active span:last-child {
+      color: #0f172a !important;
+    }
+
+    @media (max-width: 1080px) {
+      .dd-icon-row {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 12px 8px !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .dd-icon-banner {
+        margin: 10px auto 14px !important;
+        padding: 0 12px !important;
+      }
+
+      .dd-icon-row {
+        display: flex !important;
+        justify-content: flex-start !important;
+        gap: 14px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding: 4px 2px 14px !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      .dd-icon-pill {
+        flex: 0 0 66px !important;
+        width: 66px !important;
+        min-width: 66px !important;
+        padding: 4px 0 12px !important;
+        gap: 6px !important;
+      }
+
+      .dd-icon-symbol {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+      }
+
+      .dd-category-icon-img {
+        width: 27px !important;
+        height: 27px !important;
+      }
+
+      .dd-icon-label,
+      .dd-icon-pill span:last-child {
+        font-size: 12px !important;
+        line-height: 1.25 !important;
+      }
+
+      .dd-icon-pill.active::after {
+        width: 28px !important;
+      }
+    }
+
   `;
 
   if (selectedService) {

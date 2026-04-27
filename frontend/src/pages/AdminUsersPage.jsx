@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -8,14 +8,9 @@ const TEXT = "#0F172A";
 const SUB = "#64748B";
 const BG = "#F4F7FB";
 const CARD = "#FFFFFF";
-const BORDER = "#DBE4F0";
+const BORDER = "#D9E4F2";
 const SOFT = "#F8FBFF";
 const DANGER = "#EF4444";
-
-function getWindowWidth() {
-  if (typeof window === "undefined") return 1024;
-  return window.innerWidth;
-}
 
 function normalizeRole(role) {
   const value = String(role || "").trim().toLowerCase();
@@ -46,142 +41,44 @@ function getDisplayName(user) {
   return user?.name || user?.username || user?.email || "이름 없음";
 }
 
-function getRoleStyle(role) {
-  const normalized = normalizeRole(role);
-
-  if (normalized === "admin") {
-    return {
-      backgroundColor: "#FEF2F2",
-      color: "#DC2626",
-      borderColor: "#FECACA",
-    };
-  }
-
-  if (normalized === "worker") {
-    return {
-      backgroundColor: "#EEF2FF",
-      color: "#4F46E5",
-      borderColor: "#C7D2FE",
-    };
-  }
-
-  return {
-    backgroundColor: "#F1F5F9",
-    color: "#475569",
-    borderColor: "#E2E8F0",
-  };
-}
-
-function getProviderStyle(provider) {
-  const value = String(provider || "").trim().toLowerCase();
-
-  if (value === "google") {
-    return {
-      backgroundColor: "#FFF7ED",
-      color: "#C2410C",
-      borderColor: "#FED7AA",
-    };
-  }
-
-  if (value === "kakao") {
-    return {
-      backgroundColor: "#FEF9C3",
-      color: "#854D0E",
-      borderColor: "#FDE68A",
-    };
-  }
-
-  if (value === "email") {
-    return {
-      backgroundColor: "#EFF6FF",
-      color: "#2563EB",
-      borderColor: "#BFDBFE",
-    };
-  }
-
-  return {
-    backgroundColor: "#F8FAFC",
-    color: "#64748B",
-    borderColor: "#E2E8F0",
-  };
-}
-
 function formatDate(value) {
   if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
 
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
-    2,
-    "0",
-  )}.${String(date.getDate()).padStart(2, "0")}`;
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
-function HoverButton({
-  children,
-  onClick,
-  baseStyle,
-  hoverStyle = {},
-  disabled = false,
-  type = "button",
-}) {
-  const [isHover, setIsHover] = useState(false);
+function getRoleClass(role) {
+  const normalized = normalizeRole(role);
 
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setIsHover(true)}
-      onMouseLeave={() => setIsHover(false)}
-      onMouseDown={(e) => e.currentTarget.blur()}
-      onMouseUp={(e) => e.currentTarget.blur()}
-      onFocus={(e) => e.currentTarget.blur()}
-      style={{
-        ...baseStyle,
-        ...(isHover && !disabled ? hoverStyle : {}),
-        opacity: disabled ? 0.68 : 1,
-        cursor: disabled ? "not-allowed" : baseStyle?.cursor || "pointer",
-        outline: "none",
-        outlineOffset: 0,
-        WebkitTapHighlightColor: "transparent",
-        appearance: "none",
-        WebkitAppearance: "none",
-        MozAppearance: "none",
-        userSelect: "none",
-      }}
-    >
-      {children}
-    </button>
-  );
+  if (normalized === "admin") return "admin-user-role admin";
+  if (normalized === "worker") return "admin-user-role worker";
+  return "admin-user-role user";
 }
 
-function HoverCard({ children, baseStyle, hoverStyle = {} }) {
-  const [isHover, setIsHover] = useState(false);
+function getProviderClass(provider) {
+  const value = String(provider || "").trim().toLowerCase();
 
-  return (
-    <div
-      onMouseEnter={() => setIsHover(true)}
-      onMouseLeave={() => setIsHover(false)}
-      style={{
-        ...baseStyle,
-        ...(isHover ? hoverStyle : {}),
-      }}
-    >
-      {children}
-    </div>
-  );
+  if (value === "google") return "admin-user-provider google";
+  if (value === "kakao") return "admin-user-provider kakao";
+  if (value === "email") return "admin-user-provider email";
+  return "admin-user-provider unknown";
 }
 
-function StatCard({ label, value, sub, styles }) {
-  return (
-    <div style={styles.statCard}>
-      <div style={styles.statLabel}>{label}</div>
-      <div style={styles.statValue}>{value}</div>
-      <div style={styles.statSub}>{sub}</div>
-    </div>
-  );
+function readLoginUser() {
+  try {
+    const savedUser = localStorage.getItem("loginUser");
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch (error) {
+    console.error("loginUser 파싱 실패:", error);
+    return null;
+  }
 }
 
 export default function AdminUsersPage() {
@@ -189,37 +86,27 @@ export default function AdminUsersPage() {
 
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loginUser, setLoginUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [providerFilter, setProviderFilter] = useState("all");
   const [savingUserId, setSavingUserId] = useState(null);
   const [message, setMessage] = useState("");
-  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
 
-  const isMobile = windowWidth <= 900;
-  const isSmallMobile = windowWidth <= 480;
+  const loginUser = useMemo(() => readLoginUser(), []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .order("auth_created_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("회원 목록 조회 실패:", error);
+      throw error;
+    }
 
     setUsers(Array.isArray(data) ? data : []);
-  };
-
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(getWindowWidth());
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -228,47 +115,35 @@ export default function AdminUsersPage() {
     const checkAdminAndLoad = async () => {
       try {
         setLoading(true);
-        setMessage("");
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        let currentUser = user || null;
-        let currentUserId = user?.id || null;
-
-        if (userError || !currentUserId) {
-          try {
-            const savedUser = localStorage.getItem("loginUser");
-            const parsedUser = savedUser ? JSON.parse(savedUser) : null;
-
-            currentUser = parsedUser || null;
-            currentUserId = parsedUser?.supabaseUserId || parsedUser?.id || null;
-          } catch (error) {
-            console.error("loginUser 파싱 실패:", error);
-          }
-        }
-
-        if (!currentUserId) {
+        if (!loginUser?.id && !loginUser?.supabaseUserId) {
           navigate("/login", { replace: true });
           return;
         }
 
-        if (!mounted) return;
-        setLoginUser(currentUser);
+        const userId = loginUser?.supabaseUserId || loginUser?.id;
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
-          .eq("id", currentUserId)
-          .maybeSingle();
+          .eq("id", userId)
+          .single();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("관리자 권한 확인 실패:", profileError);
+
+          if (mounted) {
+            setIsAdmin(false);
+            setLoading(false);
+          }
+
+          return;
+        }
 
         const admin = normalizeRole(profile?.role) === "admin";
 
         if (!mounted) return;
+
         setIsAdmin(admin);
 
         if (!admin) {
@@ -282,12 +157,12 @@ export default function AdminUsersPage() {
           setLoading(false);
         }
       } catch (error) {
-        console.error("관리자 회원관리 페이지 로딩 실패:", error);
+        console.error("관리자 사용자 페이지 로딩 실패:", error);
 
         if (mounted) {
           setMessage(error.message || "회원 목록을 불러오지 못했습니다.");
-          setIsAdmin(false);
           setLoading(false);
+          setIsAdmin(false);
         }
       }
     };
@@ -297,26 +172,17 @@ export default function AdminUsersPage() {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [fetchUsers, loginUser, navigate]);
 
   const summary = useMemo(() => {
+    const roles = users.map((user) => normalizeRole(user?.role));
+
     return {
       total: users.length,
-      normal: users.filter((user) => normalizeRole(user.role) === "user")
-        .length,
-      worker: users.filter((user) => normalizeRole(user.role) === "worker")
-        .length,
-      admin: users.filter((user) => normalizeRole(user.role) === "admin")
-        .length,
+      user: roles.filter((role) => role === "user").length,
+      worker: roles.filter((role) => role === "worker").length,
+      admin: roles.filter((role) => role === "admin").length,
     };
-  }, [users]);
-
-  const providerOptions = useMemo(() => {
-    const providers = users
-      .map((user) => String(user?.provider || "").trim().toLowerCase())
-      .filter(Boolean);
-
-    return ["all", ...Array.from(new Set(providers))];
   }, [users]);
 
   const filteredUsers = useMemo(() => {
@@ -324,15 +190,9 @@ export default function AdminUsersPage() {
 
     return users.filter((user) => {
       const normalizedRole = normalizeRole(user?.role);
-      const normalizedProvider = String(user?.provider || "")
-        .trim()
-        .toLowerCase();
 
       const matchesRole =
         roleFilter === "all" ? true : normalizedRole === roleFilter;
-
-      const matchesProvider =
-        providerFilter === "all" ? true : normalizedProvider === providerFilter;
 
       const searchTarget = [
         user?.name,
@@ -340,8 +200,6 @@ export default function AdminUsersPage() {
         user?.email,
         user?.provider,
         user?.id,
-        getRoleText(user?.role),
-        getProviderText(user?.provider),
       ]
         .filter(Boolean)
         .join(" ")
@@ -349,15 +207,17 @@ export default function AdminUsersPage() {
 
       const matchesKeyword = keyword === "" || searchTarget.includes(keyword);
 
-      return matchesRole && matchesProvider && matchesKeyword;
+      return matchesRole && matchesKeyword;
     });
-  }, [users, roleFilter, providerFilter, searchKeyword]);
+  }, [users, roleFilter, searchKeyword]);
 
   const handleRoleChange = (userId, nextRole) => {
+    setMessage("");
+
     setUsers((prev) =>
       prev.map((user) =>
-        user.id === userId ? { ...user, role: normalizeRole(nextRole) } : user,
-      ),
+        user.id === userId ? { ...user, role: normalizeRole(nextRole) } : user
+      )
     );
   };
 
@@ -375,7 +235,7 @@ export default function AdminUsersPage() {
 
       if (error) throw error;
 
-      setMessage("역할이 저장되었습니다.");
+      setMessage(`${getDisplayName(user)}님의 역할이 저장되었습니다.`);
     } catch (error) {
       console.error("역할 저장 실패:", error);
       setMessage(error.message || "역할 저장 중 문제가 발생했습니다.");
@@ -385,779 +245,744 @@ export default function AdminUsersPage() {
     }
   };
 
-  const styles = {
-    page: {
-      minHeight: "100dvh",
-      background: BG,
-      padding: isMobile ? "88px 14px 28px" : "104px 24px 52px",
-      boxSizing: "border-box",
-      fontFamily:
-        '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-    container: {
-      maxWidth: "1180px",
-      margin: "0 auto",
-    },
-    pageTitle: {
-      margin: "0 0 18px",
-      fontSize: isMobile ? "21px" : "25px",
-      fontWeight: 850,
-      color: TEXT,
-      letterSpacing: "-0.4px",
-      lineHeight: 1.35,
-    },
-    shell: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 310px",
-      gap: isMobile ? "14px" : "18px",
-      alignItems: "start",
-    },
-    mainCard: {
-      background: CARD,
-      border: `1px solid ${BORDER}`,
-      borderRadius: isMobile ? "20px" : "24px",
-      padding: isSmallMobile ? "15px" : isMobile ? "16px" : "22px",
-      boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
-      boxSizing: "border-box",
-    },
-    heroCard: {
-      background: "linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%)",
-      border: `1px solid ${BORDER}`,
-      borderRadius: isMobile ? "18px" : "20px",
-      padding: isMobile ? "16px" : "20px",
-      marginBottom: "16px",
-      boxSizing: "border-box",
-    },
-    eyebrow: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "7px 11px",
-      borderRadius: "999px",
-      background: "#EAF2FF",
-      color: BRAND,
-      fontSize: "12px",
-      fontWeight: 850,
-      marginBottom: "12px",
-    },
-    heroTitle: {
-      margin: 0,
-      fontSize: isMobile ? "23px" : "28px",
-      fontWeight: 850,
-      color: TEXT,
-      lineHeight: 1.35,
-      letterSpacing: "-0.6px",
-      wordBreak: "keep-all",
-    },
-    heroSub: {
-      marginTop: "10px",
-      fontSize: isMobile ? "13px" : "14px",
-      color: SUB,
-      lineHeight: 1.7,
-      fontWeight: 500,
-      wordBreak: "keep-all",
-    },
-    statGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))",
-      gap: "10px",
-      marginTop: "16px",
-    },
-    statCard: {
-      background: "#FFFFFF",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "16px",
-      padding: isMobile ? "14px" : "15px",
-      boxSizing: "border-box",
-    },
-    statLabel: {
-      fontSize: "12px",
-      color: SUB,
-      fontWeight: 750,
-      marginBottom: "7px",
-    },
-    statValue: {
-      fontSize: isMobile ? "21px" : "23px",
-      color: TEXT,
-      fontWeight: 850,
-      letterSpacing: "-0.35px",
-      lineHeight: 1.2,
-    },
-    statSub: {
-      marginTop: "6px",
-      fontSize: "12px",
-      color: SUB,
-      lineHeight: 1.5,
-      fontWeight: 500,
-      wordBreak: "keep-all",
-    },
-    controlsCard: {
-      background: SOFT,
-      border: `1px solid ${BORDER}`,
-      borderRadius: "18px",
-      padding: isMobile ? "14px" : "16px",
-      marginBottom: "18px",
-      boxSizing: "border-box",
-    },
-    controlLabel: {
-      fontSize: "13px",
-      color: TEXT,
-      fontWeight: 800,
-      marginBottom: "10px",
-    },
-    filterBar: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 170px 170px",
-      gap: "10px",
-    },
-    input: {
-      width: "100%",
-      height: "48px",
-      padding: "0 15px",
-      borderRadius: "14px",
-      border: `1px solid ${BORDER}`,
-      background: "#FFFFFF",
-      color: TEXT,
-      fontSize: "14px",
-      fontWeight: 500,
-      outline: "none",
-      boxSizing: "border-box",
-      WebkitAppearance: "none",
-      appearance: "none",
-    },
-    select: {
-      width: "100%",
-      height: "48px",
-      padding: "0 14px",
-      borderRadius: "14px",
-      border: `1px solid ${BORDER}`,
-      background: "#FFFFFF",
-      color: TEXT,
-      fontSize: "14px",
-      fontWeight: 500,
-      outline: "none",
-      boxSizing: "border-box",
-    },
-    countText: {
-      marginTop: "12px",
-      fontSize: "13px",
-      color: SUB,
-      lineHeight: 1.6,
-      fontWeight: 600,
-      wordBreak: "keep-all",
-    },
-    message: {
-      marginBottom: "14px",
-      padding: "12px 14px",
-      borderRadius: "14px",
-      fontSize: "13px",
-      fontWeight: 650,
-      lineHeight: 1.6,
-      border: "1px solid #D9E6FF",
-      background: "#F8FBFF",
-      color: BRAND_HOVER,
-      wordBreak: "keep-all",
-      boxSizing: "border-box",
-    },
-    listWrap: {
-      display: "grid",
-      gap: "14px",
-    },
-    emptyCard: {
-      background: "#FFFFFF",
-      border: `1px dashed ${BORDER}`,
-      borderRadius: "18px",
-      padding: "34px 20px",
-      textAlign: "center",
-      color: SUB,
-      fontSize: "14px",
-      lineHeight: 1.8,
-      fontWeight: 550,
-      wordBreak: "keep-all",
-    },
-    userCard: {
-      background: "#FFFFFF",
-      border: "1px solid #E6EDF5",
-      borderRadius: "20px",
-      padding: isMobile ? "16px" : "18px",
-      transition:
-        "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
-      boxShadow: "0 8px 22px rgba(15, 23, 42, 0.035)",
-      boxSizing: "border-box",
-    },
-    userTop: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: isMobile ? "flex-start" : "center",
-      flexDirection: isMobile ? "column" : "row",
-      gap: "12px",
-      marginBottom: "14px",
-    },
-    nameArea: {
-      minWidth: 0,
-    },
-    userName: {
-      margin: 0,
-      fontSize: isMobile ? "18px" : "19px",
-      fontWeight: 850,
-      color: TEXT,
-      lineHeight: 1.45,
-      letterSpacing: "-0.3px",
-      wordBreak: "break-word",
-    },
-    userSub: {
-      marginTop: "6px",
-      fontSize: "13px",
-      color: SUB,
-      fontWeight: 550,
-      wordBreak: "break-all",
-    },
-    badgeRow: {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      flexWrap: "wrap",
-    },
-    badge: {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "8px 12px",
-      borderRadius: "999px",
-      fontSize: "12px",
-      fontWeight: 800,
-      whiteSpace: "nowrap",
-      border: "1px solid transparent",
-      boxSizing: "border-box",
-    },
-    metaGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-      gap: "10px",
-      marginBottom: "14px",
-    },
-    metaBox: {
-      background: "#FBFDFF",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "15px",
-      padding: "12px 14px",
-      boxSizing: "border-box",
-    },
-    metaLabel: {
-      fontSize: "12px",
-      color: SUB,
-      fontWeight: 750,
-      marginBottom: "6px",
-    },
-    metaValue: {
-      fontSize: "14px",
-      color: TEXT,
-      fontWeight: 750,
-      lineHeight: 1.55,
-      wordBreak: "break-word",
-    },
-    idValue: {
-      fontSize: "13px",
-      color: TEXT,
-      fontWeight: 650,
-      lineHeight: 1.55,
-      wordBreak: "break-all",
-    },
-    actionBox: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 160px",
-      gap: "10px",
-      alignItems: "end",
-      paddingTop: "14px",
-      borderTop: "1px solid #EDF2F7",
-    },
-    actionLabel: {
-      fontSize: "12px",
-      color: SUB,
-      fontWeight: 800,
-      marginBottom: "8px",
-    },
-    saveBtn: {
-      width: "100%",
-      minHeight: "48px",
-      border: "1px solid transparent",
-      borderRadius: "14px",
-      background: BRAND,
-      color: "#FFFFFF",
-      fontSize: "14px",
-      fontWeight: 800,
-      cursor: "pointer",
-      outline: "none",
-      outlineOffset: 0,
-      boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
-      transition:
-        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
-      boxSizing: "border-box",
-    },
-    sideCard: {
-      background: CARD,
-      border: `1px solid ${BORDER}`,
-      borderRadius: isMobile ? "20px" : "24px",
-      padding: isMobile ? "16px" : "18px",
-      boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
-      position: isMobile ? "static" : "sticky",
-      top: "94px",
-      boxSizing: "border-box",
-    },
-    sideBadge: {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "7px 10px",
-      borderRadius: "999px",
-      background: "#EEF4FF",
-      color: BRAND,
-      fontSize: "12px",
-      fontWeight: 850,
-      marginBottom: "12px",
-    },
-    sideTitle: {
-      margin: 0,
-      fontSize: "19px",
-      fontWeight: 850,
-      color: TEXT,
-      letterSpacing: "-0.3px",
-    },
-    sideDesc: {
-      margin: "8px 0 16px",
-      fontSize: "13px",
-      lineHeight: 1.7,
-      color: SUB,
-      fontWeight: 500,
-      wordBreak: "keep-all",
-    },
-    primaryBtn: {
-      width: "100%",
-      minHeight: "48px",
-      border: "1px solid transparent",
-      borderRadius: "14px",
-      background: BRAND,
-      color: "#FFFFFF",
-      fontSize: "14px",
-      fontWeight: 800,
-      cursor: "pointer",
-      outline: "none",
-      outlineOffset: 0,
-      boxShadow: "0 10px 20px rgba(47, 128, 237, 0.16)",
-      transition:
-        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
-      boxSizing: "border-box",
-    },
-    whiteBtn: {
-      width: "100%",
-      minHeight: "48px",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "14px",
-      background: "#FFFFFF",
-      color: TEXT,
-      fontSize: "14px",
-      fontWeight: 800,
-      cursor: "pointer",
-      outline: "none",
-      outlineOffset: 0,
-      boxShadow: "none",
-      transition:
-        "background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease",
-      boxSizing: "border-box",
-    },
-    miniInfo: {
-      marginTop: "16px",
-      paddingTop: "16px",
-      borderTop: `1px solid ${BORDER}`,
-      display: "grid",
-      gap: "10px",
-    },
-    miniItem: {
-      background: "#F8FBFF",
-      borderRadius: "15px",
-      padding: "12px 14px",
-      border: `1px solid ${BORDER}`,
-      boxSizing: "border-box",
-    },
-    miniLabel: {
-      fontSize: "12px",
-      fontWeight: 750,
-      color: SUB,
-      marginBottom: "4px",
-    },
-    miniValue: {
-      fontSize: "14px",
-      fontWeight: 750,
-      color: TEXT,
-      lineHeight: 1.55,
-      wordBreak: "break-word",
-    },
-    loadingWrap: {
-      background: "#FFFFFF",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "18px",
-      padding: "30px 20px",
-      textAlign: "center",
-      color: SUB,
-      fontSize: "15px",
-      fontWeight: 700,
-      boxSizing: "border-box",
-    },
-    dangerText: {
-      color: DANGER,
-      fontWeight: 750,
-    },
-  };
-
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.loadingWrap}>
-            회원 목록과 역할 정보를 불러오는 중입니다...
-          </div>
-        </div>
+      <div className="admin-users-page">
+        <style>{styles}</style>
+
+        <main className="admin-users-container">
+          <section className="admin-users-empty-card">
+            <h1>회원 관리 불러오는 중...</h1>
+            <p>회원 목록과 역할 정보를 확인하고 있어요.</p>
+          </section>
+        </main>
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.loadingWrap}>
-            관리자만 접근할 수 있어요.
-            {message && (
-              <div style={{ marginTop: "8px", fontSize: "13px" }}>
-                {message}
-              </div>
-            )}
-            <div
-              style={{
-                display: "grid",
-                gap: "10px",
-                maxWidth: "260px",
-                margin: "18px auto 0",
-              }}
-            >
-              <HoverButton
-                onClick={() => navigate("/admin")}
-                baseStyle={styles.primaryBtn}
-                hoverStyle={{
-                  background: BRAND_HOVER,
-                  boxShadow: "0 14px 24px rgba(31, 111, 214, 0.22)",
-                }}
-              >
-                관리자 메인
-              </HoverButton>
+      <div className="admin-users-page">
+        <style>{styles}</style>
 
-              <HoverButton
-                onClick={() => navigate("/")}
-                baseStyle={styles.whiteBtn}
-                hoverStyle={{
-                  color: BRAND,
-                }}
+        <main className="admin-users-container">
+          <section className="admin-users-empty-card">
+            <h1>관리자만 접근할 수 있어요</h1>
+            <p>
+              현재 계정은 관리자 권한이 없어서 회원 관리 페이지를 볼 수 없습니다.
+            </p>
+
+            <div className="admin-users-top-actions">
+              <button
+                type="button"
+                className="admin-users-white-button"
+                onClick={() => navigate("/admin")}
               >
-                메인으로 돌아가기
-              </HoverButton>
+                관리자 메인으로
+              </button>
+
+              <button
+                type="button"
+                className="admin-users-blue-button"
+                onClick={() => navigate("/")}
+              >
+                홈으로
+              </button>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h1 style={styles.pageTitle}>회원 관리</h1>
+    <div className="admin-users-page">
+      <style>{styles}</style>
 
-        <div style={styles.shell}>
-          <div style={styles.mainCard}>
-            <div style={styles.heroCard}>
-              <div style={styles.eyebrow}>관리자 회원 관리</div>
+      <main className="admin-users-container">
+        <section className="admin-users-hero">
+          <div>
+            <span className="admin-users-kicker">관리자 회원 관리</span>
+            <h1>전체 회원 관리</h1>
+            <p>
+              회원 목록을 확인하고, 필요한 경우 일반 회원 / 전문가 / 관리자
+              역할을 변경할 수 있어요.
+            </p>
+          </div>
 
-              <h2 style={styles.heroTitle}>
-                전체 회원과 역할 정보를 관리해요
-              </h2>
+          <div className="admin-users-top-actions">
+            <button
+              type="button"
+              className="admin-users-white-button"
+              onClick={() => navigate("/admin")}
+            >
+              관리자 메인
+            </button>
 
-              <div style={styles.heroSub}>
-                회원 목록을 확인하고, 일반 회원/전문가/관리자 역할을 변경할 수
-                있어요.
-              </div>
+            <button
+              type="button"
+              className="admin-users-blue-button"
+              onClick={() => navigate("/admin/requests")}
+            >
+              요청 관리
+            </button>
+          </div>
+        </section>
 
-              <div style={styles.statGrid}>
-                <StatCard
-                  label="전체 회원"
-                  value={`${summary.total}명`}
-                  sub="등록된 전체 회원"
-                  styles={styles}
-                />
+        <section className="admin-users-summary-grid">
+          <div className="admin-users-summary-card">
+            <span>전체 회원</span>
+            <strong>{summary.total}명</strong>
+          </div>
 
-                <StatCard
-                  label="일반 회원"
-                  value={`${summary.normal}명`}
-                  sub="요청을 등록하는 회원"
-                  styles={styles}
-                />
+          <div className="admin-users-summary-card">
+            <span>일반 회원</span>
+            <strong>{summary.user}명</strong>
+          </div>
 
-                <StatCard
-                  label="전문가"
-                  value={`${summary.worker}명`}
-                  sub="요청을 수락하는 회원"
-                  styles={styles}
-                />
+          <div className="admin-users-summary-card">
+            <span>전문가</span>
+            <strong>{summary.worker}명</strong>
+          </div>
 
-                <StatCard
-                  label="관리자"
-                  value={`${summary.admin}명`}
-                  sub="서비스를 관리하는 계정"
-                  styles={styles}
-                />
-              </div>
+          <div className="admin-users-summary-card">
+            <span>관리자</span>
+            <strong>{summary.admin}명</strong>
+          </div>
+        </section>
+
+        <section className="admin-users-filter-card">
+          <div className="admin-users-filter-grid">
+            <label className="admin-users-field">
+              <span>검색</span>
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="이름, 아이디, 이메일, 가입방식, 회원 ID 검색"
+              />
+            </label>
+
+            <label className="admin-users-field">
+              <span>역할</span>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="all">전체 역할</option>
+                <option value="user">일반 회원</option>
+                <option value="worker">전문가</option>
+                <option value="admin">관리자</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="admin-users-count">
+            총 <strong>{filteredUsers.length}</strong>명의 회원이 보여요.
+          </div>
+
+          {message && <div className="admin-users-message">{message}</div>}
+        </section>
+
+        <section className="admin-users-list-section">
+          {filteredUsers.length === 0 ? (
+            <div className="admin-users-empty-list">
+              조건에 맞는 회원이 없습니다.
             </div>
+          ) : (
+            <div className="admin-users-list">
+              {filteredUsers.map((user) => (
+                <article key={user.id} className="admin-users-card">
+                  <div className="admin-users-card-top">
+                    <div className="admin-users-avatar">
+                      {String(getDisplayName(user)).slice(0, 1)}
+                    </div>
 
-            <div style={styles.controlsCard}>
-              <div style={styles.controlLabel}>검색 및 필터</div>
+                    <div className="admin-users-main-info">
+                      <div className="admin-users-name-row">
+                        <h2>{getDisplayName(user)}</h2>
 
-              <div style={styles.filterBar}>
-                <input
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="이름, 아이디, 이메일, 가입방식, 회원 ID 검색"
-                  style={styles.input}
-                />
-
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  style={styles.select}
-                >
-                  <option value="all">전체 역할</option>
-                  <option value="user">일반 회원</option>
-                  <option value="worker">전문가</option>
-                  <option value="admin">관리자</option>
-                </select>
-
-                <select
-                  value={providerFilter}
-                  onChange={(e) => setProviderFilter(e.target.value)}
-                  style={styles.select}
-                >
-                  {providerOptions.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider === "all"
-                        ? "전체 가입방식"
-                        : getProviderText(provider)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.countText}>
-                총 <strong>{filteredUsers.length}</strong>명의 회원이 보여요.
-              </div>
-            </div>
-
-            {message && <div style={styles.message}>{message}</div>}
-
-            <div style={styles.listWrap}>
-              {filteredUsers.length === 0 ? (
-                <div style={styles.emptyCard}>조건에 맞는 회원이 없어요.</div>
-              ) : (
-                filteredUsers.map((user) => {
-                  const saving = savingUserId === user.id;
-                  const joinedAt = user?.auth_created_at || user?.created_at;
-                  const isMe =
-                    loginUser?.id === user.id ||
-                    loginUser?.supabaseUserId === user.id;
-
-                  return (
-                    <HoverCard
-                      key={user.id}
-                      baseStyle={styles.userCard}
-                      hoverStyle={{
-                        transform: isMobile ? "none" : "translateY(-3px)",
-                        boxShadow: "0 16px 34px rgba(15, 23, 42, 0.08)",
-                        borderColor: "#D7E6FB",
-                      }}
-                    >
-                      <div style={styles.userTop}>
-                        <div style={styles.nameArea}>
-                          <h3 style={styles.userName}>
-                            {getDisplayName(user)}
-                            {isMe ? " (나)" : ""}
-                          </h3>
-                          <div style={styles.userSub}>
-                            {user?.email || "이메일 정보 없음"}
-                          </div>
-                        </div>
-
-                        <div style={styles.badgeRow}>
-                          <span
-                            style={{
-                              ...styles.badge,
-                              ...getRoleStyle(user.role),
-                            }}
-                          >
+                        <div className="admin-users-badge-row">
+                          <span className={getRoleClass(user.role)}>
                             {getRoleText(user.role)}
                           </span>
 
-                          <span
-                            style={{
-                              ...styles.badge,
-                              ...getProviderStyle(user.provider),
-                            }}
-                          >
+                          <span className={getProviderClass(user.provider)}>
                             {getProviderText(user.provider)}
                           </span>
                         </div>
                       </div>
 
-                      <div style={styles.metaGrid}>
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>아이디</div>
-                          <div style={styles.metaValue}>
-                            {user?.username || "-"}
-                          </div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>이름</div>
-                          <div style={styles.metaValue}>{user?.name || "-"}</div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>가입일</div>
-                          <div style={styles.metaValue}>
-                            {formatDate(joinedAt)}
-                          </div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>가입방식</div>
-                          <div style={styles.metaValue}>
-                            {getProviderText(user?.provider)}
-                          </div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>현재 역할</div>
-                          <div style={styles.metaValue}>
-                            {getRoleText(user?.role)}
-                          </div>
-                        </div>
-
-                        <div style={styles.metaBox}>
-                          <div style={styles.metaLabel}>회원 ID</div>
-                          <div style={styles.idValue}>{user?.id || "-"}</div>
-                        </div>
-                      </div>
-
-                      <div style={styles.actionBox}>
+                      <div className="admin-users-meta-grid">
                         <div>
-                          <div style={styles.actionLabel}>역할 변경</div>
-                          <select
-                            value={normalizeRole(user.role)}
-                            onChange={(e) =>
-                              handleRoleChange(user.id, e.target.value)
-                            }
-                            style={styles.select}
-                            disabled={saving}
-                          >
-                            <option value="user">일반 회원</option>
-                            <option value="worker">전문가</option>
-                            <option value="admin">관리자</option>
-                          </select>
+                          <span>아이디</span>
+                          <p>{user?.username || "-"}</p>
                         </div>
 
-                        <HoverButton
-                          onClick={() => handleSaveRole(user)}
-                          disabled={saving}
-                          baseStyle={styles.saveBtn}
-                          hoverStyle={{
-                            background: BRAND_HOVER,
-                            boxShadow:
-                              "0 14px 24px rgba(31, 111, 214, 0.22)",
-                          }}
-                        >
-                          {saving ? "저장 중..." : "역할 저장"}
-                        </HoverButton>
+                        <div>
+                          <span>이름</span>
+                          <p>{user?.name || "-"}</p>
+                        </div>
+
+                        <div>
+                          <span>이메일</span>
+                          <p>{user?.email || "-"}</p>
+                        </div>
+
+                        <div>
+                          <span>회원 ID</span>
+                          <p>{user?.id || "-"}</p>
+                        </div>
+
+                        <div>
+                          <span>가입일</span>
+                          <p>
+                            {formatDate(user?.auth_created_at || user?.created_at)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span>가입방식</span>
+                          <p>{getProviderText(user?.provider)}</p>
+                        </div>
                       </div>
-                    </HoverCard>
-                  );
-                })
-              )}
+                    </div>
+                  </div>
+
+                  <div className="admin-users-role-editor">
+                    <label>
+                      <span>역할 변경</span>
+                      <select
+                        value={normalizeRole(user.role)}
+                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      >
+                        <option value="user">일반 회원</option>
+                        <option value="worker">전문가</option>
+                        <option value="admin">관리자</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="admin-users-save-button"
+                      onClick={() => handleSaveRole(user)}
+                      disabled={savingUserId === user.id}
+                    >
+                      {savingUserId === user.id ? "저장 중..." : "역할 저장"}
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
-          </div>
-
-          <div style={styles.sideCard}>
-            <div style={styles.sideBadge}>관리자 메뉴</div>
-
-            <h3 style={styles.sideTitle}>회원 관리 요약</h3>
-
-            <p style={styles.sideDesc}>
-              회원 역할과 가입방식을 확인하고, 요청 관리 화면으로 이동할 수
-              있어요.
-            </p>
-
-            <div style={{ display: "grid", gap: "10px" }}>
-              <HoverButton
-                onClick={() => navigate("/admin/requests")}
-                baseStyle={styles.primaryBtn}
-                hoverStyle={{
-                  background: BRAND_HOVER,
-                  boxShadow: "0 14px 24px rgba(31, 111, 214, 0.22)",
-                }}
-              >
-                요청 관리로 가기
-              </HoverButton>
-
-              <HoverButton
-                onClick={() => navigate("/admin")}
-                baseStyle={styles.whiteBtn}
-                hoverStyle={{
-                  color: BRAND,
-                }}
-              >
-                관리자 메인
-              </HoverButton>
-
-              <HoverButton
-                onClick={() => navigate("/")}
-                baseStyle={styles.whiteBtn}
-                hoverStyle={{
-                  color: BRAND,
-                }}
-              >
-                메인으로 돌아가기
-              </HoverButton>
-            </div>
-
-            <div style={styles.miniInfo}>
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>전체 회원</div>
-                <div style={styles.miniValue}>{summary.total}명</div>
-              </div>
-
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>일반 회원</div>
-                <div style={styles.miniValue}>{summary.normal}명</div>
-              </div>
-
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>전문가</div>
-                <div style={styles.miniValue}>{summary.worker}명</div>
-              </div>
-
-              <div style={styles.miniItem}>
-                <div style={styles.miniLabel}>관리자</div>
-                <div style={styles.miniValue}>{summary.admin}명</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
+
+const styles = `
+  .admin-users-page {
+    min-height: 100dvh;
+    background: ${BG};
+    color: ${TEXT};
+    font-family:
+      "Pretendard",
+      "Noto Sans KR",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+
+  .admin-users-page * {
+    box-sizing: border-box;
+  }
+
+  .admin-users-container {
+    width: min(1160px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 104px 0 56px;
+  }
+
+  .admin-users-hero,
+  .admin-users-filter-card,
+  .admin-users-list-section,
+  .admin-users-empty-card {
+    background: ${CARD};
+    border: 1px solid ${BORDER};
+    border-radius: 24px;
+    box-shadow: 0 14px 34px rgba(47, 128, 237, 0.08);
+  }
+
+  .admin-users-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 26px;
+    margin-bottom: 16px;
+  }
+
+  .admin-users-kicker {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #EFF6FF;
+    color: ${BRAND};
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .admin-users-hero h1,
+  .admin-users-empty-card h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: -0.7px;
+    color: ${TEXT};
+  }
+
+  .admin-users-hero p,
+  .admin-users-empty-card p {
+    margin: 10px 0 0;
+    max-width: 620px;
+    color: ${SUB};
+    font-size: 14px;
+    line-height: 1.75;
+    font-weight: 600;
+    word-break: keep-all;
+  }
+
+  .admin-users-top-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .admin-users-blue-button,
+  .admin-users-white-button,
+  .admin-users-save-button {
+    min-height: 44px;
+    border-radius: 13px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 850;
+    cursor: pointer;
+    outline: none;
+    outline-offset: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .admin-users-blue-button,
+  .admin-users-save-button {
+    background: ${BRAND};
+    color: #FFFFFF;
+    box-shadow: 0 10px 22px rgba(47, 128, 237, 0.18);
+  }
+
+  .admin-users-blue-button:hover,
+  .admin-users-save-button:hover {
+    background: ${BRAND_HOVER};
+    box-shadow: 0 12px 24px rgba(31, 111, 214, 0.22);
+  }
+
+  .admin-users-white-button {
+    background: #FFFFFF;
+    border-color: ${BORDER};
+    color: ${TEXT};
+    box-shadow: none;
+  }
+
+  .admin-users-white-button:hover {
+    color: ${BRAND};
+  }
+
+  .admin-users-blue-button:focus,
+  .admin-users-blue-button:focus-visible,
+  .admin-users-white-button:focus,
+  .admin-users-white-button:focus-visible,
+  .admin-users-save-button:focus,
+  .admin-users-save-button:focus-visible {
+    outline: none;
+  }
+
+  .admin-users-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .admin-users-summary-card {
+    background: #FFFFFF;
+    border: 1px solid ${BORDER};
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(47, 128, 237, 0.055);
+  }
+
+  .admin-users-summary-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: ${SUB};
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .admin-users-summary-card strong {
+    color: ${TEXT};
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 900;
+  }
+
+  .admin-users-filter-card {
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .admin-users-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 10px;
+  }
+
+  .admin-users-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .admin-users-field span {
+    font-size: 13px;
+    font-weight: 850;
+    color: ${TEXT};
+  }
+
+  .admin-users-field input,
+  .admin-users-field select,
+  .admin-users-role-editor select {
+    width: 100%;
+    height: 48px;
+    border: 1px solid ${BORDER};
+    border-radius: 14px;
+    background: ${SOFT};
+    color: ${TEXT};
+    padding: 0 14px;
+    font-size: 14px;
+    outline: none;
+    outline-offset: 0;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .admin-users-field input:focus,
+  .admin-users-field select:focus,
+  .admin-users-role-editor select:focus {
+    border-color: #AFCBF5;
+    box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.1);
+  }
+
+  .admin-users-count {
+    margin-top: 14px;
+    color: ${SUB};
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .admin-users-count strong {
+    color: ${TEXT};
+  }
+
+  .admin-users-message {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #D9E6FF;
+    border-radius: 14px;
+    background: #F8FBFF;
+    color: ${BRAND_HOVER};
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.6;
+  }
+
+  .admin-users-list-section {
+    padding: 18px;
+  }
+
+  .admin-users-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .admin-users-card {
+    border: 1px solid ${BORDER};
+    border-radius: 20px;
+    background: #FFFFFF;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(47, 128, 237, 0.045);
+  }
+
+  .admin-users-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .admin-users-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #5B9DFF 0%, ${BRAND} 100%);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    flex-shrink: 0;
+    box-shadow: 0 12px 24px rgba(47, 128, 237, 0.16);
+  }
+
+  .admin-users-main-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .admin-users-name-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .admin-users-name-row h2 {
+    margin: 0;
+    color: ${TEXT};
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.35;
+    letter-spacing: -0.3px;
+    word-break: break-word;
+  }
+
+  .admin-users-badge-row {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-shrink: 0;
+  }
+
+  .admin-user-role,
+  .admin-user-provider {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 29px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .admin-user-role.admin {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #DC2626;
+  }
+
+  .admin-user-role.worker {
+    background: #EEF2FF;
+    border-color: #C7D2FE;
+    color: #4F46E5;
+  }
+
+  .admin-user-role.user {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+    color: #475569;
+  }
+
+  .admin-user-provider.google {
+    background: #FFF7ED;
+    border-color: #FED7AA;
+    color: #C2410C;
+  }
+
+  .admin-user-provider.kakao {
+    background: #FEF9C3;
+    border-color: #FDE68A;
+    color: #854D0E;
+  }
+
+  .admin-user-provider.email {
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    color: ${BRAND};
+  }
+
+  .admin-user-provider.unknown {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+    color: ${SUB};
+  }
+
+  .admin-users-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-users-meta-grid div {
+    min-width: 0;
+    border: 1px solid ${BORDER};
+    border-radius: 14px;
+    background: ${SOFT};
+    padding: 11px 12px;
+  }
+
+  .admin-users-meta-grid span {
+    display: block;
+    margin-bottom: 5px;
+    color: ${SUB};
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .admin-users-meta-grid p {
+    margin: 0;
+    color: ${TEXT};
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.45;
+    word-break: break-all;
+  }
+
+  .admin-users-role-editor {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid ${BORDER};
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .admin-users-role-editor label {
+    display: grid;
+    gap: 8px;
+    min-width: 220px;
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .admin-users-role-editor label span {
+    color: ${SUB};
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .admin-users-save-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .admin-users-empty-list {
+    padding: 42px 20px;
+    border: 1px dashed ${BORDER};
+    border-radius: 18px;
+    background: ${SOFT};
+    color: ${SUB};
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .admin-users-empty-card {
+    padding: 34px;
+  }
+
+  @media (max-width: 900px) {
+    .admin-users-container {
+      width: min(100% - 28px, 1160px);
+      padding-top: 90px;
+    }
+
+    .admin-users-hero {
+      flex-direction: column;
+      padding: 22px 18px;
+      border-radius: 22px;
+    }
+
+    .admin-users-top-actions,
+    .admin-users-blue-button,
+    .admin-users-white-button {
+      width: 100%;
+    }
+
+    .admin-users-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-users-filter-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-users-card-top {
+      flex-direction: column;
+    }
+
+    .admin-users-name-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .admin-users-badge-row {
+      justify-content: flex-start;
+    }
+
+    .admin-users-meta-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-users-role-editor,
+    .admin-users-role-editor label,
+    .admin-users-save-button {
+      width: 100%;
+      max-width: none;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .admin-users-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-users-hero h1,
+    .admin-users-empty-card h1 {
+      font-size: 25px;
+    }
+
+    .admin-users-card,
+    .admin-users-filter-card,
+    .admin-users-list-section {
+      padding: 14px;
+      border-radius: 18px;
+    }
+  }
+`;

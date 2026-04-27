@@ -5,6 +5,7 @@ function LandingPage({
   onGoLogin,
   onGoSignup,
   onGoCreate,
+  onGoAiRequest,
   onGoMyPage,
   onGoMyRequests,
   onGoAllRequests,
@@ -398,7 +399,7 @@ function LandingPage({
                   type="button"
                   className="button-hover"
                   onClick={onGoCreate}
-                  onMouseEnter={() => setHoveredPrimaryButton("header-create")}
+                  onMouseEnter={() => setHoveredPrimaryButton("guest-create")}
                   onMouseLeave={() => setHoveredPrimaryButton("")}
                   onMouseDown={(e) => e.currentTarget.blur()}
                   style={{
@@ -407,11 +408,11 @@ function LandingPage({
                     minWidth: "118px",
                     background: BRAND_COLOR,
                     transform:
-                      hoveredPrimaryButton === "header-create"
+                      hoveredPrimaryButton === "guest-create"
                         ? "translateY(-1px)"
                         : "none",
                     boxShadow:
-                      hoveredPrimaryButton === "header-create"
+                      hoveredPrimaryButton === "guest-create"
                         ? "0 12px 26px rgba(31, 111, 214, 0.22)"
                         : primaryButton.boxShadow,
                   }}
@@ -709,33 +710,7 @@ function LandingPage({
                               {roleLabel}
                             </div>
                           </div>
-                           <div
-                          style={{
-                            padding: "10px 12px 12px",
-                            borderBottom: `1px solid ${CARD_BORDER}`,
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "700",
-                              color: TEXT_DARK,
-                              marginBottom: "4px",
-                            }}
-                          >
-                            {displayName}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              color: isAdmin ? "#DC2626" : isWorker ? "#7C3AED" : "#64748B",
-                              fontWeight: "700",
-                            }}
-                          >
-                            {roleLabel}
-                          </div>
-                        </div>   
+
                           <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
                             마이페이지
                           </DropdownButton>
@@ -903,8 +878,8 @@ function LandingPage({
           <button
             type="button"
             className="button-hover"
-            onClick={onGoCreate}
-            onMouseEnter={() => setHoveredPrimaryButton("hero-create")}
+            onClick={onGoAiRequest}
+            onMouseEnter={() => setHoveredPrimaryButton("hero-ai")}
             onMouseLeave={() => setHoveredPrimaryButton("")}
             onMouseDown={(e) => e.currentTarget.blur()}
             style={{
@@ -913,18 +888,18 @@ function LandingPage({
               borderRadius: "16px",
               width: isMobile ? "100%" : "auto",
               padding: "0 22px",
-              background: BRAND_COLOR,
+              background: "#6846F5",
               transform:
-                hoveredPrimaryButton === "hero-create" && !isMobile
+                hoveredPrimaryButton === "hero-ai" && !isMobile
                   ? "translateY(-1px)"
                   : "none",
               boxShadow:
-                hoveredPrimaryButton === "hero-create" && !isMobile
-                  ? "0 14px 28px rgba(31, 111, 214, 0.22)"
-                  : primaryButton.boxShadow,
+                hoveredPrimaryButton === "hero-ai" && !isMobile
+                  ? "0 14px 28px rgba(104, 70, 245, 0.24)"
+                  : "0 8px 20px rgba(104, 70, 245, 0.16)",
             }}
           >
-            {isLoggedIn ? "바로 요청하기" : "로그인 후 요청"}
+            ✨ AI 견적 요청
           </button>
         </div>
 

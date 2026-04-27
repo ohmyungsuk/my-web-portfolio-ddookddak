@@ -1,12 +1,270 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-function AdminPage() {
+const BRAND = "#2F80ED";
+const BRAND_HOVER = "#1F6FD6";
+const TEXT = "#0F172A";
+const SUB = "#64748B";
+const BG = "#F4F7FB";
+const CARD = "#FFFFFF";
+const BORDER = "#D9E4F2";
+const BORDER_SOFT = "#E6EEF8";
+const SOFT = "#F8FBFF";
+const DANGER = "#EF4444";
+
+function getWindowWidth() {
+  if (typeof window === "undefined") return 1200;
+  return window.innerWidth;
+}
+
+function normalizeStatus(status) {
+  const value = String(status || "").trim().toLowerCase();
+
+  if (["pending", "접수대기", "요청됨", "요청 등록", "등록됨"].includes(value)) {
+    return "pending";
+  }
+
+  if (
+    [
+      "assigned",
+      "배정완료",
+      "담당자 배정",
+      "quoted",
+      "견적 협의중",
+      "planned",
+      "작업 예정",
+    ].includes(value)
+  ) {
+    return "assigned";
+  }
+
+  if (["in_progress", "진행중", "작업중", "작업 진행중"].includes(value)) {
+    return "in_progress";
+  }
+
+  if (["completed", "완료", "완료됨", "작업완료", "처리완료"].includes(value)) {
+    return "completed";
+  }
+
+  if (["cancelled", "취소", "취소됨", "요청 취소"].includes(value)) {
+    return "cancelled";
+  }
+
+  return "pending";
+}
+
+function getStatusLabel(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pending") return "요청 등록";
+  if (normalized === "assigned") return "진행 준비";
+  if (normalized === "in_progress") return "작업 진행중";
+  if (normalized === "completed") return "완료";
+  if (normalized === "cancelled") return "취소됨";
+
+  return "요청 등록";
+}
+
+function getStatusStyle(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "pending") {
+    return {
+      background: "#EFF6FF",
+      color: "#2563EB",
+      borderColor: "#BFDBFE",
+    };
+  }
+
+  if (normalized === "assigned") {
+    return {
+      background: "#EEF2FF",
+      color: "#4F46E5",
+      borderColor: "#C7D2FE",
+    };
+  }
+
+  if (normalized === "in_progress") {
+    return {
+      background: "#ECFDF3",
+      color: "#15803D",
+      borderColor: "#BBF7D0",
+    };
+  }
+
+  if (normalized === "completed") {
+    return {
+      background: "#DCFCE7",
+      color: "#166534",
+      borderColor: "#86EFAC",
+    };
+  }
+
+  if (normalized === "cancelled") {
+    return {
+      background: "#F1F5F9",
+      color: "#64748B",
+      borderColor: "#E2E8F0",
+    };
+  }
+
+  return {
+    background: "#F8FAFC",
+    color: SUB,
+    borderColor: "#E2E8F0",
+  };
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseContentPreview(content) {
+  if (!content) return "요청 내용이 없습니다.";
+
+  const cleaned = String(content)
+    .replace(/공간 유형:/g, "")
+    .replace(/도움이 필요한 내용:/g, "")
+    .replace(/희망 일정:/g, "")
+    .replace(/상세 설명:/g, "")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return "요청 내용이 없습니다.";
+  return cleaned.length > 92 ? `${cleaned.slice(0, 92)}...` : cleaned;
+}
+
+function HoverButton({ children, onClick, baseStyle, hoverStyle = {}, disabled = false }) {
+  const [isHover, setIsHover] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(event) => event.currentTarget.blur()}
+      onMouseUp={(event) => event.currentTarget.blur()}
+      onFocus={(event) => event.currentTarget.blur()}
+      style={{
+        ...baseStyle,
+        ...(isHover && !disabled ? hoverStyle : {}),
+        opacity: disabled ? 0.65 : 1,
+        cursor: disabled ? "not-allowed" : baseStyle?.cursor || "pointer",
+        outline: "none",
+        outlineOffset: 0,
+        WebkitTapHighlightColor: "transparent",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        userSelect: "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SummaryCard({ label, value, desc, tone = "blue", styles }) {
+  const toneStyle = {
+    blue: { background: "#EFF6FF", color: BRAND },
+    indigo: { background: "#EEF2FF", color: "#4F46E5" },
+    green: { background: "#ECFDF3", color: "#15803D" },
+    gray: { background: "#F1F5F9", color: "#64748B" },
+    red: { background: "#FFF1F2", color: DANGER },
+  }[tone];
+
+  return (
+    <div style={styles.summaryCard}>
+      <div style={{ ...styles.summaryIcon, ...toneStyle }}>{value}</div>
+      <div>
+        <p style={styles.summaryLabel}>{label}</p>
+        <p style={styles.summaryDesc}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function QuickCard({ title, desc, buttonText, onClick, styles }) {
+  return (
+    <div style={styles.quickCard}>
+      <div>
+        <h3 style={styles.quickTitle}>{title}</h3>
+        <p style={styles.quickDesc}>{desc}</p>
+      </div>
+
+      <HoverButton
+        onClick={onClick}
+        baseStyle={styles.whiteButton}
+        hoverStyle={{ color: BRAND }}
+      >
+        {buttonText}
+      </HoverButton>
+    </div>
+  );
+}
+
+function RecentRequestCard({ request, onOpen, styles }) {
+  const [isHover, setIsHover] = useState(false);
+  const statusStyle = getStatusStyle(request.status);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onMouseDown={(event) => event.currentTarget.blur()}
+      onFocus={(event) => event.currentTarget.blur()}
+      style={{
+        ...styles.requestCard,
+        ...(isHover
+          ? {
+              transform: "translateY(-2px)",
+              boxShadow: "0 16px 30px rgba(47, 128, 237, 0.09)",
+              borderColor: "#CFE0FB",
+            }
+          : {}),
+      }}
+    >
+      <div style={styles.requestCardTop}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={styles.requestTitle}>{request.title || "제목 없음"}</h3>
+          <p style={styles.requestPreview}>{parseContentPreview(request.content)}</p>
+        </div>
+
+        <span style={{ ...styles.statusBadge, ...statusStyle }}>
+          {getStatusLabel(request.status)}
+        </span>
+      </div>
+
+      <div style={styles.requestMeta}>
+        <span>카테고리 {request.category || "미분류"}</span>
+        <span>등록일 {formatDate(request.created_at)}</span>
+        <span>담당자 {request.assigned_username || "아직 없음"}</span>
+      </div>
+    </button>
+  );
+}
+
+export default function AdminPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [message, setMessage] = useState("");
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth);
   const [summary, setSummary] = useState({
     total: 0,
     pending: 0,
@@ -17,173 +275,431 @@ function AdminPage() {
   });
   const [recentRequests, setRecentRequests] = useState([]);
 
+  const isMobile = windowWidth <= 760;
+  const isSmallMobile = windowWidth <= 460;
+
   const loginUser = useMemo(() => {
-    const savedUser = localStorage.getItem("loginUser");
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem("loginUser");
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error("저장된 로그인 정보 파싱 실패:", error);
+      return null;
+    }
   }, []);
 
-  const normalizeStatus = (status) => {
-    const value = String(status || "").trim().toLowerCase();
+  const loadAdminData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setMessage("");
 
-    if (["pending", "접수대기", "요청됨"].includes(value)) return "pending";
-    if (["assigned", "배정완료", "작업 예정", "quoted", "planned"].includes(value))
-      return "assigned";
-    if (["in_progress", "진행중", "작업중"].includes(value)) return "in_progress";
-    if (["completed", "완료", "완료됨"].includes(value)) return "completed";
-    if (["cancelled", "취소", "취소됨"].includes(value)) return "cancelled";
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    return "pending";
-  };
+      const userId = user?.id || loginUser?.supabaseUserId || loginUser?.id;
 
-  const getStatusLabel = (status) => {
-    switch (normalizeStatus(status)) {
-      case "pending":
-        return "접수대기";
-      case "assigned":
-        return "배정완료";
-      case "in_progress":
-        return "작업중";
-      case "completed":
-        return "완료";
-      case "cancelled":
-        return "취소됨";
-      default:
-        return "접수대기";
+      if (!userId) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (profile?.role !== "admin") {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsAdmin(true);
+
+      const { data: requests, error: requestsError } = await supabase
+        .from("requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (requestsError) throw requestsError;
+
+      const safeRequests = Array.isArray(requests) ? requests : [];
+      const nextSummary = {
+        total: safeRequests.length,
+        pending: 0,
+        assigned: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+      };
+
+      safeRequests.forEach((request) => {
+        const normalized = normalizeStatus(request.status);
+        if (nextSummary[normalized] !== undefined) {
+          nextSummary[normalized] += 1;
+        }
+      });
+
+      setSummary(nextSummary);
+      setRecentRequests(safeRequests.slice(0, 6));
+    } catch (error) {
+      console.error("관리자 페이지 로딩 실패:", error);
+      setMessage(error.message || "관리자 정보를 불러오지 못했습니다.");
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const getStatusStyle = (status) => {
-    switch (normalizeStatus(status)) {
-      case "pending":
-        return {
-          background: "#FFF7ED",
-          color: "#C2410C",
-          border: "1px solid #FED7AA",
-        };
-      case "assigned":
-        return {
-          background: "#EFF6FF",
-          color: "#1D4ED8",
-          border: "1px solid #BFDBFE",
-        };
-      case "in_progress":
-        return {
-          background: "#EEF2FF",
-          color: "#4338CA",
-          border: "1px solid #C7D2FE",
-        };
-      case "completed":
-        return {
-          background: "#ECFDF5",
-          color: "#047857",
-          border: "1px solid #A7F3D0",
-        };
-      case "cancelled":
-        return {
-          background: "#F3F4F6",
-          color: "#4B5563",
-          border: "1px solid #D1D5DB",
-        };
-      default:
-        return {
-          background: "#F9FAFB",
-          color: "#374151",
-          border: "1px solid #E5E7EB",
-        };
-    }
-  };
-
-  const parseContentPreview = (content) => {
-    if (!content) return "요청 내용이 없습니다.";
-
-    const cleaned = String(content)
-      .replace(/\n/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return cleaned.length > 90 ? `${cleaned.slice(0, 90)}...` : cleaned;
-  };
+  }, [loginUser?.id, loginUser?.supabaseUserId, navigate]);
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        if (!loginUser?.id && !loginUser?.supabaseUserId) {
-          navigate("/login", { replace: true });
-          return;
-        }
-
-        const userId = loginUser.supabaseUserId || loginUser.id;
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", userId)
-          .single();
-
-        if (profileError) {
-          console.error("관리자 권한 확인 실패:", profileError);
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-
-        if (profile?.role !== "admin") {
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-
-        setIsAdmin(true);
-
-        const { data: requests, error: requestsError } = await supabase
-          .from("requests")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (requestsError) {
-          console.error("요청 목록 조회 실패:", requestsError);
-          setLoading(false);
-          return;
-        }
-
-        const safeRequests = Array.isArray(requests) ? requests : [];
-
-        const nextSummary = {
-          total: safeRequests.length,
-          pending: 0,
-          assigned: 0,
-          in_progress: 0,
-          completed: 0,
-          cancelled: 0,
-        };
-
-        safeRequests.forEach((request) => {
-          const normalized = normalizeStatus(request.status);
-          if (nextSummary[normalized] !== undefined) {
-            nextSummary[normalized] += 1;
-          }
-        });
-
-        setSummary(nextSummary);
-        setRecentRequests(safeRequests.slice(0, 6));
-      } catch (error) {
-        console.error("관리자 페이지 로딩 실패:", error);
-      } finally {
-        setLoading(false);
-      }
+    const handleResize = () => {
+      setWindowWidth(getWindowWidth());
     };
 
-    fetchAdminData();
-  }, [loginUser, navigate]);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    loadAdminData();
+  }, [loadAdminData]);
+
+  const activeCount = summary.assigned + summary.in_progress;
+
+  const styles = {
+    page: {
+      minHeight: "100dvh",
+      background: BG,
+      padding: isMobile ? "88px 16px 38px" : "104px 42px 58px",
+      boxSizing: "border-box",
+      fontFamily:
+        '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      color: TEXT,
+    },
+    container: {
+      maxWidth: "1160px",
+      margin: "0 auto",
+    },
+    hero: {
+      background: "linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%)",
+      border: `1px solid ${BORDER}`,
+      borderRadius: isMobile ? "20px" : "26px",
+      padding: isMobile ? "22px 18px" : "28px",
+      boxShadow: "0 16px 36px rgba(47, 128, 237, 0.08)",
+      marginBottom: "18px",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    heroInner: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "18px",
+      flexWrap: "wrap",
+      alignItems: "flex-start",
+      flexDirection: isMobile ? "column" : "row",
+    },
+    badge: {
+      display: "inline-flex",
+      alignItems: "center",
+      margin: "0 0 10px",
+      padding: "7px 11px",
+      borderRadius: "999px",
+      background: "#EFF6FF",
+      color: BRAND,
+      fontSize: "12px",
+      fontWeight: 900,
+      lineHeight: 1,
+    },
+    title: {
+      margin: 0,
+      fontSize: isMobile ? "25px" : "31px",
+      fontWeight: 900,
+      color: TEXT,
+      lineHeight: 1.25,
+      letterSpacing: "-0.8px",
+      wordBreak: "keep-all",
+    },
+    desc: {
+      margin: "10px 0 0",
+      fontSize: "14px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 600,
+      wordBreak: "keep-all",
+    },
+    buttonRow: {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
+      width: isMobile ? "100%" : "auto",
+    },
+    primaryButton: {
+      minHeight: "45px",
+      padding: "0 18px",
+      border: "1px solid transparent",
+      borderRadius: "14px",
+      background: BRAND,
+      color: "#FFFFFF",
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
+      boxSizing: "border-box",
+      width: isMobile ? "100%" : "auto",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    whiteButton: {
+      minHeight: "45px",
+      padding: "0 18px",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "14px",
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      boxShadow: "none",
+      boxSizing: "border-box",
+      width: isMobile ? "100%" : "auto",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    message: {
+      marginBottom: "16px",
+      padding: "13px 15px",
+      borderRadius: "14px",
+      background: "#FFF5F5",
+      border: "1px solid #FFD8D8",
+      color: "#DC2626",
+      fontSize: "13px",
+      fontWeight: 800,
+      lineHeight: 1.6,
+      boxSizing: "border-box",
+    },
+    summaryGrid: {
+      display: "grid",
+      gridTemplateColumns: isSmallMobile
+        ? "1fr"
+        : isMobile
+          ? "repeat(2, minmax(0, 1fr))"
+          : "repeat(3, minmax(0, 1fr))",
+      gap: "12px",
+      marginBottom: "18px",
+    },
+    summaryCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: isMobile ? "16px" : "18px",
+      boxShadow: "0 12px 26px rgba(47, 128, 237, 0.055)",
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    summaryIcon: {
+      width: "52px",
+      height: "52px",
+      borderRadius: "17px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      fontSize: "22px",
+      fontWeight: 900,
+      lineHeight: 1,
+    },
+    summaryLabel: {
+      margin: 0,
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 900,
+      lineHeight: 1.35,
+    },
+    summaryDesc: {
+      margin: "5px 0 0",
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 650,
+      lineHeight: 1.5,
+    },
+    quickGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+      gap: "12px",
+      marginBottom: "18px",
+    },
+    quickCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: "18px",
+      boxShadow: "0 12px 26px rgba(47, 128, 237, 0.055)",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: "16px",
+      minHeight: isMobile ? "auto" : "160px",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    quickTitle: {
+      margin: "0 0 8px",
+      fontSize: "18px",
+      fontWeight: 900,
+      color: TEXT,
+      lineHeight: 1.35,
+    },
+    quickDesc: {
+      margin: 0,
+      fontSize: "13px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 650,
+      wordBreak: "keep-all",
+    },
+    sectionCard: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: isMobile ? "20px" : "24px",
+      padding: isMobile ? "18px" : "22px",
+      boxShadow: "0 16px 36px rgba(47, 128, 237, 0.06)",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    sectionHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: isMobile ? "flex-start" : "center",
+      flexDirection: isMobile ? "column" : "row",
+      gap: "12px",
+      marginBottom: "16px",
+    },
+    sectionTitle: {
+      margin: 0,
+      fontSize: isMobile ? "20px" : "22px",
+      fontWeight: 900,
+      color: TEXT,
+      lineHeight: 1.35,
+      letterSpacing: "-0.35px",
+    },
+    sectionDesc: {
+      margin: "6px 0 0",
+      fontSize: "13px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 650,
+    },
+    empty: {
+      padding: "34px 16px",
+      borderRadius: "18px",
+      background: SOFT,
+      border: `1px dashed ${BORDER}`,
+      color: SUB,
+      textAlign: "center",
+      fontSize: "14px",
+      fontWeight: 700,
+      lineHeight: 1.7,
+      boxSizing: "border-box",
+    },
+    requestList: {
+      display: "grid",
+      gap: "10px",
+    },
+    requestCard: {
+      width: "100%",
+      textAlign: "left",
+      border: `1px solid ${BORDER_SOFT}`,
+      borderRadius: "18px",
+      background: "#FFFFFF",
+      padding: isMobile ? "15px" : "17px",
+      cursor: "pointer",
+      boxShadow: "0 8px 18px rgba(47, 128, 237, 0.035)",
+      transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+      appearance: "none",
+      WebkitAppearance: "none",
+      WebkitTapHighlightColor: "transparent",
+    },
+    requestCardTop: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "12px",
+      flexDirection: isMobile ? "column" : "row",
+    },
+    requestTitle: {
+      margin: 0,
+      fontSize: "17px",
+      fontWeight: 900,
+      color: TEXT,
+      lineHeight: 1.4,
+      wordBreak: "break-word",
+    },
+    requestPreview: {
+      margin: "8px 0 0",
+      fontSize: "13px",
+      color: SUB,
+      lineHeight: 1.7,
+      fontWeight: 600,
+      wordBreak: "break-word",
+    },
+    requestMeta: {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap",
+      marginTop: "14px",
+      fontSize: "12px",
+      color: SUB,
+      fontWeight: 750,
+    },
+    statusBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "12px",
+      fontWeight: 850,
+      whiteSpace: "nowrap",
+      border: "1px solid transparent",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    loadingWrap: {
+      background: CARD,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "22px",
+      padding: "34px 24px",
+      textAlign: "center",
+      boxShadow: "0 16px 36px rgba(47, 128, 237, 0.08)",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+  };
 
   if (loading) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div style={heroStyle}>
-            <p style={badgeStyle}>관리자</p>
-            <h1 style={titleStyle}>관리자 페이지 불러오는 중...</h1>
-            <p style={descStyle}>권한과 요청 현황을 확인하고 있습니다.</p>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.loadingWrap}>
+            <p style={styles.badge}>관리자</p>
+            <h1 style={styles.title}>관리자 페이지 불러오는 중...</h1>
+            <p style={styles.desc}>권한과 요청 현황을 확인하고 있습니다.</p>
           </div>
         </div>
       </div>
@@ -192,30 +708,36 @@ function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div style={heroStyle}>
-            <p style={badgeStyle}>접근 제한</p>
-            <h1 style={titleStyle}>관리자만 들어올 수 있어요</h1>
-            <p style={descStyle}>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.hero}>
+            <p style={styles.badge}>접근 제한</p>
+            <h1 style={styles.title}>관리자만 들어올 수 있어요</h1>
+            <p style={styles.desc}>
               현재 계정은 관리자 권한이 없어서 이 페이지를 볼 수 없습니다.
             </p>
 
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
+            {message && <div style={{ ...styles.message, marginTop: "16px" }}>{message}</div>}
+
+            <div style={{ ...styles.buttonRow, marginTop: "18px" }}>
+              <HoverButton
                 onClick={() => navigate("/")}
-                style={primaryButtonStyle}
+                baseStyle={styles.primaryButton}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+                }}
               >
                 홈으로 가기
-              </button>
-              <button
-                type="button"
+              </HoverButton>
+
+              <HoverButton
                 onClick={() => navigate("/mypage")}
-                style={secondaryButtonStyle}
+                baseStyle={styles.whiteButton}
+                hoverStyle={{ color: BRAND }}
               >
                 마이페이지로 가기
-              </button>
+              </HoverButton>
             </div>
           </div>
         </div>
@@ -224,113 +746,153 @@ function AdminPage() {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <section style={heroStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-            }}
-          >
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <section style={styles.hero}>
+          <div style={styles.heroInner}>
             <div>
-              <p style={badgeStyle}>관리자 대시보드</p>
-              <h1 style={titleStyle}>요청 현황 한눈에 보기</h1>
-              <p style={descStyle}>
-                전체 요청 수와 상태별 진행 현황을 빠르게 확인할 수 있어요.
+              <p style={styles.badge}>관리자 대시보드</p>
+              <h1 style={styles.title}>요청 현황을 한눈에 확인해요</h1>
+              <p style={styles.desc}>
+                전체 요청과 진행 상태를 확인하고, 관리자 화면으로 빠르게 이동할 수 있어요.
               </p>
             </div>
 
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
+            <div style={styles.buttonRow}>
+              <HoverButton
                 onClick={() => navigate("/admin/requests")}
-                style={primaryButtonStyle}
+                baseStyle={styles.primaryButton}
+                hoverStyle={{
+                  background: BRAND_HOVER,
+                  boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+                }}
               >
-                전체 요청 관리
-              </button>
+                요청 관리
+              </HoverButton>
 
-              <button
-                type="button"
+              <HoverButton
                 onClick={() => navigate("/admin/users")}
-                style={secondaryButtonStyle}
+                baseStyle={styles.whiteButton}
+                hoverStyle={{ color: BRAND }}
               >
                 회원 관리
-              </button>
+              </HoverButton>
 
-              <button
-                type="button"
+              <HoverButton
                 onClick={() => navigate("/")}
-                style={secondaryButtonStyle}
+                baseStyle={styles.whiteButton}
+                hoverStyle={{ color: BRAND }}
               >
-                홈으로 가기
-              </button>
+                홈으로
+              </HoverButton>
             </div>
           </div>
         </section>
 
-        <section style={summaryGridStyle}>
-          <SummaryCard label="전체 요청" value={summary.total} />
-          <SummaryCard label="접수대기" value={summary.pending} />
-          <SummaryCard label="배정완료" value={summary.assigned} />
-          <SummaryCard label="작업중" value={summary.in_progress} />
-          <SummaryCard label="완료" value={summary.completed} />
-          <SummaryCard label="취소됨" value={summary.cancelled} />
+        {message && <div style={styles.message}>{message}</div>}
+
+        <section style={styles.summaryGrid}>
+          <SummaryCard
+            label="전체 요청"
+            value={summary.total}
+            desc="등록된 모든 요청"
+            tone="blue"
+            styles={styles}
+          />
+          <SummaryCard
+            label="요청 등록"
+            value={summary.pending}
+            desc="아직 담당자 배정 전"
+            tone="gray"
+            styles={styles}
+          />
+          <SummaryCard
+            label="진행 관련"
+            value={activeCount}
+            desc="배정부터 작업 진행까지"
+            tone="indigo"
+            styles={styles}
+          />
+          <SummaryCard
+            label="작업 진행중"
+            value={summary.in_progress}
+            desc="현재 처리 중인 요청"
+            tone="green"
+            styles={styles}
+          />
+          <SummaryCard
+            label="완료"
+            value={summary.completed}
+            desc="처리가 끝난 요청"
+            tone="green"
+            styles={styles}
+          />
+          <SummaryCard
+            label="취소됨"
+            value={summary.cancelled}
+            desc="취소 처리된 요청"
+            tone="red"
+            styles={styles}
+          />
         </section>
 
-        <section style={sectionCardStyle}>
-          <div style={sectionHeaderStyle}>
+        <section style={styles.quickGrid}>
+          <QuickCard
+            title="요청 관리"
+            desc="전체 요청을 확인하고 담당자 배정과 상태 변경을 처리해요."
+            buttonText="요청 관리로 이동"
+            onClick={() => navigate("/admin/requests")}
+            styles={styles}
+          />
+          <QuickCard
+            title="회원 관리"
+            desc="회원 목록을 확인하고 일반회원, 전문가, 관리자 역할을 관리해요."
+            buttonText="회원 관리로 이동"
+            onClick={() => navigate("/admin/users")}
+            styles={styles}
+          />
+          <QuickCard
+            title="전체 요청 보기"
+            desc="사용자 화면 기준의 전체 요청 목록을 확인할 수 있어요."
+            buttonText="전체 요청 보기"
+            onClick={() => navigate("/requests/all")}
+            styles={styles}
+          />
+        </section>
+
+        <section style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
             <div>
-              <h2 style={sectionTitleStyle}>최근 등록된 요청</h2>
-              <p style={sectionDescStyle}>
-                최근 들어온 요청을 빠르게 확인할 수 있어요.
+              <h2 style={styles.sectionTitle}>최근 등록된 요청</h2>
+              <p style={styles.sectionDesc}>
+                최근 들어온 요청을 빠르게 확인하고 상세보기로 이동할 수 있어요.
               </p>
             </div>
+
+            <HoverButton
+              onClick={() => navigate("/admin/requests")}
+              baseStyle={styles.whiteButton}
+              hoverStyle={{ color: BRAND }}
+            >
+              전체 보기
+            </HoverButton>
           </div>
 
           {recentRequests.length === 0 ? (
-            <div style={emptyStyle}>등록된 요청이 아직 없습니다.</div>
+            <div style={styles.empty}>등록된 요청이 아직 없습니다.</div>
           ) : (
-            <div style={requestListStyle}>
+            <div style={styles.requestList}>
               {recentRequests.map((request) => (
-                <button
+                <RecentRequestCard
                   key={request.id}
-                  type="button"
-                  onClick={() =>
+                  request={request}
+                  styles={styles}
+                  onOpen={() =>
                     navigate(`/requests/${request.id}`, {
                       state: { request, from: "/admin" },
                     })
                   }
-                  style={requestCardButtonStyle}
-                >
-                  <div style={requestCardTopStyle}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={requestTitleStyle}>
-                        {request.title || "제목 없음"}
-                      </h3>
-                      <p style={requestPreviewStyle}>
-                        {parseContentPreview(request.content)}
-                      </p>
-                    </div>
-
-                    <span style={{ ...statusBadgeStyle, ...getStatusStyle(request.status) }}>
-                      {getStatusLabel(request.status)}
-                    </span>
-                  </div>
-
-                  <div style={requestMetaStyle}>
-                    <span>카테고리: {request.category || "미분류"}</span>
-                    <span>
-                      등록일:{" "}
-                      {request.created_at
-                        ? new Date(request.created_at).toLocaleDateString("ko-KR")
-                        : "-"}
-                    </span>
-                  </div>
-                </button>
+                />
               ))}
             </div>
           )}
@@ -339,213 +901,3 @@ function AdminPage() {
     </div>
   );
 }
-
-function SummaryCard({ label, value }) {
-  return (
-    <div style={summaryCardStyle}>
-      <p style={summaryLabelStyle}>{label}</p>
-      <strong style={summaryValueStyle}>{value}</strong>
-    </div>
-  );
-}
-
-const pageStyle = {
-  minHeight: "100vh",
-  background: "#F8FAFC",
-};
-
-const containerStyle = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "108px 20px 56px",
-};
-
-const heroStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E2E8F0",
-  borderRadius: "24px",
-  padding: "28px",
-  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-  marginBottom: "20px",
-};
-
-const badgeStyle = {
-  margin: 0,
-  marginBottom: "10px",
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#2563EB",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: "30px",
-  fontWeight: 800,
-  color: "#0F172A",
-  lineHeight: 1.3,
-};
-
-const descStyle = {
-  margin: "10px 0 0",
-  fontSize: "15px",
-  color: "#475569",
-  lineHeight: 1.6,
-};
-
-const buttonRowStyle = {
-  display: "flex",
-  gap: "10px",
-  flexWrap: "wrap",
-};
-
-const primaryButtonStyle = {
-  border: "none",
-  borderRadius: "14px",
-  background: "#2563EB",
-  color: "#FFFFFF",
-  fontSize: "14px",
-  fontWeight: 700,
-  padding: "12px 18px",
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle = {
-  border: "1px solid #CBD5E1",
-  borderRadius: "14px",
-  background: "#FFFFFF",
-  color: "#0F172A",
-  fontSize: "14px",
-  fontWeight: 700,
-  padding: "12px 18px",
-  cursor: "pointer",
-};
-
-const summaryGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-  gap: "14px",
-  marginBottom: "20px",
-};
-
-const summaryCardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E2E8F0",
-  borderRadius: "20px",
-  padding: "20px",
-  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-};
-
-const summaryLabelStyle = {
-  margin: 0,
-  fontSize: "14px",
-  color: "#64748B",
-  fontWeight: 600,
-};
-
-const summaryValueStyle = {
-  display: "block",
-  marginTop: "10px",
-  fontSize: "30px",
-  color: "#0F172A",
-  lineHeight: 1.2,
-};
-
-const sectionCardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E2E8F0",
-  borderRadius: "24px",
-  padding: "24px",
-  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-};
-
-const sectionHeaderStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "12px",
-  marginBottom: "18px",
-  flexWrap: "wrap",
-};
-
-const sectionTitleStyle = {
-  margin: 0,
-  fontSize: "22px",
-  fontWeight: 800,
-  color: "#0F172A",
-};
-
-const sectionDescStyle = {
-  margin: "6px 0 0",
-  fontSize: "14px",
-  color: "#64748B",
-};
-
-const emptyStyle = {
-  padding: "28px 16px",
-  borderRadius: "18px",
-  background: "#F8FAFC",
-  border: "1px dashed #CBD5E1",
-  color: "#64748B",
-  textAlign: "center",
-  fontSize: "15px",
-};
-
-const requestListStyle = {
-  display: "grid",
-  gap: "12px",
-};
-
-const requestCardButtonStyle = {
-  width: "100%",
-  textAlign: "left",
-  border: "1px solid #E2E8F0",
-  borderRadius: "20px",
-  background: "#FFFFFF",
-  padding: "18px",
-  cursor: "pointer",
-};
-
-const requestCardTopStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: "12px",
-  flexWrap: "wrap",
-};
-
-const requestTitleStyle = {
-  margin: 0,
-  fontSize: "18px",
-  fontWeight: 800,
-  color: "#0F172A",
-  lineHeight: 1.4,
-};
-
-const requestPreviewStyle = {
-  margin: "8px 0 0",
-  fontSize: "14px",
-  color: "#475569",
-  lineHeight: 1.6,
-};
-
-const requestMetaStyle = {
-  display: "flex",
-  gap: "14px",
-  flexWrap: "wrap",
-  marginTop: "14px",
-  fontSize: "13px",
-  color: "#64748B",
-};
-
-const statusBadgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "999px",
-  padding: "8px 12px",
-  fontSize: "12px",
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-};
-
-export default AdminPage;
