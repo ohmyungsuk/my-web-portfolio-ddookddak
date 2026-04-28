@@ -15,6 +15,9 @@ const DANGER_HOVER = "#DC2626";
 const GRAY = "#94A3B8";
 const GRAY_HOVER = "#64748B";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 const STATUS_STEPS = [
   { key: "pending", title: "요청 등록", desc: "요청이 등록됐어요." },
   { key: "assigned", title: "담당자 배정", desc: "전문가가 확인 중이에요." },
@@ -462,8 +465,98 @@ export default function RequestDetailPage() {
     canStartWork ||
     canComplete;
 
+  const getActorName = () =>
+    loginProfile?.name ||
+    loginProfile?.username ||
+    loginUser?.user_metadata?.name ||
+    loginUser?.user_metadata?.full_name ||
+    loginUser?.email ||
+    "담당자";
+
+  const sendNotification = async ({
+    recipientId,
+    type,
+    title,
+    notificationMessage,
+    requestData,
+    metadata = {},
+  }) => {
+    const actorId = loginUser?.id;
+
+    if (!recipientId || !actorId || !requestData?.id) {
+      return;
+    }
+
+    if (String(recipientId) === String(actorId)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipientId: String(recipientId),
+          actorId: String(actorId),
+          type,
+          title,
+          message: notificationMessage,
+          requestId: requestData.id,
+          targetUrl: `/requests/${requestData.id}`,
+          metadata: JSON.stringify({
+            source: "request-detail",
+            requestStatus: requestData.status,
+            ...metadata,
+          }),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("알림 발송 실패");
+      }
+    } catch (error) {
+      console.error("요청 상태 알림 발송 실패:", error);
+    }
+  };
+
+  const notifyOwner = async ({
+    requestData,
+    type = "REQUEST_STATUS_CHANGED",
+    title,
+    notificationMessage,
+    metadata,
+  }) => {
+    await sendNotification({
+      recipientId: requestData?.user_id || detail?.user_id,
+      type,
+      title,
+      notificationMessage,
+      requestData,
+      metadata,
+    });
+  };
+
+  const notifyAssignedWorker = async ({
+    requestData,
+    type = "REQUEST_STATUS_CHANGED",
+    title,
+    notificationMessage,
+    metadata,
+  }) => {
+    await sendNotification({
+      recipientId: requestData?.assigned_user_id || detail?.assigned_user_id,
+      type,
+      title,
+      notificationMessage,
+      requestData,
+      metadata,
+    });
+  };
+
   const updateRequest = async (updateData, successMessage) => {
-    if (!detail) return;
+    if (!detail) return null;
 
     try {
       setActionLoading(true);
@@ -480,9 +573,12 @@ export default function RequestDetailPage() {
 
       setDetail(data);
       setMessage(successMessage);
+
+      return data;
     } catch (error) {
       console.error("요청 변경 실패:", error);
       setMessage(error.message || "요청 변경 중 오류가 발생했습니다.");
+      return null;
     } finally {
       setActionLoading(false);
     }
@@ -491,35 +587,89 @@ export default function RequestDetailPage() {
   const handleAccept = async () => {
     if (!loginUser?.id || !canAccept) return;
 
-    await updateRequest(
+    const actorName = getActorName();
+
+    const updatedRequest = await updateRequest(
       {
         status: "quoted",
         assigned_user_id: loginUser.id,
-        assigned_username:
-          loginProfile?.name ||
-          loginProfile?.username ||
-          loginUser.user_metadata?.name ||
-          loginUser.user_metadata?.full_name ||
-          loginUser.email ||
-          "전문가",
+        assigned_username: actorName,
       },
       "요청을 수락했습니다.",
     );
+
+    if (!updatedRequest) return;
+
+    await notifyOwner({
+      requestData: updatedRequest,
+      type: "REQUEST_ASSIGNED",
+      title: "전문가가 요청을 수락했습니다",
+      notificationMessage: `${actorName}님이 '${updatedRequest.title || "요청"}' 요청을 수락했습니다. 견적 협의를 진행해 주세요.`,
+      metadata: {
+        action: "accept",
+      },
+    });
   };
 
   const handleSetPlanned = async () => {
     if (!canSetPlanned) return;
-    await updateRequest({ status: "planned" }, "작업 예정 상태로 변경됐어요.");
+
+    const updatedRequest = await updateRequest(
+      { status: "planned" },
+      "작업 예정 상태로 변경됐어요.",
+    );
+
+    if (!updatedRequest) return;
+
+    await notifyOwner({
+      requestData: updatedRequest,
+      title: "작업 예정 상태로 변경되었습니다",
+      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 예정 상태로 변경되었습니다.`,
+      metadata: {
+        action: "planned",
+      },
+    });
   };
 
   const handleStartWork = async () => {
     if (!canStartWork) return;
-    await updateRequest({ status: "in_progress" }, "작업을 시작했습니다.");
+
+    const updatedRequest = await updateRequest(
+      { status: "in_progress" },
+      "작업을 시작했습니다.",
+    );
+
+    if (!updatedRequest) return;
+
+    await notifyOwner({
+      requestData: updatedRequest,
+      title: "작업이 시작되었습니다",
+      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 진행중으로 변경되었습니다.`,
+      metadata: {
+        action: "start-work",
+      },
+    });
   };
 
   const handleComplete = async () => {
     if (!canComplete) return;
-    await updateRequest({ status: "completed" }, "작업을 완료 처리했습니다.");
+
+    const updatedRequest = await updateRequest(
+      { status: "completed" },
+      "작업을 완료 처리했습니다.",
+    );
+
+    if (!updatedRequest) return;
+
+    await notifyOwner({
+      requestData: updatedRequest,
+      type: "REQUEST_COMPLETED",
+      title: "작업이 완료되었습니다",
+      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 완료 처리되었습니다.`,
+      metadata: {
+        action: "complete",
+      },
+    });
   };
 
   const handleCancel = async () => {
@@ -528,7 +678,21 @@ export default function RequestDetailPage() {
     const confirmed = window.confirm("이 요청을 취소할까요?");
     if (!confirmed) return;
 
-    await updateRequest({ status: "cancelled" }, "요청이 취소되었습니다.");
+    const updatedRequest = await updateRequest(
+      { status: "cancelled" },
+      "요청이 취소되었습니다.",
+    );
+
+    if (!updatedRequest) return;
+
+    await notifyAssignedWorker({
+      requestData: updatedRequest,
+      title: "요청이 취소되었습니다",
+      notificationMessage: `'${updatedRequest.title || "요청"}' 요청이 작성자에 의해 취소되었습니다.`,
+      metadata: {
+        action: "cancel",
+      },
+    });
   };
 
   const handleEdit = () => {

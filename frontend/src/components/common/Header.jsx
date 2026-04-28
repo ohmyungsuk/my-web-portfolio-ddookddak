@@ -25,115 +25,6 @@ function formatNotificationTime(value) {
   return `${date.getMonth() + 1}.${date.getDate()}`;
 }
 
-function HeaderNotificationButton({
-  isMobile,
-  isHovered,
-  unreadCount = 0,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
-}) {
-  const BRAND_COLOR = "#2F80ED";
-  const TEXT_BODY = "#2F3438";
-  const hasUnread = Number(unreadCount) > 0;
-  const badgeText = unreadCount > 99 ? "99+" : String(unreadCount);
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onMouseDown={(e) => e.currentTarget.blur()}
-      style={{
-        position: "relative",
-        width: isMobile ? "34px" : "38px",
-        height: isMobile ? "34px" : "38px",
-        border: "none",
-        outline: "none",
-        boxShadow: "none",
-        background: "transparent",
-        padding: 0,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "999px",
-        color: isHovered ? BRAND_COLOR : TEXT_BODY,
-        transition: "color 0.18s ease, background-color 0.18s ease",
-        WebkitTapHighlightColor: "transparent",
-      }}
-      aria-label="알림"
-    >
-      <GrNotification size={isMobile ? 18 : 20} />
-
-      {hasUnread && (
-        <span
-          style={{
-            position: "absolute",
-            top: isMobile ? "1px" : "0px",
-            right: isMobile ? "0px" : "1px",
-            minWidth: unreadCount > 9 ? "18px" : "15px",
-            height: "15px",
-            padding: unreadCount > 9 ? "0 4px" : 0,
-            borderRadius: "999px",
-            background: "#EF4444",
-            color: "#ffffff",
-            border: "2px solid #ffffff",
-            boxSizing: "content-box",
-            fontSize: "10px",
-            lineHeight: "15px",
-            fontWeight: "900",
-            textAlign: "center",
-          }}
-        >
-          {badgeText}
-        </span>
-      )}
-    </button>
-  );
-}
-
-function HeaderDropdownButton({
-  children,
-  onClick,
-  danger = false,
-  textBody = "#2F3438",
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseDown={(e) => e.currentTarget.blur()}
-      style={{
-        width: "100%",
-        background: danger ? "#fee2e2" : "transparent",
-        color: danger ? "#dc2626" : textBody,
-        border: "none",
-        padding: "10px 12px",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "500",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "background-color 0.12s ease",
-        outline: "none",
-        boxShadow: "none",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = danger ? "#fecaca" : "#f8fafc";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = danger
-          ? "#fee2e2"
-          : "transparent";
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Header({
   isLoggedIn,
   loginUser,
@@ -158,6 +49,7 @@ function Header({
   const [hoveredNotification, setHoveredNotification] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
 
@@ -167,6 +59,12 @@ function Header({
   const TEXT_DARK = "#0F172A";
   const TEXT_BODY = "#2F3438";
   const CARD_BORDER = "#E5EDF6";
+  const SOFT_BLUE = "#EFF6FF";
+
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const safeUnreadCount = Number(unreadCount) || 0;
+  const hasUnread = safeUnreadCount > 0;
+  const badgeText = safeUnreadCount > 99 ? "99+" : String(safeUnreadCount);
 
   const normalizeRole = (role) => {
     const value = String(role || "").trim().toLowerCase();
@@ -216,13 +114,11 @@ function Header({
       onGoHome();
       return;
     }
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const moveToSection = (id) => {
     const target = document.getElementById(id);
-
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
     }
@@ -230,33 +126,28 @@ function Header({
 
   const closeAndRun = (action) => {
     setProfileOpen(false);
-    setNotificationOpen(false);
-
-    if (action) {
-      action();
-    }
+    if (action) action();
   };
 
   const goAdminPage = () => {
     setProfileOpen(false);
-    setNotificationOpen(false);
     navigate("/admin");
   };
 
-  const handleNotificationClick = () => {
+  const handleNotificationToggle = () => {
     setProfileOpen(false);
     setNotificationOpen((prev) => !prev);
   };
 
-  const handleReadNotification = (notification) => {
-    setNotificationOpen(false);
-
+  const handleNotificationClick = (notification) => {
     if (onReadNotification) {
       onReadNotification(notification);
     }
+    setNotificationOpen(false);
   };
 
-  const handleReadAllNotifications = () => {
+  const handleReadAllNotifications = (e) => {
+    e.stopPropagation();
     if (onReadAllNotifications) {
       onReadAllNotifications();
     }
@@ -273,6 +164,7 @@ function Header({
     whiteSpace: "nowrap",
     letterSpacing: "-0.2px",
     outline: "none",
+    boxShadow: "none",
     WebkitTapHighlightColor: "transparent",
     fontFamily:
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -299,59 +191,146 @@ function Header({
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
-  const renderNotificationPanel = () => (
+  function DropdownButton({ children, onClick, danger = false }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        onMouseDown={(e) => e.currentTarget.blur()}
+        style={{
+          width: "100%",
+          background: danger ? "#fee2e2" : "transparent",
+          color: danger ? "#dc2626" : TEXT_BODY,
+          border: "none",
+          padding: "10px 12px",
+          borderRadius: "8px",
+          fontSize: "14px",
+          fontWeight: "500",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background-color 0.12s ease",
+          outline: "none",
+          boxShadow: "none",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = danger ? "#fecaca" : "#f8fafc";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = danger ? "#fee2e2" : "transparent";
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  const renderNotificationButton = () => (
+    <button
+      type="button"
+      onClick={handleNotificationToggle}
+      onMouseEnter={() => setHoveredNotification(true)}
+      onMouseLeave={() => setHoveredNotification(false)}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      style={{
+        position: "relative",
+        width: isMobile ? "34px" : "38px",
+        height: isMobile ? "34px" : "38px",
+        border: "none",
+        outline: "none",
+        boxShadow: "none",
+        background: "transparent",
+        padding: 0,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "999px",
+        color: hoveredNotification || notificationOpen ? BRAND_COLOR : TEXT_BODY,
+        transition: "color 0.18s ease, background-color 0.18s ease",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      aria-label="알림"
+    >
+      <GrNotification size={isMobile ? 18 : 20} />
+
+      {hasUnread && (
+        <span
+          style={{
+            position: "absolute",
+            top: isMobile ? "0px" : "-1px",
+            right: isMobile ? "-1px" : "0px",
+            minWidth: safeUnreadCount > 9 ? "18px" : "15px",
+            height: "15px",
+            padding: safeUnreadCount > 9 ? "0 4px" : 0,
+            borderRadius: "999px",
+            background: "#EF4444",
+            color: "#ffffff",
+            border: "2px solid #ffffff",
+            boxSizing: "content-box",
+            fontSize: "10px",
+            lineHeight: "15px",
+            fontWeight: "900",
+            textAlign: "center",
+          }}
+        >
+          {badgeText}
+        </span>
+      )}
+    </button>
+  );
+
+  const renderNotificationDropdown = () => (
     <div
       style={{
         position: "absolute",
-        top: isMobile ? "42px" : "42px",
-        right: isMobile ? "-54px" : 0,
+        top: isMobile ? "42px" : "44px",
+        right: isMobile ? "-54px" : "-6px",
         width: isMobile ? "310px" : "360px",
         maxWidth: "calc(100vw - 28px)",
         backgroundColor: "#ffffff",
         border: `1px solid ${CARD_BORDER}`,
         borderRadius: "18px",
-        boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
-        padding: "12px",
+        boxShadow: "0 18px 42px rgba(15, 23, 42, 0.14)",
+        overflow: "hidden",
         zIndex: 120,
       }}
     >
       <div
         style={{
+          padding: "15px 16px 13px",
+          borderBottom: `1px solid ${CARD_BORDER}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: "12px",
-          padding: "4px 4px 12px",
-          borderBottom: `1px solid ${CARD_BORDER}`,
-          marginBottom: "8px",
         }}
       >
         <div>
-          <strong
+          <div
             style={{
-              display: "block",
-              color: TEXT_DARK,
               fontSize: "15px",
-              fontWeight: "900",
-              letterSpacing: "-0.03em",
+              fontWeight: "800",
+              color: TEXT_DARK,
+              letterSpacing: "-0.3px",
             }}
           >
             알림
-          </strong>
-          <span
+          </div>
+          <div
             style={{
-              display: "block",
               marginTop: "3px",
-              color: "#64748B",
               fontSize: "12px",
-              fontWeight: "700",
+              color: "#64748B",
+              fontWeight: "500",
             }}
           >
-            안 읽은 알림 {unreadCount}개
-          </span>
+            {hasUnread
+              ? `읽지 않은 알림 ${safeUnreadCount}개`
+              : "새 알림이 없습니다"}
+          </div>
         </div>
 
-        {Number(unreadCount) > 0 && (
+        {safeNotifications.length > 0 && (
           <button
             type="button"
             onClick={handleReadAllNotifications}
@@ -360,14 +339,14 @@ function Header({
               border: "none",
               outline: "none",
               boxShadow: "none",
-              background: "#EFF6FF",
+              background: SOFT_BLUE,
               color: BRAND_COLOR,
-              height: "30px",
-              padding: "0 10px",
               borderRadius: "999px",
+              padding: "7px 10px",
               fontSize: "12px",
-              fontWeight: "900",
+              fontWeight: "800",
               cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
             모두 읽음
@@ -377,55 +356,68 @@ function Header({
 
       <div
         style={{
-          maxHeight: isMobile ? "330px" : "380px",
+          maxHeight: "360px",
           overflowY: "auto",
-          paddingRight: "2px",
+          padding: safeNotifications.length > 0 ? "8px" : "24px 18px",
         }}
       >
-        {notifications.length === 0 ? (
-          <div
-            style={{
-              padding: "32px 10px",
-              textAlign: "center",
-              color: "#94A3B8",
-              fontSize: "14px",
-              fontWeight: "700",
-            }}
-          >
-            아직 도착한 알림이 없어요.
+        {safeNotifications.length === 0 ? (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "22px", marginBottom: "8px" }}>🔔</div>
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: "700",
+                color: TEXT_DARK,
+                marginBottom: "4px",
+              }}
+            >
+              아직 알림이 없습니다
+            </div>
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#64748B",
+                lineHeight: 1.5,
+              }}
+            >
+              요청 진행 상황이 바뀌면 이곳에 표시됩니다.
+            </div>
           </div>
         ) : (
-          notifications.map((notification) => {
-            const isUnread = !notification.read;
+          safeNotifications.slice(0, 10).map((notification) => {
+            const isRead = notification.read;
 
             return (
               <button
                 key={notification.id}
                 type="button"
-                onClick={() => handleReadNotification(notification)}
+                onClick={() => handleNotificationClick(notification)}
                 onMouseDown={(e) => e.currentTarget.blur()}
                 style={{
                   width: "100%",
-                  display: "flex",
-                  gap: "10px",
-                  padding: "12px 10px",
                   border: "none",
                   outline: "none",
                   boxShadow: "none",
-                  borderRadius: "14px",
-                  background: isUnread ? "#F8FBFF" : "#ffffff",
+                  background: isRead ? "#ffffff" : "#F8FBFF",
+                  borderRadius: "13px",
+                  padding: "12px",
                   cursor: "pointer",
                   textAlign: "left",
-                  transition: "background-color 0.16s ease",
+                  display: "flex",
+                  gap: "10px",
+                  transition: "background-color 0.14s ease",
                   marginBottom: "4px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#EFF6FF";
+                  e.currentTarget.style.backgroundColor = isRead
+                    ? "#F8FAFC"
+                    : "#EFF6FF";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = isUnread
-                    ? "#F8FBFF"
-                    : "#ffffff";
+                  e.currentTarget.style.backgroundColor = isRead
+                    ? "#ffffff"
+                    : "#F8FBFF";
                 }}
               >
                 <span
@@ -433,50 +425,57 @@ function Header({
                     width: "8px",
                     height: "8px",
                     borderRadius: "999px",
-                    background: isUnread ? BRAND_COLOR : "#CBD5E1",
+                    background: isRead ? "#CBD5E1" : BRAND_COLOR,
                     flexShrink: 0,
-                    marginTop: "7px",
+                    marginTop: "6px",
                   }}
                 />
 
                 <span style={{ minWidth: 0, flex: 1 }}>
-                  <strong
-                    style={{
-                      display: "block",
-                      color: TEXT_DARK,
-                      fontSize: "14px",
-                      fontWeight: isUnread ? "900" : "750",
-                      lineHeight: 1.45,
-                      letterSpacing: "-0.02em",
-                    }}
-                  >
-                    {notification.title || "새 알림"}
-                  </strong>
-
                   <span
                     style={{
-                      display: "block",
-                      marginTop: "5px",
-                      color: "#64748B",
-                      fontSize: "13px",
-                      fontWeight: "650",
-                      lineHeight: 1.5,
-                      wordBreak: "keep-all",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      marginBottom: "4px",
                     }}
                   >
-                    {notification.message || "알림 내용이 없습니다."}
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: isRead ? "700" : "800",
+                        color: TEXT_DARK,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {notification.title || "새 알림"}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        color: "#94A3B8",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {formatNotificationTime(notification.createdAt)}
+                    </span>
                   </span>
 
                   <span
                     style={{
                       display: "block",
-                      marginTop: "7px",
-                      color: "#94A3B8",
                       fontSize: "12px",
-                      fontWeight: "700",
+                      color: "#64748B",
+                      lineHeight: 1.45,
+                      wordBreak: "keep-all",
                     }}
                   >
-                    {formatNotificationTime(notification.createdAt)}
+                    {notification.message || "알림 내용을 확인해주세요."}
                   </span>
                 </span>
               </button>
@@ -484,21 +483,6 @@ function Header({
           })
         )}
       </div>
-    </div>
-  );
-
-  const renderNotificationButton = () => (
-    <div style={{ position: "relative" }} ref={notificationRef}>
-      <HeaderNotificationButton
-        isMobile={isMobile}
-        isHovered={hoveredNotification || notificationOpen}
-        unreadCount={unreadCount}
-        onMouseEnter={() => setHoveredNotification(true)}
-        onMouseLeave={() => setHoveredNotification(false)}
-        onClick={handleNotificationClick}
-      />
-
-      {notificationOpen && renderNotificationPanel()}
     </div>
   );
 
@@ -534,7 +518,6 @@ function Header({
         >
           {displayName}
         </div>
-
         <div
           style={{
             fontSize: "12px",
@@ -546,51 +529,33 @@ function Header({
         </div>
       </div>
 
-      <HeaderDropdownButton
-        onClick={() => closeAndRun(onGoMyPage)}
-        textBody={TEXT_BODY}
-      >
+      <DropdownButton onClick={() => closeAndRun(onGoMyPage)}>
         마이페이지
-      </HeaderDropdownButton>
+      </DropdownButton>
 
       {!isWorker && (
-        <HeaderDropdownButton
-          onClick={() => closeAndRun(onGoMyRequests)}
-          textBody={TEXT_BODY}
-        >
+        <DropdownButton onClick={() => closeAndRun(onGoMyRequests)}>
           내 요청 목록
-        </HeaderDropdownButton>
+        </DropdownButton>
       )}
 
-      <HeaderDropdownButton
-        onClick={() => closeAndRun(onGoAllRequests)}
-        textBody={TEXT_BODY}
-      >
+      <DropdownButton onClick={() => closeAndRun(onGoAllRequests)}>
         전체 요청 보기
-      </HeaderDropdownButton>
+      </DropdownButton>
 
       {(isWorker || isAdmin) && (
-        <HeaderDropdownButton
-          onClick={() => closeAndRun(onGoAssignedRequests)}
-          textBody={TEXT_BODY}
-        >
+        <DropdownButton onClick={() => closeAndRun(onGoAssignedRequests)}>
           맡은 작업 보기
-        </HeaderDropdownButton>
+        </DropdownButton>
       )}
 
       {isAdmin && (
-        <HeaderDropdownButton onClick={goAdminPage} textBody={TEXT_BODY}>
-          관리자 페이지
-        </HeaderDropdownButton>
+        <DropdownButton onClick={goAdminPage}>관리자 페이지</DropdownButton>
       )}
 
-      <HeaderDropdownButton
-        onClick={() => closeAndRun(onLogout)}
-        danger
-        textBody={TEXT_BODY}
-      >
+      <DropdownButton onClick={() => closeAndRun(onLogout)} danger>
         로그아웃
-      </HeaderDropdownButton>
+      </DropdownButton>
     </div>
   );
 
@@ -680,13 +645,7 @@ function Header({
             </Link>
 
             {!isMobile && (
-              <nav
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "32px",
-                }}
-              >
+              <nav style={{ display: "flex", alignItems: "center", gap: "32px" }}>
                 {[
                   { key: "home", text: "홈", onClick: goTop },
                   {
@@ -797,7 +756,10 @@ function Header({
                 paddingLeft: "16px",
               }}
             >
-              {renderNotificationButton()}
+              <div style={{ position: "relative" }} ref={notificationRef}>
+                {renderNotificationButton()}
+                {notificationOpen && renderNotificationDropdown()}
+              </div>
 
               <div style={{ position: "relative" }} ref={profileRef}>
                 <button
@@ -810,13 +772,13 @@ function Header({
                   style={{
                     border: "none",
                     outline: "none",
-                    boxShadow: "none",
                     background: "none",
                     padding: 0,
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                     cursor: "pointer",
+                    boxShadow: "none",
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
@@ -836,15 +798,7 @@ function Header({
                   >
                     {String(displayName).slice(0, 1)}
                   </div>
-
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      color: "#8A8F94",
-                    }}
-                  >
-                    ▾
-                  </span>
+                  <span style={{ fontSize: "13px", color: "#8A8F94" }}>▾</span>
                 </button>
 
                 {profileOpen && renderDropdownMenu()}
@@ -887,7 +841,10 @@ function Header({
             >
               {isLoggedIn ? (
                 <>
-                  {renderNotificationButton()}
+                  <div style={{ position: "relative" }} ref={notificationRef}>
+                    {renderNotificationButton()}
+                    {notificationOpen && renderNotificationDropdown()}
+                  </div>
 
                   <div style={{ position: "relative" }} ref={profileRef}>
                     <button
@@ -903,13 +860,13 @@ function Header({
                         borderRadius: "50%",
                         border: "none",
                         outline: "none",
-                        boxShadow: "none",
                         background: "#F1F5F9",
                         color: BRAND_COLOR,
                         cursor: "pointer",
                         padding: 0,
                         fontWeight: "700",
                         fontSize: "12px",
+                        boxShadow: "none",
                         WebkitTapHighlightColor: "transparent",
                       }}
                     >

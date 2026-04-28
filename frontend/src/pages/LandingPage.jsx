@@ -63,12 +63,18 @@ function LandingPage({
       return "방금 전";
     }
 
-    return date.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return "방금 전";
+    if (diffMinutes < 60) return `${diffMinutes}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+
+    return `${date.getMonth() + 1}.${date.getDate()}`;
   };
 
   const handleNotificationClick = (notification) => {
@@ -271,8 +277,8 @@ function LandingPage({
       style={{
         position: "absolute",
         top: isMobile ? "40px" : "42px",
-        right: 0,
-        width: isMobile ? "286px" : "340px",
+        right: isMobile ? "-8px" : 0,
+        width: isMobile ? "304px" : "348px",
         maxWidth: "calc(100vw - 32px)",
         backgroundColor: "#ffffff",
         border: `1px solid ${CARD_BORDER}`,
@@ -280,7 +286,7 @@ function LandingPage({
         boxShadow: "0 18px 42px rgba(15, 23, 42, 0.13)",
         padding: "12px",
         zIndex: 200,
-        boxSizing: "border-box",
+        boxSizing: "content-box",
       }}
     >
       <div
@@ -313,7 +319,9 @@ function LandingPage({
               color: TEXT_MUTED,
             }}
           >
-            안 읽은 알림 {safeUnreadCount}개
+            {safeUnreadCount > 0
+              ? `안 읽은 알림 ${safeUnreadCount}개`
+              : "새 알림을 모두 확인했어요"}
           </div>
         </div>
 
@@ -344,7 +352,7 @@ function LandingPage({
       {visibleNotifications.length === 0 ? (
         <div
           style={{
-            padding: "28px 8px",
+            padding: "30px 10px",
             textAlign: "center",
             color: TEXT_MUTED,
             fontSize: "14px",
@@ -362,6 +370,7 @@ function LandingPage({
             gap: "6px",
             maxHeight: isMobile ? "320px" : "380px",
             overflowY: "auto",
+            paddingRight: "2px",
           }}
         >
           {visibleNotifications.map((notification) => {
@@ -408,15 +417,16 @@ function LandingPage({
                   }}
                 />
 
-                <span>
+                <span style={{ minWidth: 0 }}>
                   <span
                     style={{
                       display: "block",
                       fontSize: "13px",
-                      fontWeight: "900",
+                      fontWeight: isUnread ? "900" : "750",
                       color: TEXT_DARK,
                       lineHeight: "1.45",
                       marginBottom: "4px",
+                      letterSpacing: "-0.15px",
                     }}
                   >
                     {notification.title || "새 알림"}
@@ -429,6 +439,7 @@ function LandingPage({
                       color: TEXT_MUTED,
                       lineHeight: "1.55",
                       marginBottom: "7px",
+                      wordBreak: "keep-all",
                     }}
                   >
                     {notification.message || "알림 내용이 없습니다."}
@@ -462,8 +473,8 @@ function LandingPage({
         }}
         onMouseDown={(e) => e.currentTarget.blur()}
         style={{
-          width: "32px",
-          height: "32px",
+          width: isMobile ? "34px" : "36px",
+          height: isMobile ? "34px" : "36px",
           border: "none",
           outline: "none",
           boxShadow: "none",
@@ -474,9 +485,16 @@ function LandingPage({
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "999px",
-          color: TEXT_BODY,
+          color: notificationOpen ? BRAND_COLOR : TEXT_BODY,
           position: "relative",
+          transition: "color 0.18s ease, background-color 0.18s ease",
           WebkitTapHighlightColor: "transparent",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = BRAND_COLOR;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = notificationOpen ? BRAND_COLOR : TEXT_BODY;
         }}
         aria-label="알림"
       >
@@ -486,11 +504,11 @@ function LandingPage({
           <span
             style={{
               position: "absolute",
-              top: "1px",
-              right: "0px",
-              minWidth: "16px",
-              height: "16px",
-              padding: "0 4px",
+              top: isMobile ? "1px" : "0px",
+              right: isMobile ? "0px" : "1px",
+              minWidth: safeUnreadCount > 9 ? "18px" : "15px",
+              height: "15px",
+              padding: safeUnreadCount > 9 ? "0 4px" : 0,
               borderRadius: "999px",
               background: "#EF4444",
               color: "#ffffff",

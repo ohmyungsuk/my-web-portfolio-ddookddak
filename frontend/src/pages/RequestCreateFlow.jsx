@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { getCategoryIcon } from "../utils/categoryIcons.js";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 const CATEGORY_DATA = [
   {
     id: "electrical",
@@ -753,8 +756,41 @@ export default function RequestCreateFlow() {
     };
 
     try {
-      const { error } = await supabase.from("requests").insert([payload]);
+      const { data: createdRequest, error } = await supabase
+        .from("requests")
+        .insert([payload])
+        .select("id, title, category")
+        .single();
+
       if (error) throw error;
+
+      try {
+        const notificationResponse = await fetch(
+          `${API_BASE_URL}/api/notification-events/request-created`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              requestId: createdRequest?.id,
+              actorId: loginUser.id,
+              category: createdRequest?.category || selectedCategory.title,
+              title: createdRequest?.title || payload.title,
+              message: `${payload.title} 요청이 등록되었습니다.`,
+            }),
+          },
+        );
+
+        if (!notificationResponse.ok) {
+          console.error(
+            "요청 등록 알림 발송 실패:",
+            await notificationResponse.text(),
+          );
+        }
+      } catch (notificationError) {
+        console.error("요청 등록 알림 발송 실패:", notificationError);
+      }
 
       navigate("/requests/my");
     } catch (error) {
