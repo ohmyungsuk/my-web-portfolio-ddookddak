@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 const BRAND = "#2F80ED";
 const BRAND_HOVER = "#1F6FD6";
 const TEXT = "#0F172A";
@@ -14,9 +17,6 @@ const DANGER = "#EF4444";
 const DANGER_HOVER = "#DC2626";
 const GRAY = "#94A3B8";
 const GRAY_HOVER = "#64748B";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 const STATUS_STEPS = [
   { key: "pending", title: "요청 등록", desc: "요청이 등록됐어요." },
@@ -408,20 +408,18 @@ export default function RequestDetailPage() {
     assignedUserId === loginUserId
   );
 
-  const writerText =
-    isWriter
-      ? "나"
-      : detail?.writer_name ||
-        detail?.writer_nickname ||
-        detail?.writer_email ||
-        "작성자 정보 없음";
+  const writerText = isWriter
+    ? "나"
+    : detail?.writer_name ||
+      detail?.writer_nickname ||
+      detail?.writer_email ||
+      "작성자 정보 없음";
 
-  const assignedText =
-    !assignedUserId
-      ? "아직 없음"
-      : assignedUserId === loginUserId
-        ? "나"
-        : detail?.assigned_username || "배정됨";
+  const assignedText = !assignedUserId
+    ? "아직 없음"
+    : assignedUserId === loginUserId
+      ? "나"
+      : detail?.assigned_username || "배정됨";
 
   const canEdit =
     isWriter && !["completed", "cancelled"].includes(normalizedStatus);
@@ -448,9 +446,7 @@ export default function RequestDetailPage() {
     isAssignedWorker && ["assigned", "quoted"].includes(normalizedStatus)
   );
 
-  const canStartWork = !!(
-    isAssignedWorker && normalizedStatus === "planned"
-  );
+  const canStartWork = !!(isAssignedWorker && normalizedStatus === "planned");
 
   const canComplete = !!(
     isAssignedWorker && normalizedStatus === "in_progress"
@@ -465,31 +461,15 @@ export default function RequestDetailPage() {
     canStartWork ||
     canComplete;
 
-  const getActorName = () =>
-    loginProfile?.name ||
-    loginProfile?.username ||
-    loginUser?.user_metadata?.name ||
-    loginUser?.user_metadata?.full_name ||
-    loginUser?.email ||
-    "담당자";
-
-  const sendNotification = async ({
+  const createNotification = async ({
     recipientId,
+    actorId,
     type,
     title,
     notificationMessage,
-    requestData,
-    metadata = {},
+    targetUrl,
   }) => {
-    const actorId = loginUser?.id;
-
-    if (!recipientId || !actorId || !requestData?.id) {
-      return;
-    }
-
-    if (String(recipientId) === String(actorId)) {
-      return;
-    }
+    if (!recipientId || !actorId || !detail?.id) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications`, {
@@ -498,60 +478,51 @@ export default function RequestDetailPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipientId: String(recipientId),
-          actorId: String(actorId),
+          recipientId,
+          actorId,
           type,
           title,
           message: notificationMessage,
-          requestId: requestData.id,
-          targetUrl: `/requests/${requestData.id}`,
+          requestId: detail.id,
+          targetUrl: targetUrl || `/requests/${detail.id}`,
           metadata: JSON.stringify({
-            source: "request-detail",
-            requestStatus: requestData.status,
-            ...metadata,
+            source: "request-detail-status",
+            status: type,
           }),
         }),
       });
 
       if (!response.ok) {
-        throw new Error("알림 발송 실패");
+        throw new Error("알림 발송에 실패했습니다.");
       }
     } catch (error) {
-      console.error("요청 상태 알림 발송 실패:", error);
+      console.error("상태 변경 알림 발송 실패:", error);
     }
   };
 
-  const notifyOwner = async ({
-    requestData,
-    type = "REQUEST_STATUS_CHANGED",
-    title,
-    notificationMessage,
-    metadata,
-  }) => {
-    await sendNotification({
-      recipientId: requestData?.user_id || detail?.user_id,
+  const notifyOwner = async ({ type, title, notificationMessage }) => {
+    if (!requestOwnerId || !loginUserId || requestOwnerId === loginUserId)
+      return;
+
+    await createNotification({
+      recipientId: requestOwnerId,
+      actorId: loginUserId,
       type,
       title,
       notificationMessage,
-      requestData,
-      metadata,
     });
   };
 
-  const notifyAssignedWorker = async ({
-    requestData,
-    type = "REQUEST_STATUS_CHANGED",
-    title,
-    notificationMessage,
-    metadata,
-  }) => {
-    await sendNotification({
-      recipientId: requestData?.assigned_user_id || detail?.assigned_user_id,
+  const notifyAssignedWorker = async ({ type, title, notificationMessage }) => {
+    if (!assignedUserId || !loginUserId || assignedUserId === loginUserId)
+      return;
+
+    await createNotification({
+      recipientId: assignedUserId,
+      actorId: loginUserId,
       type,
       title,
       notificationMessage,
-      requestData,
-      metadata,
     });
   };
 
@@ -573,7 +544,6 @@ export default function RequestDetailPage() {
 
       setDetail(data);
       setMessage(successMessage);
-
       return data;
     } catch (error) {
       console.error("요청 변경 실패:", error);
@@ -587,28 +557,28 @@ export default function RequestDetailPage() {
   const handleAccept = async () => {
     if (!loginUser?.id || !canAccept) return;
 
-    const actorName = getActorName();
-
     const updatedRequest = await updateRequest(
       {
         status: "quoted",
         assigned_user_id: loginUser.id,
-        assigned_username: actorName,
+        assigned_username:
+          loginProfile?.name ||
+          loginProfile?.username ||
+          loginUser.user_metadata?.name ||
+          loginUser.user_metadata?.full_name ||
+          loginUser.email ||
+          "전문가",
       },
       "요청을 수락했습니다.",
     );
 
-    if (!updatedRequest) return;
-
-    await notifyOwner({
-      requestData: updatedRequest,
-      type: "REQUEST_ASSIGNED",
-      title: "전문가가 요청을 수락했습니다",
-      notificationMessage: `${actorName}님이 '${updatedRequest.title || "요청"}' 요청을 수락했습니다. 견적 협의를 진행해 주세요.`,
-      metadata: {
-        action: "accept",
-      },
-    });
+    if (updatedRequest) {
+      await notifyOwner({
+        type: "REQUEST_STATUS_CHANGED",
+        title: "전문가가 요청을 수락했습니다",
+        notificationMessage: `'${detail.title || "요청"}' 요청을 전문가가 확인했습니다.`,
+      });
+    }
   };
 
   const handleSetPlanned = async () => {
@@ -619,16 +589,13 @@ export default function RequestDetailPage() {
       "작업 예정 상태로 변경됐어요.",
     );
 
-    if (!updatedRequest) return;
-
-    await notifyOwner({
-      requestData: updatedRequest,
-      title: "작업 예정 상태로 변경되었습니다",
-      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 예정 상태로 변경되었습니다.`,
-      metadata: {
-        action: "planned",
-      },
-    });
+    if (updatedRequest) {
+      await notifyOwner({
+        type: "REQUEST_STATUS_CHANGED",
+        title: "작업 예정으로 변경되었습니다",
+        notificationMessage: `'${detail.title || "요청"}' 작업이 예정 상태로 변경되었습니다.`,
+      });
+    }
   };
 
   const handleStartWork = async () => {
@@ -639,16 +606,13 @@ export default function RequestDetailPage() {
       "작업을 시작했습니다.",
     );
 
-    if (!updatedRequest) return;
-
-    await notifyOwner({
-      requestData: updatedRequest,
-      title: "작업이 시작되었습니다",
-      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 진행중으로 변경되었습니다.`,
-      metadata: {
-        action: "start-work",
-      },
-    });
+    if (updatedRequest) {
+      await notifyOwner({
+        type: "REQUEST_STATUS_CHANGED",
+        title: "작업이 시작되었습니다",
+        notificationMessage: `'${detail.title || "요청"}' 작업이 진행중으로 변경되었습니다.`,
+      });
+    }
   };
 
   const handleComplete = async () => {
@@ -659,17 +623,13 @@ export default function RequestDetailPage() {
       "작업을 완료 처리했습니다.",
     );
 
-    if (!updatedRequest) return;
-
-    await notifyOwner({
-      requestData: updatedRequest,
-      type: "REQUEST_COMPLETED",
-      title: "작업이 완료되었습니다",
-      notificationMessage: `'${updatedRequest.title || "요청"}' 작업이 완료 처리되었습니다.`,
-      metadata: {
-        action: "complete",
-      },
-    });
+    if (updatedRequest) {
+      await notifyOwner({
+        type: "REQUEST_COMPLETED",
+        title: "작업이 완료되었습니다",
+        notificationMessage: `'${detail.title || "요청"}' 작업이 완료되었습니다.`,
+      });
+    }
   };
 
   const handleCancel = async () => {
@@ -683,16 +643,13 @@ export default function RequestDetailPage() {
       "요청이 취소되었습니다.",
     );
 
-    if (!updatedRequest) return;
-
-    await notifyAssignedWorker({
-      requestData: updatedRequest,
-      title: "요청이 취소되었습니다",
-      notificationMessage: `'${updatedRequest.title || "요청"}' 요청이 작성자에 의해 취소되었습니다.`,
-      metadata: {
-        action: "cancel",
-      },
-    });
+    if (updatedRequest) {
+      await notifyAssignedWorker({
+        type: "REQUEST_STATUS_CHANGED",
+        title: "요청이 취소되었습니다",
+        notificationMessage: `'${detail.title || "요청"}' 요청이 작성자에 의해 취소되었습니다.`,
+      });
+    }
   };
 
   const handleEdit = () => {
@@ -883,11 +840,7 @@ export default function RequestDetailPage() {
     },
     flowStep: (isDone, isActive, isCancelled) => ({
       border: `1px solid ${
-        isCancelled
-          ? "#E2E8F0"
-          : isActive || isDone
-            ? "#BFDBFE"
-            : "#E2E8F0"
+        isCancelled ? "#E2E8F0" : isActive || isDone ? "#BFDBFE" : "#E2E8F0"
       }`,
       background: isCancelled
         ? "#F8FAFC"
@@ -1017,7 +970,8 @@ export default function RequestDetailPage() {
       outline: "none",
       outlineOffset: 0,
       boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
-      transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
       boxSizing: "border-box",
     },
     dangerBtn: {
@@ -1033,7 +987,8 @@ export default function RequestDetailPage() {
       outline: "none",
       outlineOffset: 0,
       boxShadow: "0 10px 22px rgba(239, 68, 68, 0.16)",
-      transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
       boxSizing: "border-box",
     },
     grayBtn: {
@@ -1049,7 +1004,8 @@ export default function RequestDetailPage() {
       outline: "none",
       outlineOffset: 0,
       boxShadow: "0 10px 22px rgba(100, 116, 139, 0.14)",
-      transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+      transition:
+        "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
       boxSizing: "border-box",
     },
     secondaryBtn: {
@@ -1254,7 +1210,11 @@ export default function RequestDetailPage() {
 
               <div style={styles.infoGrid}>
                 <InfoBox label="담당자" value={assignedText} styles={styles} />
-                <InfoBox label="요청 번호" value={`#${detail.id}`} styles={styles} />
+                <InfoBox
+                  label="요청 번호"
+                  value={`#${detail.id}`}
+                  styles={styles}
+                />
                 <InfoBox
                   label="공간 유형"
                   value={parsedContent.placeType}
