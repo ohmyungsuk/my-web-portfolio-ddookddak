@@ -12,6 +12,20 @@ const SOFT = "#F8FBFF";
 const DANGER = "#EF4444";
 const DANGER_HOVER = "#DC2626";
 
+const WORKER_CATEGORY_OPTIONS = [
+  { value: "전기/조명", label: "전기/조명", desc: "콘센트, 스위치, 조명, 누전" },
+  { value: "설비/배관", label: "설비/배관", desc: "수도, 배관, 세면대, 변기" },
+  { value: "누수/방수", label: "누수/방수", desc: "누수 점검, 방수, 곰팡이" },
+  { value: "도어락/출입문", label: "도어락/출입문", desc: "도어락, 현관문, 출입문" },
+  { value: "에어컨/환기", label: "에어컨/환기", desc: "에어컨, 환풍기, 실외기" },
+  { value: "CCTV/네트워크", label: "CCTV/네트워크", desc: "CCTV, 공유기, 와이파이" },
+  { value: "유리/창호", label: "유리/창호", desc: "창문, 방충망, 유리문" },
+  { value: "가전/생활수리", label: "가전/생활수리", desc: "생활가전, 가구, 소형수리" },
+  { value: "청소/철거", label: "청소/철거", desc: "입주청소, 폐기물, 부분철거" },
+  { value: "기타 유지보수", label: "기타 유지보수", desc: "기타 현장 점검과 수리" },
+];
+
+
 function getWindowWidth() {
   if (typeof window === "undefined") return 1024;
   return window.innerWidth;
@@ -117,6 +131,27 @@ function SettingItem({ title, desc, children, styles }) {
   );
 }
 
+function SettingToggle({ title, desc, checked, onChange, styles }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      onMouseDown={(e) => e.currentTarget.blur()}
+      onFocus={(e) => e.currentTarget.blur()}
+      style={styles.toggleRow}
+    >
+      <span style={styles.toggleTextBox}>
+        <strong style={styles.toggleTitle}>{title}</strong>
+        {desc && <span style={styles.toggleDesc}>{desc}</span>}
+      </span>
+
+      <span style={styles.toggleSwitch(checked)}>
+        <span style={styles.toggleKnob(checked)} />
+      </span>
+    </button>
+  );
+}
+
 export default function MyPage({
   loginUser,
   onGoHome,
@@ -142,6 +177,21 @@ export default function MyPage({
 
   const [authProvider, setAuthProvider] = useState("email");
 
+  const [workerCategories, setWorkerCategories] = useState([]);
+  const [workerCategoryLoading, setWorkerCategoryLoading] = useState(false);
+  const [workerCategorySaving, setWorkerCategorySaving] = useState(false);
+  const [workerCategoryMessage, setWorkerCategoryMessage] = useState("");
+
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    new_request_alert: true,
+    status_alert: true,
+    chat_alert: true,
+    admin_alert: true,
+  });
+  const [notificationPrefLoading, setNotificationPrefLoading] = useState(false);
+  const [notificationPrefSaving, setNotificationPrefSaving] = useState(false);
+  const [notificationPrefMessage, setNotificationPrefMessage] = useState("");
+
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawConfirmText, setWithdrawConfirmText] = useState("");
   const [withdrawMessage, setWithdrawMessage] = useState("");
@@ -154,6 +204,8 @@ export default function MyPage({
 
   const isMobile = windowWidth <= 768;
   const isWorker = loginUser?.role === "worker" || loginUser?.role === "admin";
+  const canManageWorkerCategories = loginUser?.role === "worker";
+  const isAdmin = loginUser?.role === "admin";
 
   const userId = loginUser?.supabaseUserId || loginUser?.id || "";
   const displayName =
@@ -273,6 +325,94 @@ export default function MyPage({
       isMounted = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNotificationPreferences = async () => {
+      if (!userId) return;
+
+      try {
+        setNotificationPrefLoading(true);
+
+        const { data, error } = await supabase
+          .from("notification_preferences")
+          .select("new_request_alert, status_alert, chat_alert, admin_alert")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!isMounted) return;
+
+        if (data) {
+          setNotificationPrefs({
+            new_request_alert: data.new_request_alert ?? true,
+            status_alert: data.status_alert ?? true,
+            chat_alert: data.chat_alert ?? true,
+            admin_alert: data.admin_alert ?? true,
+          });
+        }
+      } catch (error) {
+        console.error("알림 설정 불러오기 실패:", error);
+      } finally {
+        if (isMounted) {
+          setNotificationPrefLoading(false);
+        }
+      }
+    };
+
+    loadNotificationPreferences();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadWorkerCategories = async () => {
+      if (!userId || !canManageWorkerCategories) {
+        setWorkerCategories([]);
+        return;
+      }
+
+      try {
+        setWorkerCategoryLoading(true);
+
+        const { data, error } = await supabase
+          .from("worker_categories")
+          .select("category, is_enabled")
+          .eq("worker_id", userId);
+
+        if (error) throw error;
+
+        if (!isMounted) return;
+
+        const enabledCategories = (data || [])
+          .filter((item) => item.is_enabled)
+          .map((item) => item.category);
+
+        setWorkerCategories(enabledCategories);
+      } catch (error) {
+        console.error("전문 분야 불러오기 실패:", error);
+        if (isMounted) {
+          setWorkerCategoryMessage("전문 분야를 불러오지 못했습니다.");
+        }
+      } finally {
+        if (isMounted) {
+          setWorkerCategoryLoading(false);
+        }
+      }
+    };
+
+    loadWorkerCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, canManageWorkerCategories]);
 
   const activityCards = useMemo(() => {
     const cards = [
@@ -415,6 +555,98 @@ export default function MyPage({
       setPasswordMessage(error.message || "비밀번호 변경 중 문제가 발생했습니다.");
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleToggleWorkerCategory = (category) => {
+    setWorkerCategoryMessage("");
+    setWorkerCategories((prev) => {
+      if (prev.includes(category)) {
+        return prev.filter((item) => item !== category);
+      }
+
+      return [...prev, category];
+    });
+  };
+
+  const handleSaveWorkerCategories = async () => {
+    if (!userId) {
+      setWorkerCategoryMessage("로그인 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    if (!canManageWorkerCategories) {
+      setWorkerCategoryMessage("전문가 회원만 전문 분야를 설정할 수 있습니다.");
+      return;
+    }
+
+    try {
+      setWorkerCategorySaving(true);
+      setWorkerCategoryMessage("");
+
+      const rows = WORKER_CATEGORY_OPTIONS.map((option) => ({
+        worker_id: userId,
+        category: option.value,
+        is_enabled: workerCategories.includes(option.value),
+      }));
+
+      const { error } = await supabase
+        .from("worker_categories")
+        .upsert(rows, { onConflict: "worker_id,category" });
+
+      if (error) throw error;
+
+      setWorkerCategoryMessage("전문 분야 설정이 저장되었습니다.");
+    } catch (error) {
+      console.error("전문 분야 저장 실패:", error);
+      setWorkerCategoryMessage(
+        error.message || "전문 분야 저장 중 문제가 발생했습니다.",
+      );
+    } finally {
+      setWorkerCategorySaving(false);
+    }
+  };
+
+  const handleToggleNotificationPref = (key) => {
+    setNotificationPrefMessage("");
+    setNotificationPrefs((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleSaveNotificationPrefs = async () => {
+    if (!userId) {
+      setNotificationPrefMessage("로그인 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    try {
+      setNotificationPrefSaving(true);
+      setNotificationPrefMessage("");
+
+      const { error } = await supabase.from("notification_preferences").upsert(
+        {
+          user_id: userId,
+          new_request_alert: notificationPrefs.new_request_alert,
+          status_alert: notificationPrefs.status_alert,
+          chat_alert: notificationPrefs.chat_alert,
+          admin_alert: notificationPrefs.admin_alert,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+
+      if (error) throw error;
+
+      setNotificationPrefMessage("알림 설정이 저장되었습니다.");
+    } catch (error) {
+      console.error("알림 설정 저장 실패:", error);
+      setNotificationPrefMessage(
+        error.message || "알림 설정 저장 중 문제가 발생했습니다.",
+      );
+    } finally {
+      setNotificationPrefSaving(false);
     }
   };
 
@@ -861,6 +1093,116 @@ export default function MyPage({
       width: isMobile ? "100%" : "160px",
       flexShrink: 0,
     },
+    preferencePanel: {
+      background: SOFT,
+      border: `1px solid ${BORDER}`,
+      borderRadius: "20px",
+      padding: isMobile ? "18px" : "20px",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+    },
+    categoryGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gap: "10px",
+      marginTop: "14px",
+    },
+    categoryButton: (active) => ({
+      minHeight: "76px",
+      borderRadius: "16px",
+      border: active ? `1px solid ${BRAND}` : `1px solid ${BORDER}`,
+      background: active ? "#EEF6FF" : "#FFFFFF",
+      color: active ? BRAND : TEXT,
+      padding: "14px",
+      textAlign: "left",
+      cursor: "pointer",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+      boxShadow: active ? "0 10px 22px rgba(47, 128, 237, 0.10)" : "none",
+      transition: "border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease",
+    }),
+    categoryName: {
+      display: "block",
+      fontSize: "14px",
+      fontWeight: 900,
+      marginBottom: "6px",
+    },
+    categoryDesc: {
+      display: "block",
+      fontSize: "12px",
+      color: SUB,
+      lineHeight: 1.55,
+      wordBreak: "keep-all",
+    },
+    toggleGroup: {
+      display: "grid",
+      gap: "10px",
+      marginTop: "14px",
+    },
+    toggleRow: {
+      width: "100%",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "16px",
+      background: "#FFFFFF",
+      minHeight: "66px",
+      padding: "13px 14px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "12px",
+      cursor: "pointer",
+      boxSizing: "border-box",
+      outline: "none",
+      outlineOffset: 0,
+      WebkitTapHighlightColor: "transparent",
+    },
+    toggleTextBox: {
+      minWidth: 0,
+      display: "grid",
+      gap: "4px",
+      textAlign: "left",
+    },
+    toggleTitle: {
+      fontSize: "14px",
+      color: TEXT,
+      fontWeight: 900,
+      lineHeight: 1.3,
+    },
+    toggleDesc: {
+      fontSize: "12px",
+      color: SUB,
+      lineHeight: 1.5,
+      wordBreak: "keep-all",
+    },
+    toggleSwitch: (checked) => ({
+      width: "44px",
+      height: "24px",
+      borderRadius: "999px",
+      background: checked ? BRAND : "#CBD5E1",
+      position: "relative",
+      flexShrink: 0,
+      transition: "background-color 0.18s ease",
+    }),
+    toggleKnob: (checked) => ({
+      position: "absolute",
+      top: "3px",
+      left: checked ? "23px" : "3px",
+      width: "18px",
+      height: "18px",
+      borderRadius: "50%",
+      background: "#FFFFFF",
+      boxShadow: "0 3px 8px rgba(15, 23, 42, 0.18)",
+      transition: "left 0.18s ease",
+    }),
+    smallGuide: {
+      margin: "10px 0 0",
+      fontSize: "12px",
+      color: SUB,
+      lineHeight: 1.65,
+      wordBreak: "keep-all",
+    },
     passwordBox: {
       display: "grid",
       gap: "10px",
@@ -1127,6 +1469,126 @@ export default function MyPage({
                       </HoverButton>
                     </div>
                   </SettingItem>
+
+                  <SettingItem
+                    title="알림 설정"
+                    desc="알림 종류별로 받을지 말지 설정할 수 있어요."
+                    styles={styles}
+                  >
+                    <div style={styles.settingButtonWrap}>
+                      <HoverButton
+                        onClick={handleSaveNotificationPrefs}
+                        disabled={notificationPrefSaving || notificationPrefLoading}
+                        baseStyle={styles.primaryBtn}
+                        hoverStyle={{
+                          background: BRAND_HOVER,
+                          boxShadow: "0 12px 24px rgba(31, 111, 214, 0.22)",
+                        }}
+                      >
+                        {notificationPrefSaving ? "저장 중..." : "저장하기"}
+                      </HoverButton>
+                    </div>
+                  </SettingItem>
+
+                  <div style={styles.preferencePanel}>
+                    <div style={styles.toggleGroup}>
+                      {canManageWorkerCategories && (
+                        <SettingToggle
+                          title="내 분야 새 요청 알림"
+                          desc="선택한 전문 분야와 맞는 새 요청이 올라오면 알림을 받아요."
+                          checked={notificationPrefs.new_request_alert}
+                          onChange={() =>
+                            handleToggleNotificationPref("new_request_alert")
+                          }
+                          styles={styles}
+                        />
+                      )}
+
+                      <SettingToggle
+                        title="진행상황 알림"
+                        desc="내 요청이 수락, 진행중, 완료로 바뀌면 알림을 받아요."
+                        checked={notificationPrefs.status_alert}
+                        onChange={() => handleToggleNotificationPref("status_alert")}
+                        styles={styles}
+                      />
+
+                      <SettingToggle
+                        title="채팅 알림"
+                        desc="나중에 견적 협의 채팅이 도착하면 알림을 받을 때 사용해요."
+                        checked={notificationPrefs.chat_alert}
+                        onChange={() => handleToggleNotificationPref("chat_alert")}
+                        styles={styles}
+                      />
+
+                      {isAdmin && (
+                        <SettingToggle
+                          title="관리자 운영 알림"
+                          desc="새 요청 등록이나 완료 같은 운영 알림을 받아요."
+                          checked={notificationPrefs.admin_alert}
+                          onChange={() => handleToggleNotificationPref("admin_alert")}
+                          styles={styles}
+                        />
+                      )}
+                    </div>
+
+                    {renderMessage(notificationPrefMessage, "저장")}
+                  </div>
+
+                  {canManageWorkerCategories && (
+                    <>
+                      <SettingItem
+                        title="전문 분야 설정"
+                        desc="선택한 분야의 새 요청이 등록되면 알림을 받을 수 있어요."
+                        styles={styles}
+                      >
+                        <div style={styles.settingButtonWrap}>
+                          <HoverButton
+                            onClick={handleSaveWorkerCategories}
+                            disabled={workerCategorySaving || workerCategoryLoading}
+                            baseStyle={styles.primaryBtn}
+                            hoverStyle={{
+                              background: BRAND_HOVER,
+                              boxShadow:
+                                "0 12px 24px rgba(31, 111, 214, 0.22)",
+                            }}
+                          >
+                            {workerCategorySaving ? "저장 중..." : "분야 저장"}
+                          </HoverButton>
+                        </div>
+                      </SettingItem>
+
+                      <div style={styles.preferencePanel}>
+                        <div style={styles.categoryGrid}>
+                          {WORKER_CATEGORY_OPTIONS.map((option) => {
+                            const active = workerCategories.includes(option.value);
+
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => handleToggleWorkerCategory(option.value)}
+                                onMouseDown={(e) => e.currentTarget.blur()}
+                                onFocus={(e) => e.currentTarget.blur()}
+                                style={styles.categoryButton(active)}
+                              >
+                                <span style={styles.categoryName}>
+                                  {active ? "✓ " : ""}
+                                  {option.label}
+                                </span>
+                                <span style={styles.categoryDesc}>{option.desc}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <p style={styles.smallGuide}>
+                          선택한 분야와 요청 등록 카테고리가 같으면 해당 새 요청 알림을 받을 수 있어요.
+                        </p>
+
+                        {renderMessage(workerCategoryMessage, "저장")}
+                      </div>
+                    </>
+                  )}
 
                   <SettingItem
                     title="비밀번호 변경"

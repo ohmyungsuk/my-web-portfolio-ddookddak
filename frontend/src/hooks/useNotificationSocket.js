@@ -4,6 +4,11 @@ import { Client } from "@stomp/stompjs";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+const SOCKET_ENABLED =
+  import.meta.env.VITE_NOTIFICATION_SOCKET_ENABLED !== "false";
+
+const STOMP_DEBUG = import.meta.env.VITE_STOMP_DEBUG === "true";
+
 function getWebSocketUrl() {
   if (API_BASE_URL.startsWith("https://")) {
     return API_BASE_URL.replace("https://", "wss://") + "/ws-notifications";
@@ -16,28 +21,70 @@ function getWebSocketUrl() {
   return "ws://localhost:8080/ws-notifications";
 }
 
+function isLocalHost(hostname) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0"
+  );
+}
+
+function canConnectToNotificationServer() {
+  try {
+    const apiUrl = new URL(API_BASE_URL);
+    const apiHost = apiUrl.hostname;
+    const pageHost = window.location.hostname;
+
+    // 배포된 GitHub Pages 같은 곳에서 localhost:8080으로 붙으려는 걸 막음
+    if (isLocalHost(apiHost) && !isLocalHost(pageHost)) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function useNotificationSocket(loginUser, onNotificationReceived) {
   const stompClientRef = useRef(null);
+  const errorShownRef = useRef(false);
 
   useEffect(() => {
-    console.log("알림 소켓 훅 실행됨:", loginUser);
-
     const userId = loginUser?.id || loginUser?.supabaseUserId;
 
+    if (!SOCKET_ENABLED) {
+      return;
+    }
+
     if (!userId) {
-      console.log("알림 소켓 연결 안 함: userId 없음");
+      return;
+    }
+
+    if (!canConnectToNotificationServer()) {
       return;
     }
 
     const client = new Client({
       brokerURL: getWebSocketUrl(),
-      reconnectDelay: 5000,
+
+      // 중요:
+      // 기존 5000이면 백엔드 꺼져 있을 때 5초마다 콘솔 오류가 계속 쌓임.
+      // 0으로 두면 자동 무한 재연결을 하지 않음.
+      reconnectDelay: 0,
+
+      connectionTimeout: 3000,
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
 
       debug: (message) => {
-        console.log("[STOMP]", message);
+        if (STOMP_DEBUG) {
+          console.log("[STOMP]", message);
+        }
       },
 
       onConnect: () => {
+        errorShownRef.current = false;
         console.log("알림 WebSocket 연결 성공:", userId);
 
         client.subscribe(`/topic/notifications/${userId}`, (message) => {
@@ -56,15 +103,30 @@ function useNotificationSocket(loginUser, onNotificationReceived) {
       },
 
       onStompError: (frame) => {
-        console.error("STOMP 에러:", frame);
+        if (!errorShownRef.current) {
+          console.warn("알림 STOMP 연결 오류:", frame);
+          errorShownRef.current = true;
+        }
       },
 
-      onWebSocketError: (error) => {
-        console.error("WebSocket 에러:", error);
+      onWebSocketError: () => {
+        if (!errorShownRef.current) {
+          console.warn(
+            "알림 서버에 연결하지 못했습니다. 백엔드가 꺼져 있으면 무시해도 됩니다."
+          );
+          errorShownRef.current = true;
+        }
       },
 
       onWebSocketClose: (event) => {
-        console.log("WebSocket 연결 종료:", event);
+        if (event.code === 1000) {
+          return;
+        }
+
+        if (!errorShownRef.current) {
+          console.warn("알림 WebSocket 연결이 종료되었습니다:", event);
+          errorShownRef.current = true;
+        }
       },
     });
 

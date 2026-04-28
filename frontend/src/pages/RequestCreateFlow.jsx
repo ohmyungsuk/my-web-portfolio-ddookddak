@@ -592,7 +592,9 @@ export default function RequestCreateFlow() {
   const [answers, setAnswers] = useState(EMPTY_ANSWERS);
   const [draftOption, setDraftOption] = useState("");
   const [draftText, setDraftText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const submitLockRef = useRef(false);
   const iconRowRef = useRef(null);
   const dragStateRef = useRef({
     isDown: false,
@@ -652,6 +654,8 @@ export default function RequestCreateFlow() {
     setAnswers(EMPTY_ANSWERS);
     setDraftOption("");
     setDraftText("");
+    submitLockRef.current = false;
+    setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -731,6 +735,8 @@ export default function RequestCreateFlow() {
   };
 
   const handleSubmit = async () => {
+    if (submitLockRef.current || isSubmitting) return;
+
     const savedUser = localStorage.getItem("loginUser");
     const loginUser = savedUser ? JSON.parse(savedUser) : null;
 
@@ -738,6 +744,9 @@ export default function RequestCreateFlow() {
       alert("로그인 정보가 없습니다. 다시 로그인 후 시도해주세요.");
       return;
     }
+
+    submitLockRef.current = true;
+    setIsSubmitting(true);
 
     const payload = {
       user_id: loginUser.id,
@@ -796,6 +805,8 @@ export default function RequestCreateFlow() {
     } catch (error) {
       console.error("요청 등록 실패:", error);
       alert(error.message || "요청 등록 중 문제가 발생했습니다.");
+      submitLockRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -1568,6 +1579,36 @@ export default function RequestCreateFlow() {
       transition: all 0.18s ease;
     }
 
+    .dd-btn:disabled {
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+      opacity: 0.72;
+    }
+
+    .dd-btn.submitting {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #2563eb !important;
+      color: #ffffff !important;
+    }
+
+    .dd-submit-spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.42);
+      border-top-color: #ffffff;
+      animation: ddSubmitSpin 0.75s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes ddSubmitSpin {
+      to { transform: rotate(360deg); }
+    }
+
     .dd-btn.secondary {
       background: #ffffff;
       color: #0f172a;
@@ -2105,16 +2146,26 @@ export default function RequestCreateFlow() {
                     type="button"
                     className="dd-btn secondary"
                     onClick={() => setStep(questions.length - 1)}
+                    disabled={isSubmitting}
                   >
                     마지막 답변 수정
                   </button>
 
                   <button
                     type="button"
-                    className="dd-btn primary enabled"
+                    className={`dd-btn primary enabled ${isSubmitting ? "submitting" : ""}`}
                     onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    aria-busy={isSubmitting}
                   >
-                    요청 등록
+                    {isSubmitting ? (
+                      <>
+                        <span className="dd-submit-spinner" aria-hidden="true" />
+                        요청 등록 중...
+                      </>
+                    ) : (
+                      "요청 등록"
+                    )}
                   </button>
                 </div>
               </section>

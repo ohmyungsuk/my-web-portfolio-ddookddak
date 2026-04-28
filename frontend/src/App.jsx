@@ -342,17 +342,7 @@ function App() {
   };
 
   if (!authReady) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-header">
-            <p className="auth-badge">뚝딱</p>
-            <h1>불러오는 중...</h1>
-            <p className="auth-desc">로그인 정보를 확인하고 있습니다.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <div style={{ minHeight: "100vh", background: "#fff" }} />;
   }
 
   const hideHeader = ["/login", "/signup"].includes(location.pathname);
