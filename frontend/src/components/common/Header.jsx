@@ -2,15 +2,41 @@ import { useEffect, useRef, useState } from "react";
 import { GrNotification } from "react-icons/gr";
 import { Link, useNavigate } from "react-router-dom";
 
+function formatNotificationTime(value) {
+  if (!value) return "방금 전";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "방금 전";
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return "방금 전";
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  if (diffDays < 7) return `${diffDays}일 전`;
+
+  return `${date.getMonth() + 1}.${date.getDate()}`;
+}
+
 function HeaderNotificationButton({
   isMobile,
   isHovered,
+  unreadCount = 0,
   onMouseEnter,
   onMouseLeave,
   onClick,
 }) {
   const BRAND_COLOR = "#2F80ED";
   const TEXT_BODY = "#2F3438";
+  const hasUnread = Number(unreadCount) > 0;
+  const badgeText = unreadCount > 99 ? "99+" : String(unreadCount);
 
   return (
     <button
@@ -20,6 +46,7 @@ function HeaderNotificationButton({
       onMouseLeave={onMouseLeave}
       onMouseDown={(e) => e.currentTarget.blur()}
       style={{
+        position: "relative",
         width: isMobile ? "34px" : "38px",
         height: isMobile ? "34px" : "38px",
         border: "none",
@@ -39,6 +66,30 @@ function HeaderNotificationButton({
       aria-label="알림"
     >
       <GrNotification size={isMobile ? 18 : 20} />
+
+      {hasUnread && (
+        <span
+          style={{
+            position: "absolute",
+            top: isMobile ? "1px" : "0px",
+            right: isMobile ? "0px" : "1px",
+            minWidth: unreadCount > 9 ? "18px" : "15px",
+            height: "15px",
+            padding: unreadCount > 9 ? "0 4px" : 0,
+            borderRadius: "999px",
+            background: "#EF4444",
+            color: "#ffffff",
+            border: "2px solid #ffffff",
+            boxSizing: "content-box",
+            fontSize: "10px",
+            lineHeight: "15px",
+            fontWeight: "900",
+            textAlign: "center",
+          }}
+        >
+          {badgeText}
+        </span>
+      )}
     </button>
   );
 }
@@ -86,6 +137,10 @@ function HeaderDropdownButton({
 function Header({
   isLoggedIn,
   loginUser,
+  notifications = [],
+  unreadCount = 0,
+  onReadNotification,
+  onReadAllNotifications,
   onGoHome,
   onGoLogin,
   onGoSignup,
@@ -102,7 +157,9 @@ function Header({
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredNotification, setHoveredNotification] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const profileRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const isMobile = windowWidth <= 768;
 
@@ -136,6 +193,13 @@ function Header({
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
       }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target)
+      ) {
+        setNotificationOpen(false);
+      }
     };
 
     window.addEventListener("resize", handleResize);
@@ -166,6 +230,7 @@ function Header({
 
   const closeAndRun = (action) => {
     setProfileOpen(false);
+    setNotificationOpen(false);
 
     if (action) {
       action();
@@ -174,11 +239,27 @@ function Header({
 
   const goAdminPage = () => {
     setProfileOpen(false);
+    setNotificationOpen(false);
     navigate("/admin");
   };
 
   const handleNotificationClick = () => {
-    alert("알림 기능은 아직 준비 중입니다.");
+    setProfileOpen(false);
+    setNotificationOpen((prev) => !prev);
+  };
+
+  const handleReadNotification = (notification) => {
+    setNotificationOpen(false);
+
+    if (onReadNotification) {
+      onReadNotification(notification);
+    }
+  };
+
+  const handleReadAllNotifications = () => {
+    if (onReadAllNotifications) {
+      onReadAllNotifications();
+    }
   };
 
   const topMenuButton = {
@@ -218,14 +299,207 @@ function Header({
       '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   };
 
+  const renderNotificationPanel = () => (
+    <div
+      style={{
+        position: "absolute",
+        top: isMobile ? "42px" : "42px",
+        right: isMobile ? "-54px" : 0,
+        width: isMobile ? "310px" : "360px",
+        maxWidth: "calc(100vw - 28px)",
+        backgroundColor: "#ffffff",
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: "18px",
+        boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
+        padding: "12px",
+        zIndex: 120,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          padding: "4px 4px 12px",
+          borderBottom: `1px solid ${CARD_BORDER}`,
+          marginBottom: "8px",
+        }}
+      >
+        <div>
+          <strong
+            style={{
+              display: "block",
+              color: TEXT_DARK,
+              fontSize: "15px",
+              fontWeight: "900",
+              letterSpacing: "-0.03em",
+            }}
+          >
+            알림
+          </strong>
+          <span
+            style={{
+              display: "block",
+              marginTop: "3px",
+              color: "#64748B",
+              fontSize: "12px",
+              fontWeight: "700",
+            }}
+          >
+            안 읽은 알림 {unreadCount}개
+          </span>
+        </div>
+
+        {Number(unreadCount) > 0 && (
+          <button
+            type="button"
+            onClick={handleReadAllNotifications}
+            onMouseDown={(e) => e.currentTarget.blur()}
+            style={{
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+              background: "#EFF6FF",
+              color: BRAND_COLOR,
+              height: "30px",
+              padding: "0 10px",
+              borderRadius: "999px",
+              fontSize: "12px",
+              fontWeight: "900",
+              cursor: "pointer",
+            }}
+          >
+            모두 읽음
+          </button>
+        )}
+      </div>
+
+      <div
+        style={{
+          maxHeight: isMobile ? "330px" : "380px",
+          overflowY: "auto",
+          paddingRight: "2px",
+        }}
+      >
+        {notifications.length === 0 ? (
+          <div
+            style={{
+              padding: "32px 10px",
+              textAlign: "center",
+              color: "#94A3B8",
+              fontSize: "14px",
+              fontWeight: "700",
+            }}
+          >
+            아직 도착한 알림이 없어요.
+          </div>
+        ) : (
+          notifications.map((notification) => {
+            const isUnread = !notification.read;
+
+            return (
+              <button
+                key={notification.id}
+                type="button"
+                onClick={() => handleReadNotification(notification)}
+                onMouseDown={(e) => e.currentTarget.blur()}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  gap: "10px",
+                  padding: "12px 10px",
+                  border: "none",
+                  outline: "none",
+                  boxShadow: "none",
+                  borderRadius: "14px",
+                  background: isUnread ? "#F8FBFF" : "#ffffff",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background-color 0.16s ease",
+                  marginBottom: "4px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#EFF6FF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isUnread
+                    ? "#F8FBFF"
+                    : "#ffffff";
+                }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "999px",
+                    background: isUnread ? BRAND_COLOR : "#CBD5E1",
+                    flexShrink: 0,
+                    marginTop: "7px",
+                  }}
+                />
+
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <strong
+                    style={{
+                      display: "block",
+                      color: TEXT_DARK,
+                      fontSize: "14px",
+                      fontWeight: isUnread ? "900" : "750",
+                      lineHeight: 1.45,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {notification.title || "새 알림"}
+                  </strong>
+
+                  <span
+                    style={{
+                      display: "block",
+                      marginTop: "5px",
+                      color: "#64748B",
+                      fontSize: "13px",
+                      fontWeight: "650",
+                      lineHeight: 1.5,
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    {notification.message || "알림 내용이 없습니다."}
+                  </span>
+
+                  <span
+                    style={{
+                      display: "block",
+                      marginTop: "7px",
+                      color: "#94A3B8",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {formatNotificationTime(notification.createdAt)}
+                  </span>
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
   const renderNotificationButton = () => (
-    <HeaderNotificationButton
-      isMobile={isMobile}
-      isHovered={hoveredNotification}
-      onMouseEnter={() => setHoveredNotification(true)}
-      onMouseLeave={() => setHoveredNotification(false)}
-      onClick={handleNotificationClick}
-    />
+    <div style={{ position: "relative" }} ref={notificationRef}>
+      <HeaderNotificationButton
+        isMobile={isMobile}
+        isHovered={hoveredNotification || notificationOpen}
+        unreadCount={unreadCount}
+        onMouseEnter={() => setHoveredNotification(true)}
+        onMouseLeave={() => setHoveredNotification(false)}
+        onClick={handleNotificationClick}
+      />
+
+      {notificationOpen && renderNotificationPanel()}
+    </div>
   );
 
   const renderDropdownMenu = () => (
@@ -528,7 +802,10 @@ function Header({
               <div style={{ position: "relative" }} ref={profileRef}>
                 <button
                   type="button"
-                  onClick={() => setProfileOpen((prev) => !prev)}
+                  onClick={() => {
+                    setNotificationOpen(false);
+                    setProfileOpen((prev) => !prev);
+                  }}
                   onMouseDown={(e) => e.currentTarget.blur()}
                   style={{
                     border: "none",
@@ -615,7 +892,10 @@ function Header({
                   <div style={{ position: "relative" }} ref={profileRef}>
                     <button
                       type="button"
-                      onClick={() => setProfileOpen((prev) => !prev)}
+                      onClick={() => {
+                        setNotificationOpen(false);
+                        setProfileOpen((prev) => !prev);
+                      }}
                       onMouseDown={(e) => e.currentTarget.blur()}
                       style={{
                         width: "34px",

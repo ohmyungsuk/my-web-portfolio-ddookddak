@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Navigate,
   Route,
@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import { supabase } from "./supabaseClient.js";
+import useNotificationSocket from "./hooks/useNotificationSocket";
 
 import Header from "./components/common/Header";
 
@@ -30,15 +31,168 @@ import AdminPage from "./pages/AdminPage";
 import AdminRequestsPage from "./pages/AdminRequestsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [loginUser, setLoginUser] = useState(null);
 
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
 
   const isLoggedIn = !!session?.user;
+
+  const getUserId = useCallback((user) => {
+    return user?.id || user?.supabaseUserId || "";
+  }, []);
+
+  const loadNotifications = useCallback(async (userId) => {
+    if (!userId) return;
+
+    try {
+      const [listResponse, countResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/notifications?recipientId=${userId}`),
+        fetch(
+          `${API_BASE_URL}/api/notifications/unread-count?recipientId=${userId}`
+        ),
+      ]);
+
+      if (!listResponse.ok) {
+        throw new Error("알림 목록 조회 실패");
+      }
+
+      if (!countResponse.ok) {
+        throw new Error("안 읽은 알림 개수 조회 실패");
+      }
+
+      const listData = await listResponse.json();
+      const countData = await countResponse.json();
+
+      setNotifications(Array.isArray(listData) ? listData : []);
+      setUnreadCount(Number(countData) || 0);
+    } catch (error) {
+      console.error("알림 조회 실패:", error);
+    }
+  }, []);
+
+  const handleNotificationReceived = useCallback((notification) => {
+    console.log("App에서 받은 알림:", notification);
+
+    setNotifications((prev) => {
+      const exists = prev.some((item) => item.id === notification.id);
+
+      if (exists) {
+        return prev;
+      }
+
+      return [notification, ...prev].slice(0, 50);
+    });
+
+    if (!notification.read) {
+      setUnreadCount((prev) => prev + 1);
+    }
+  }, []);
+
+  useNotificationSocket(loginUser, handleNotificationReceived);
+
+  useEffect(() => {
+    const userId = getUserId(loginUser);
+
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    loadNotifications(userId);
+  }, [loginUser, getUserId, loadNotifications]);
+
+  const markNotificationAsRead = useCallback(
+    async (notification) => {
+      const userId = getUserId(loginUser);
+
+      if (!userId || !notification?.id) return;
+
+      const moveTarget = notification.targetUrl;
+
+      if (notification.read) {
+        if (moveTarget) {
+          navigate(moveTarget);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/notifications/${notification.id}/read?recipientId=${userId}`,
+          {
+            method: "PATCH",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("알림 읽음 처리 실패");
+        }
+
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === notification.id
+              ? {
+                  ...item,
+                  read: true,
+                  readAt: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+
+        setUnreadCount((prev) => Math.max(prev - 1, 0));
+
+        if (moveTarget) {
+          navigate(moveTarget);
+        }
+      } catch (error) {
+        console.error("알림 읽음 처리 실패:", error);
+      }
+    },
+    [loginUser, getUserId, navigate]
+  );
+
+  const markAllNotificationsAsRead = useCallback(async () => {
+    const userId = getUserId(loginUser);
+
+    if (!userId) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications/read-all?recipientId=${userId}`,
+        {
+          method: "PATCH",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("전체 알림 읽음 처리 실패");
+      }
+
+      setNotifications((prev) =>
+        prev.map((item) => ({
+          ...item,
+          read: true,
+          readAt: item.readAt || new Date().toISOString(),
+        }))
+      );
+
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("전체 알림 읽음 처리 실패:", error);
+    }
+  }, [loginUser, getUserId]);
 
   useEffect(() => {
     let mounted = true;
@@ -181,6 +335,8 @@ function App() {
     localStorage.removeItem("role");
 
     setLoginUser(null);
+    setNotifications([]);
+    setUnreadCount(0);
 
     navigate("/", { replace: true });
   };
@@ -201,12 +357,20 @@ function App() {
 
   const hideHeader = ["/login", "/signup"].includes(location.pathname);
 
+  const notificationProps = {
+    notifications,
+    unreadCount,
+    onReadNotification: markNotificationAsRead,
+    onReadAllNotifications: markAllNotificationsAsRead,
+  };
+
   return (
     <>
       {!hideHeader && (
         <Header
           isLoggedIn={isLoggedIn}
           loginUser={loginUser}
+          {...notificationProps}
           onGoHome={() => navigate("/")}
           onGoLogin={() => navigate("/login")}
           onGoSignup={() => navigate("/signup")}
@@ -228,6 +392,7 @@ function App() {
             <LandingPage
               isLoggedIn={isLoggedIn}
               loginUser={loginUser}
+              {...notificationProps}
               onGoLogin={() => navigate("/login")}
               onGoSignup={() => navigate("/signup")}
               onGoCreate={() =>

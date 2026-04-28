@@ -14,6 +14,10 @@ function LandingPage({
   onLogout,
   isLoggedIn,
   loginUser,
+  notifications = [],
+  unreadCount = 0,
+  onReadNotification,
+  onReadAllNotifications,
 }) {
   const BRAND_COLOR = "#2F80ED";
   const BRAND_HOVER = "#1F6FD6";
@@ -29,11 +33,13 @@ function LandingPage({
   const CARD_SHADOW = "0 10px 24px rgba(15, 23, 42, 0.04)";
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [hoveredTextButton, setHoveredTextButton] = useState("");
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredGhostButton, setHoveredGhostButton] = useState("");
   const profileRef = useRef(null);
+  const notificationRef = useRef(null);
   const userRole = String(loginUser?.role || "user").toLowerCase();
   const isAdmin = userRole === "admin";
   const isWorker = userRole === "worker";
@@ -44,6 +50,41 @@ function LandingPage({
   const displayName =
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
 
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const visibleNotifications = safeNotifications.slice(0, 8);
+  const safeUnreadCount = Number(unreadCount) || 0;
+
+  const formatNotificationTime = (value) => {
+    if (!value) return "방금 전";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "방금 전";
+    }
+
+    return date.toLocaleString("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleNotificationClick = (notification) => {
+    setNotificationOpen(false);
+
+    if (onReadNotification) {
+      onReadNotification(notification);
+    }
+  };
+
+  const handleReadAllNotifications = () => {
+    if (onReadAllNotifications) {
+      onReadAllNotifications();
+    }
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -52,6 +93,13 @@ function LandingPage({
     const handleOutsideClick = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target)
+      ) {
+        setNotificationOpen(false);
       }
     };
 
@@ -77,6 +125,7 @@ function LandingPage({
 
   const closeAndRun = (action) => {
     setProfileOpen(false);
+    setNotificationOpen(false);
     if (action) action();
   };
 
@@ -216,6 +265,254 @@ function LandingPage({
       desc: "사용자들이 남긴 진행 경험과 후기를 참고할 수 있습니다.",
     },
   ];
+
+  const renderNotificationDropdown = () => (
+    <div
+      style={{
+        position: "absolute",
+        top: isMobile ? "40px" : "42px",
+        right: 0,
+        width: isMobile ? "286px" : "340px",
+        maxWidth: "calc(100vw - 32px)",
+        backgroundColor: "#ffffff",
+        border: `1px solid ${CARD_BORDER}`,
+        borderRadius: "18px",
+        boxShadow: "0 18px 42px rgba(15, 23, 42, 0.13)",
+        padding: "12px",
+        zIndex: 200,
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          padding: "4px 4px 12px",
+          borderBottom: `1px solid ${CARD_BORDER}`,
+          marginBottom: "8px",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "15px",
+              fontWeight: "900",
+              color: TEXT_DARK,
+              letterSpacing: "-0.2px",
+            }}
+          >
+            알림
+          </div>
+          <div
+            style={{
+              marginTop: "3px",
+              fontSize: "12px",
+              fontWeight: "700",
+              color: TEXT_MUTED,
+            }}
+          >
+            안 읽은 알림 {safeUnreadCount}개
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleReadAllNotifications}
+          onMouseDown={(e) => e.currentTarget.blur()}
+          disabled={safeUnreadCount <= 0}
+          style={{
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+            background: safeUnreadCount > 0 ? BRAND_SOFT : "#F8FAFC",
+            color: safeUnreadCount > 0 ? BRAND_COLOR : "#94A3B8",
+            borderRadius: "999px",
+            padding: "8px 10px",
+            fontSize: "12px",
+            fontWeight: "800",
+            cursor: safeUnreadCount > 0 ? "pointer" : "default",
+            whiteSpace: "nowrap",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          모두 읽음
+        </button>
+      </div>
+
+      {visibleNotifications.length === 0 ? (
+        <div
+          style={{
+            padding: "28px 8px",
+            textAlign: "center",
+            color: TEXT_MUTED,
+            fontSize: "14px",
+            fontWeight: "700",
+            lineHeight: "1.7",
+          }}
+        >
+          아직 받은 알림이 없어요.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            maxHeight: isMobile ? "320px" : "380px",
+            overflowY: "auto",
+          }}
+        >
+          {visibleNotifications.map((notification) => {
+            const isUnread = !notification.read;
+
+            return (
+              <button
+                key={notification.id}
+                type="button"
+                onClick={() => handleNotificationClick(notification)}
+                onMouseDown={(e) => e.currentTarget.blur()}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  boxShadow: "none",
+                  background: isUnread ? "#F8FBFF" : "#ffffff",
+                  padding: "12px",
+                  borderRadius: "14px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "grid",
+                  gridTemplateColumns: "8px 1fr",
+                  gap: "10px",
+                  WebkitTapHighlightColor: "transparent",
+                  transition: "background-color 0.18s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#F1F7FF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isUnread
+                    ? "#F8FBFF"
+                    : "#ffffff";
+                }}
+              >
+                <span
+                  style={{
+                    width: "7px",
+                    height: "7px",
+                    borderRadius: "999px",
+                    background: isUnread ? BRAND_COLOR : "transparent",
+                    marginTop: "7px",
+                  }}
+                />
+
+                <span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "13px",
+                      fontWeight: "900",
+                      color: TEXT_DARK,
+                      lineHeight: "1.45",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {notification.title || "새 알림"}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: TEXT_MUTED,
+                      lineHeight: "1.55",
+                      marginBottom: "7px",
+                    }}
+                  >
+                    {notification.message || "알림 내용이 없습니다."}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "#94A3B8",
+                    }}
+                  >
+                    {formatNotificationTime(notification.createdAt)}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderNotificationButton = () => (
+    <div style={{ position: "relative" }} ref={notificationRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setProfileOpen(false);
+          setNotificationOpen((prev) => !prev);
+        }}
+        onMouseDown={(e) => e.currentTarget.blur()}
+        style={{
+          width: "32px",
+          height: "32px",
+          border: "none",
+          outline: "none",
+          boxShadow: "none",
+          background: "transparent",
+          padding: 0,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "999px",
+          color: TEXT_BODY,
+          position: "relative",
+          WebkitTapHighlightColor: "transparent",
+        }}
+        aria-label="알림"
+      >
+        <GrNotification size={isMobile ? 18 : 20} />
+
+        {safeUnreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: "1px",
+              right: "0px",
+              minWidth: "16px",
+              height: "16px",
+              padding: "0 4px",
+              borderRadius: "999px",
+              background: "#EF4444",
+              color: "#ffffff",
+              border: "2px solid #ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "10px",
+              fontWeight: "900",
+              lineHeight: 1,
+              boxSizing: "border-box",
+              pointerEvents: "none",
+            }}
+          >
+            {safeUnreadCount > 99 ? "99+" : safeUnreadCount}
+          </span>
+        )}
+      </button>
+
+      {notificationOpen && renderNotificationDropdown()}
+    </div>
+  );
 
   return (
     <div
@@ -433,30 +730,7 @@ function LandingPage({
                   paddingLeft: "16px",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
-                  onMouseDown={(e) => e.currentTarget.blur()}
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    border: "none",
-                    outline: "none",
-                    boxShadow: "none",
-                    background: "transparent",
-                    padding: 0,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "999px",
-                    color: TEXT_BODY,
-                    WebkitTapHighlightColor: "transparent",
-                  }}
-                  aria-label="알림"
-                >
-                  <GrNotification size={20} />
-                </button>
+                {renderNotificationButton()}
 
                 <div style={{ position: "relative" }} ref={profileRef}>
                   <button
@@ -611,30 +885,7 @@ function LandingPage({
               >
                 {isLoggedIn ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => alert("알림 기능은 아직 준비 중입니다.")}
-                      onMouseDown={(e) => e.currentTarget.blur()}
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        border: "none",
-                        outline: "none",
-                        boxShadow: "none",
-                        background: "transparent",
-                        padding: 0,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "999px",
-                        color: TEXT_BODY,
-                        WebkitTapHighlightColor: "transparent",
-                      }}
-                      aria-label="알림"
-                    >
-                      <GrNotification size={18} />
-                    </button>
+                    {renderNotificationButton()}
 
                     <div style={{ position: "relative" }} ref={profileRef}>
                       <button
