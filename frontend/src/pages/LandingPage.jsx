@@ -1717,22 +1717,23 @@ function LandingPage({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
+                  gap: "12px",
                   marginBottom: "14px",
                 }}
               >
                 <div
                   style={{
-                    width: "38px",
-                    height: "38px",
-                    borderRadius: "12px",
+                    width: isMobile ? "36px" : "42px",
+                    height: isMobile ? "36px" : "42px",
+                    borderRadius: "14px",
                     background: BRAND_COLOR,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#ffffff",
-                    fontWeight: "900",
+                    fontWeight: "800",
                     fontSize: "14px",
+                    boxShadow: "0 10px 24px rgba(47, 128, 237, 0.18)",
                   }}
                 >
                   ㄸ
@@ -1740,10 +1741,11 @@ function LandingPage({
 
                 <div
                   style={{
-                    fontSize: "21px",
-                    fontWeight: "900",
+                    fontSize: isMobile ? "22px" : "23px",
+                    fontWeight: "800",
                     color: BRAND_COLOR,
                     letterSpacing: "-0.5px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   뚝딱
