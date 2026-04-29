@@ -40,6 +40,7 @@ function Header({
   onGoMyRequests,
   onGoAllRequests,
   onGoAssignedRequests,
+  onGoCommunity,
   onLogout,
 }) {
   const navigate = useNavigate();
@@ -656,7 +657,8 @@ function Header({
                   {
                     key: "community",
                     text: "커뮤니티",
-                    onClick: () => moveToSection("community-preview"),
+                    onClick: () =>
+                      onGoCommunity ? onGoCommunity() : navigate("/community"),
                   },
                 ].map((item) => (
                   <button

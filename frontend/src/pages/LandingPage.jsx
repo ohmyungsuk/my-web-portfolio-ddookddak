@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { getCategoryIcon } from "../utils/categoryIcons.js";
+import {
+  COMMUNITY_POSTS_UPDATED,
+  getCommunityPreviewSections,
+} from "../data/communityPosts.js";
 import { GrNotification } from "react-icons/gr";
 
 function LandingPage({
@@ -11,6 +15,7 @@ function LandingPage({
   onGoMyRequests,
   onGoAllRequests,
   onGoAssignedRequests,
+  onGoCommunity,
   onLogout,
   isLoggedIn,
   loginUser,
@@ -38,6 +43,9 @@ function LandingPage({
   const [hoveredTextButton, setHoveredTextButton] = useState("");
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredGhostButton, setHoveredGhostButton] = useState("");
+  const [previewSections, setPreviewSections] = useState(() =>
+    getCommunityPreviewSections()
+  );
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
   const userRole = String(loginUser?.role || "user").toLowerCase();
@@ -115,6 +123,20 @@ function LandingPage({
     return () => {
       window.removeEventListener("resize", handleResize);
       document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncCommunityPreview = () => {
+      setPreviewSections(getCommunityPreviewSections());
+    };
+
+    window.addEventListener(COMMUNITY_POSTS_UPDATED, syncCommunityPreview);
+    window.addEventListener("storage", syncCommunityPreview);
+
+    return () => {
+      window.removeEventListener(COMMUNITY_POSTS_UPDATED, syncCommunityPreview);
+      window.removeEventListener("storage", syncCommunityPreview);
     };
   }, []);
 
@@ -251,24 +273,6 @@ function LandingPage({
       step: "03",
       title: "진행 상태 관리",
       desc: "접수, 배정, 진행, 완료 흐름을 한 화면에서 확인합니다.",
-    },
-  ];
-
-  const storyCards = [
-    {
-      badge: "NEW",
-      title: "최근 요청 이야기",
-      desc: "자주 올라오는 요청 유형과 진행 흐름을 함께 볼 수 있습니다.",
-    },
-    {
-      badge: "TIP",
-      title: "작업 팁 모음",
-      desc: "간단한 점검 요령과 유지보수 팁을 짧게 정리했습니다.",
-    },
-    {
-      badge: "REVIEW",
-      title: "이용 후기",
-      desc: "사용자들이 남긴 진행 경험과 후기를 참고할 수 있습니다.",
     },
   ];
 
@@ -644,7 +648,7 @@ function LandingPage({
                     {
                       key: "community",
                       text: "커뮤니티",
-                      onClick: () => moveToSection("community-preview"),
+                      onClick: onGoCommunity,
                     },
                   ].map((item) => (
                     <button
@@ -1498,14 +1502,14 @@ function LandingPage({
         >
           <SectionHeader
             title="커뮤니티"
-            desc="요청 이야기, 작업 팁, 이용 후기를 함께 보고 서비스 흐름을 이해할 수 있습니다."
+            desc="사진과 함께 올라온 최근 요청, 이용후기, 작업 팁을 홈에서 먼저 확인할 수 있습니다."
             isMobile={isMobile}
             noMargin
           />
 
           <button
             type="button"
-            onClick={() => moveToSection("community-preview")}
+            onClick={onGoCommunity}
             onMouseEnter={() => setHoveredGhostButton("community-more")}
             onMouseLeave={() => setHoveredGhostButton("")}
             onMouseDown={(e) => e.currentTarget.blur()}
@@ -1529,65 +1533,162 @@ function LandingPage({
           </button>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-            gap: "16px",
-          }}
-        >
-          {storyCards.map((item) => (
+        {previewSections.map((section) => (
+          <div key={section.id} style={{ marginBottom: "46px" }}>
             <div
-              key={item.title}
               style={{
-                backgroundColor: "#ffffff",
-                border: `1px solid ${CARD_BORDER}`,
-                borderRadius: "24px",
-                padding: "24px",
-                boxShadow: CARD_SHADOW,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "14px",
+                marginBottom: "16px",
               }}
             >
-              <div
-                style={{
-                  display: "inline-block",
-                  padding: "7px 11px",
-                  borderRadius: "999px",
-                  backgroundColor: BRAND_SOFT,
-                  color: BRAND_COLOR,
-                  fontSize: "11px",
-                  fontWeight: "900",
-                  marginBottom: "14px",
-                }}
-              >
-                {item.badge}
-              </div>
-
               <h3
                 style={{
-                  margin: "0 0 10px 0",
-                  fontSize: "18px",
-                  fontWeight: "800",
-                  letterSpacing: "-0.3px",
+                  margin: 0,
+                  fontSize: isMobile ? "20px" : "22px",
+                  fontWeight: "900",
                   color: TEXT_DARK,
-                  lineHeight: "1.4",
+                  letterSpacing: "-0.3px",
                 }}
               >
-                {item.title}
+                {section.title}
               </h3>
 
-              <p
+              <button
+                type="button"
+                onClick={onGoCommunity}
+                onMouseDown={(e) => e.currentTarget.blur()}
                 style={{
-                  margin: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: BRAND_COLOR,
+                  padding: "6px 0",
                   fontSize: "14px",
-                  lineHeight: "1.9",
-                  color: TEXT_MUTED,
+                  fontWeight: "900",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
                 }}
               >
-                {item.desc}
-              </p>
+                {section.moreLabel}
+              </button>
             </div>
-          ))}
-        </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile
+                  ? "repeat(2, minmax(0, 1fr))"
+                  : "repeat(4, minmax(0, 1fr))",
+                gap: isMobile ? "14px" : "16px",
+              }}
+            >
+              {section.posts.length === 0 ? (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    padding: isMobile ? "28px 18px" : "34px 24px",
+                    borderRadius: "8px",
+                    border: `1px dashed ${CARD_BORDER}`,
+                    backgroundColor: "#ffffff",
+                    color: TEXT_MUTED,
+                    fontSize: "14px",
+                    fontWeight: "700",
+                    textAlign: "center",
+                  }}
+                >
+                  아직 등록된 글이 없습니다.
+                </div>
+              ) : (
+                section.posts.map((post) => (
+                  <article
+                    key={post.id}
+                    onClick={onGoCommunity}
+                    style={{
+                      minWidth: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {post.image ? (
+                      <div
+                        style={{
+                          position: "relative",
+                          aspectRatio: isMobile ? "1.25 / 1" : "1.34 / 1",
+                          overflow: "hidden",
+                          borderRadius: "8px",
+                          backgroundColor: "#F1F5F9",
+                          border: `1px solid ${CARD_BORDER}`,
+                          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+                        }}
+                      >
+                        <img
+                          src={post.image}
+                          alt={post.title}
+                          loading="lazy"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          aspectRatio: isMobile ? "1.25 / 1" : "1.34 / 1",
+                          borderRadius: "8px",
+                          border: `1px solid ${CARD_BORDER}`,
+                          backgroundColor: "#ffffff",
+                          padding: "16px",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: 0,
+                            color: TEXT_MUTED,
+                            fontSize: "13px",
+                            lineHeight: "1.6",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {post.excerpt}
+                        </p>
+                      </div>
+                    )}
+
+                    <div style={{ padding: "10px 0 0" }}>
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: "15px",
+                          lineHeight: "1.35",
+                          fontWeight: "900",
+                          color: TEXT_DARK,
+                          letterSpacing: "-0.2px",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {post.title}
+                      </h4>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
       </section>
 
       <footer
@@ -1658,8 +1759,8 @@ function LandingPage({
                   maxWidth: "360px",
                 }}
               >
-                유지보수 요청을 더 간단하고 빠르게 접수하고 상태를 체계적으로
-                관리하기 위한 서비스 플랫폼
+                유지보수 요청을 간단하고 빠르게 접수하고 상태를 체계적으로
+                관리하기 위한 서비스 플랫폼입니다.
               </p>
             </div>
 

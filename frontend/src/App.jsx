@@ -13,6 +13,7 @@ import useNotificationSocket from "./hooks/useNotificationSocket";
 import Header from "./components/common/Header";
 
 import LandingPage from "./pages/LandingPage";
+import CommunityPage from "./pages/CommunityPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
@@ -371,6 +372,7 @@ function App() {
           onGoMyRequests={() => navigate("/requests/my")}
           onGoAllRequests={() => navigate("/requests/all")}
           onGoAssignedRequests={() => navigate("/requests/assigned")}
+          onGoCommunity={() => navigate("/community")}
           onLogout={handleLogout}
         />
       )}
@@ -395,10 +397,13 @@ function App() {
               onGoMyRequests={() => navigate("/requests/my")}
               onGoAllRequests={() => navigate("/requests/all")}
               onGoAssignedRequests={() => navigate("/requests/assigned")}
+              onGoCommunity={() => navigate("/community")}
               onLogout={handleLogout}
             />
           }
         />
+
+        <Route path="/community" element={<CommunityPage />} />
 
         <Route
           path="/login"
