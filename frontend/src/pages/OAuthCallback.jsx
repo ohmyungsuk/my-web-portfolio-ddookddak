@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient.js";
 
 function OAuthCallback() {
   const navigate = useNavigate();
-  const [message, setMessage] = useState("로그인 정보를 확인하는 중입니다...");
+  const setMessage = () => {};
 
   useEffect(() => {
     let mounted = true;
@@ -112,6 +112,11 @@ function OAuthCallback() {
 
         const safeUsername = getSafeUsername(user);
         const safeName = getSafeUserName(user);
+        const avatarUrl =
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          user.user_metadata?.photo_url ||
+          "";
 
         const desiredRole =
           oauthMode === "signup" && (signupRole === "worker" || signupRole === "user")
@@ -143,6 +148,7 @@ function OAuthCallback() {
           name: existingProfile?.name || safeName,
           email: user.email || existingProfile?.email || "",
           provider: existingProfile?.provider || provider,
+          avatar_url: existingProfile?.avatar_url || avatarUrl,
           auth_created_at:
             existingProfile?.auth_created_at ||
             user.created_at ||
@@ -150,9 +156,17 @@ function OAuthCallback() {
           role: finalRole,
         };
 
-        const { error: profileUpsertError } = await supabase
+        let { error: profileUpsertError } = await supabase
           .from("profiles")
           .upsert(payload, { onConflict: "id" });
+
+        if (profileUpsertError?.code === "PGRST204") {
+          const { avatar_url, ...fallbackPayload } = payload;
+          const fallback = await supabase
+            .from("profiles")
+            .upsert(fallbackPayload, { onConflict: "id" });
+          profileUpsertError = fallback.error;
+        }
 
         if (profileUpsertError) {
           console.error("프로필 저장 오류:", profileUpsertError);
@@ -170,6 +184,7 @@ function OAuthCallback() {
           name: payload.name,
           username: payload.username,
           nickname: payload.name,
+          avatarUrl: payload.avatar_url,
           provider: payload.provider,
           role: payload.role,
         };
@@ -209,54 +224,7 @@ function OAuthCallback() {
     };
   }, [navigate]);
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#eef2f7",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "30px 28px",
-          boxShadow: "0 12px 40px rgba(15, 23, 42, 0.08)",
-          border: "1px solid #edf1f6",
-          textAlign: "center",
-        }}
-      >
-        <h2
-          style={{
-            margin: "0 0 12px",
-            fontSize: "18px",
-            fontWeight: "800",
-            color: "#0f172a",
-            letterSpacing: "-0.3px",
-          }}
-        >
-          소셜 로그인
-        </h2>
-
-        <p
-          style={{
-            margin: 0,
-            fontSize: "14px",
-            color: "#64748b",
-            lineHeight: "1.6",
-          }}
-        >
-          {message}
-        </p>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 export default OAuthCallback;

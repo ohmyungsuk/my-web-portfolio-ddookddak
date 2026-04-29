@@ -87,6 +87,47 @@ function HoverButton({
   );
 }
 
+function resizeProfileImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const image = new Image();
+
+      image.onload = () => {
+        const size = 220;
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        const minSide = Math.min(image.naturalWidth, image.naturalHeight);
+        const sourceX = (image.naturalWidth - minSide) / 2;
+        const sourceY = (image.naturalHeight - minSide) / 2;
+
+        canvas.width = size;
+        canvas.height = size;
+        context.drawImage(
+          image,
+          sourceX,
+          sourceY,
+          minSide,
+          minSide,
+          0,
+          0,
+          size,
+          size,
+        );
+
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+
+      image.onerror = reject;
+      image.src = String(reader.result || "");
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function StatBox({ label, value, styles }) {
   return (
     <div style={styles.statBox}>
@@ -167,6 +208,8 @@ export default function MyPage({
   const [editName, setEditName] = useState(
     loginUser?.name || loginUser?.username || "",
   );
+  const [avatarUrl, setAvatarUrl] = useState(loginUser?.avatarUrl || "");
+  const [editAvatarUrl, setEditAvatarUrl] = useState(loginUser?.avatarUrl || "");
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -212,6 +255,7 @@ export default function MyPage({
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
   const emailText = loginUser?.email || "이메일 정보 없음";
   const initial = String(displayName).slice(0, 1).toUpperCase();
+  const profileAvatarUrl = editAvatarUrl || avatarUrl || loginUser?.avatarUrl || "";
 
   useEffect(() => {
     const handleResize = () => {
@@ -240,8 +284,16 @@ export default function MyPage({
         data?.user?.app_metadata?.providers?.[0] ||
         loginUser?.provider ||
         "email";
+      const nextAvatarUrl =
+        data?.user?.user_metadata?.avatar_url ||
+        data?.user?.user_metadata?.picture ||
+        data?.user?.user_metadata?.photo_url ||
+        loginUser?.avatarUrl ||
+        "";
 
       setAuthProvider(provider);
+      setAvatarUrl(nextAvatarUrl);
+      setEditAvatarUrl(nextAvatarUrl);
     };
 
     loadProvider();
@@ -452,7 +504,29 @@ export default function MyPage({
   const handleCancelEdit = () => {
     setSaveMessage("");
     setEditName(loginUser?.name || loginUser?.username || "");
+    setEditAvatarUrl(avatarUrl || loginUser?.avatarUrl || "");
     setIsEditingProfile(false);
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const nextAvatar = await resizeProfileImage(file);
+      setEditAvatarUrl(nextAvatar);
+      setSaveMessage("");
+    } catch (error) {
+      console.error("프로필 사진 처리 실패:", error);
+      setSaveMessage("프로필 사진을 불러오지 못했습니다.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setEditAvatarUrl("");
+    setSaveMessage("");
   };
 
   const handleSaveProfile = async () => {
@@ -475,6 +549,8 @@ export default function MyPage({
       const { data, error } = await supabase.auth.updateUser({
         data: {
           name: trimmedName,
+          avatar_url: editAvatarUrl,
+          picture: editAvatarUrl,
         },
       });
 
@@ -482,13 +558,25 @@ export default function MyPage({
 
       const updatedUser = data?.user;
 
-      const { error: profileError } = await supabase
+      let { error: profileError } = await supabase
         .from("profiles")
         .update({
           name: trimmedName,
           username: trimmedName,
+          avatar_url: editAvatarUrl,
         })
         .eq("id", userId);
+
+      if (profileError?.code === "PGRST204") {
+        const fallback = await supabase
+          .from("profiles")
+          .update({
+            name: trimmedName,
+            username: trimmedName,
+          })
+          .eq("id", userId);
+        profileError = fallback.error;
+      }
 
       if (profileError) {
         console.error("profiles 이름 업데이트 실패:", profileError);
@@ -502,9 +590,11 @@ export default function MyPage({
         email: updatedUser?.email || loginUser?.email,
         name: trimmedName,
         username: trimmedName,
+        avatarUrl: editAvatarUrl,
       };
 
       localStorage.setItem("loginUser", JSON.stringify(nextLoginUser));
+      setAvatarUrl(editAvatarUrl);
 
       setSaveMessage("내 정보가 수정되었습니다.");
       setIsEditingProfile(false);
@@ -751,6 +841,13 @@ export default function MyPage({
       fontWeight: 900,
       margin: "0 auto 16px",
       boxShadow: "0 18px 34px rgba(47, 128, 237, 0.18)",
+      overflow: "hidden",
+    },
+    avatarImage: {
+      width: "100%",
+      height: "100%",
+      display: "block",
+      objectFit: "cover",
     },
     profileName: {
       textAlign: "center",
@@ -795,6 +892,58 @@ export default function MyPage({
       fontSize: "13px",
       color: TEXT,
       fontWeight: 850,
+    },
+    profilePhotoRow: {
+      display: "flex",
+      justifyContent: "center",
+      marginBottom: "18px",
+    },
+    profilePhotoEditRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+      flexWrap: "wrap",
+    },
+    profilePhotoPreview: {
+      width: "76px",
+      height: "76px",
+      borderRadius: "50%",
+      background: "linear-gradient(135deg, #5B9DFF 0%, #2F80ED 100%)",
+      color: "#FFFFFF",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "26px",
+      fontWeight: 900,
+      overflow: "hidden",
+      boxShadow: "0 12px 24px rgba(47, 128, 237, 0.14)",
+    },
+    profilePhotoActions: {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      flexWrap: "wrap",
+    },
+    fileButton: {
+      minHeight: "38px",
+      border: `1px solid ${BORDER}`,
+      borderRadius: "10px",
+      background: "#FFFFFF",
+      color: TEXT,
+      fontSize: "13px",
+      fontWeight: 850,
+      cursor: "pointer",
+      padding: "9px 12px",
+      boxSizing: "border-box",
+    },
+    textDangerButton: {
+      border: "none",
+      background: "transparent",
+      color: DANGER,
+      fontSize: "13px",
+      fontWeight: 850,
+      cursor: "pointer",
+      padding: "8px 4px",
     },
     primaryBtn: {
       width: "100%",
@@ -1262,7 +1411,13 @@ export default function MyPage({
 
         <div style={styles.layout}>
           <div style={styles.sideCard}>
-            <div style={styles.avatar}>{initial}</div>
+            <div style={styles.avatar}>
+              {profileAvatarUrl ? (
+                <img src={profileAvatarUrl} alt="프로필 사진" style={styles.avatarImage} />
+              ) : (
+                initial
+              )}
+            </div>
 
             <div style={styles.profileName}>{displayName}</div>
             <div style={styles.profileEmail}>{emailText}</div>
@@ -1360,6 +1515,20 @@ export default function MyPage({
 
                 {!isEditingProfile ? (
                   <div style={styles.infoPanel}>
+                    <div style={styles.profilePhotoRow}>
+                      <div style={styles.profilePhotoPreview}>
+                        {profileAvatarUrl ? (
+                          <img
+                            src={profileAvatarUrl}
+                            alt="프로필 사진"
+                            style={styles.avatarImage}
+                          />
+                        ) : (
+                          initial
+                        )}
+                      </div>
+                    </div>
+
                     <div style={styles.label}>이름</div>
                     <div style={styles.valueText}>{displayName}</div>
 
@@ -1370,6 +1539,43 @@ export default function MyPage({
                   </div>
                 ) : (
                   <div style={styles.infoPanel}>
+                    <div style={styles.field}>
+                      <div style={styles.label}>프로필 사진</div>
+                      <div style={styles.profilePhotoEditRow}>
+                        <div style={styles.profilePhotoPreview}>
+                          {editAvatarUrl ? (
+                            <img
+                              src={editAvatarUrl}
+                              alt="프로필 사진 미리보기"
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            initial
+                          )}
+                        </div>
+                        <div style={styles.profilePhotoActions}>
+                          <label style={styles.fileButton}>
+                            사진 변경
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleAvatarChange}
+                              style={{ display: "none" }}
+                            />
+                          </label>
+                          {editAvatarUrl && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveAvatar}
+                              style={styles.textDangerButton}
+                            >
+                              사진 삭제
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     <div style={styles.field}>
                       <div style={styles.label}>이름</div>
                       <input

@@ -246,6 +246,12 @@ function App() {
       }
 
       const finalRole = profile?.role || "user";
+      const avatarUrl =
+        profile?.avatar_url ||
+        user.user_metadata?.avatar_url ||
+        user.user_metadata?.picture ||
+        user.user_metadata?.photo_url ||
+        "";
 
       const nextLoginUser = {
         id: user.id,
@@ -254,6 +260,7 @@ function App() {
         name: profile?.name || safeName,
         username: profile?.username || safeUsername,
         nickname: profile?.name || safeName,
+        avatarUrl,
         provider: user.app_metadata?.provider || "email",
         role: finalRole,
       };
@@ -372,7 +379,14 @@ function App() {
           onGoMyRequests={() => navigate("/requests/my")}
           onGoAllRequests={() => navigate("/requests/all")}
           onGoAssignedRequests={() => navigate("/requests/assigned")}
-          onGoCommunity={() => navigate("/community")}
+          onGoCommunity={(postId) => {
+            if (postId) {
+              navigate("/community");
+              setTimeout(() => navigate(`/community?post=${postId}`), 0);
+              return;
+            }
+            navigate("/community");
+          }}
           onLogout={handleLogout}
         />
       )}
@@ -397,7 +411,14 @@ function App() {
               onGoMyRequests={() => navigate("/requests/my")}
               onGoAllRequests={() => navigate("/requests/all")}
               onGoAssignedRequests={() => navigate("/requests/assigned")}
-              onGoCommunity={() => navigate("/community")}
+              onGoCommunity={(postId) => {
+                if (postId) {
+                  navigate("/community");
+                  setTimeout(() => navigate(`/community?post=${postId}`), 0);
+                  return;
+                }
+                navigate("/community");
+              }}
               onLogout={handleLogout}
             />
           }

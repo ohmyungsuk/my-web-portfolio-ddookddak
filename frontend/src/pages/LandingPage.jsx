@@ -1604,7 +1604,7 @@ function LandingPage({
                 section.posts.map((post) => (
                   <article
                     key={post.id}
-                    onClick={onGoCommunity}
+                    onClick={() => onGoCommunity?.(post.id)}
                     style={{
                       minWidth: 0,
                       cursor: "pointer",

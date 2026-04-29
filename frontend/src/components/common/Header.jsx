@@ -82,6 +82,45 @@ function Header({
   const roleLabel = isAdmin ? "관리자" : isWorker ? "전문가" : "일반 회원";
   const displayName =
     loginUser?.name || loginUser?.username || loginUser?.email || "사용자";
+  const avatarUrl =
+    loginUser?.avatarUrl ||
+    loginUser?.avatar_url ||
+    loginUser?.picture ||
+    loginUser?.photoUrl ||
+    "";
+
+  const renderProfileAvatar = (size = 40) => (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        background: "#F1F5F9",
+        color: BRAND_COLOR,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "700",
+        fontSize: size <= 34 ? "12px" : "14px",
+        overflow: "hidden",
+      }}
+    >
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt="프로필 사진"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "cover",
+          }}
+        />
+      ) : (
+        String(displayName).slice(0, 1)
+      )}
+    </div>
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -784,22 +823,7 @@ function Header({
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  <div
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: "#F1F5F9",
-                      color: BRAND_COLOR,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "700",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {String(displayName).slice(0, 1)}
-                  </div>
+                  {renderProfileAvatar(40)}
                   <span style={{ fontSize: "13px", color: "#8A8F94" }}>▾</span>
                 </button>
 
@@ -862,7 +886,7 @@ function Header({
                         borderRadius: "50%",
                         border: "none",
                         outline: "none",
-                        background: "#F1F5F9",
+                        background: "transparent",
                         color: BRAND_COLOR,
                         cursor: "pointer",
                         padding: 0,
@@ -872,7 +896,7 @@ function Header({
                         WebkitTapHighlightColor: "transparent",
                       }}
                     >
-                      {String(displayName).slice(0, 1)}
+                      {renderProfileAvatar(34)}
                     </button>
 
                     {profileOpen && renderDropdownMenu()}

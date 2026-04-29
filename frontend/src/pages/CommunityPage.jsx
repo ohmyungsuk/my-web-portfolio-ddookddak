@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   COMMUNITY_POSTS_UPDATED,
   communityCategories,
   countComments,
   createCommunityPost,
+  deleteCommunityPost,
   formatCommunityTime,
   getCommunityPosts,
   getStoredCommunityPosts,
@@ -21,6 +23,8 @@ const writableCategories = communityCategories.filter(
 );
 
 function CommunityPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const closingDetailRef = useRef(false);
   const [posts, setPosts] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [writeOpen, setWriteOpen] = useState(false);
@@ -32,16 +36,91 @@ function CommunityPage() {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [editingComment, setEditingComment] = useState(null);
   const [editingImage, setEditingImage] = useState(null);
+  const [editingPostId, setEditingPostId] = useState("");
+  const [detailMenuOpen, setDetailMenuOpen] = useState(false);
   const [form, setForm] = useState({
     category: "reviews",
     title: "",
     content: "",
     images: [],
   });
+  const selectedPostId = searchParams.get("post") || "";
 
   const loadLocalPosts = () => {
     setPosts(getStoredCommunityPosts());
   };
+
+  const getCurrentUser = () => {
+    try {
+      const savedUser = window.localStorage.getItem("loginUser");
+      const user = savedUser ? JSON.parse(savedUser) : null;
+      const name =
+        user?.nickname ||
+        user?.name ||
+        user?.username ||
+        (user?.email ? user.email.split("@")[0] : "") ||
+        "뚝딱 회원";
+
+      return {
+        id: user?.supabaseUserId || user?.id || "",
+        name,
+        role: String(user?.role || "").toLowerCase(),
+        avatarUrl: user?.avatarUrl || "",
+      };
+    } catch {
+      return { id: "", name: "뚝딱 회원", role: "", avatarUrl: "" };
+    }
+  };
+
+  const currentUser = getCurrentUser();
+  const canManageDetailPost =
+    detailPost &&
+    (currentUser.role === "admin" ||
+      (detailPost.authorId &&
+        currentUser.id &&
+        String(detailPost.authorId) === String(currentUser.id)) ||
+      (!detailPost.authorId &&
+        detailPost.author &&
+        currentUser.name &&
+        String(detailPost.author) === String(currentUser.name)));
+
+  const canManageAuthorContent = (item) =>
+    currentUser.role === "admin" ||
+    (item?.authorId &&
+      currentUser.id &&
+      String(item.authorId) === String(currentUser.id)) ||
+    (!item?.authorId &&
+      item?.author &&
+      currentUser.name &&
+      String(item.author) === String(currentUser.name));
+
+  const getInitial = (name = "") => {
+    const trimmed = String(name || "뚝딱").trim();
+    return trimmed.slice(0, 1).toUpperCase();
+  };
+
+  const getAuthorAvatar = (item) => {
+    if (!item) return "";
+    if (item.authorAvatar) return item.authorAvatar;
+    if (
+      currentUser.avatarUrl &&
+      ((item.authorId && String(item.authorId) === String(currentUser.id)) ||
+        (!item.authorId && item.author && item.author === currentUser.name))
+    ) {
+      return currentUser.avatarUrl;
+    }
+    return "";
+  };
+
+  const renderAuthorAvatar = (name, avatarUrl = "") => (
+    <span className="community-author-avatar">
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="프로필 사진" />
+      ) : (
+        getInitial(name)
+      )}
+    </span>
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -63,6 +142,58 @@ function CommunityPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedPostId) {
+      closingDetailRef.current = false;
+      return;
+    }
+    if (closingDetailRef.current) return;
+    if (!selectedPostId || posts.length === 0) return;
+    if (detailPost?.id === selectedPostId) return;
+
+    const selectedPost = posts.find((post) => post.id === selectedPostId);
+    if (selectedPost) {
+      openPostDetail(selectedPost, { keepQuery: true });
+    }
+  }, [selectedPostId, posts, detailPost?.id]);
+
+  useEffect(() => {
+    if (!selectedPostId) return;
+
+    const handlePopState = () => {
+      setDetailMenuOpen(false);
+      setDetailPost(null);
+      setSearchParams({}, { replace: true });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedPostId, setSearchParams]);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key !== "Escape") return;
+
+      if (editingImage) {
+        setEditingImage(null);
+        return;
+      }
+
+      if (detailPost) {
+        closePostDetail();
+        return;
+      }
+
+      if (writeOpen) {
+        setWriteOpen(false);
+        setEditingPostId("");
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [detailPost, editingImage, writeOpen]);
+
   const filteredPosts = useMemo(() => {
     if (activeCategory === "all") return posts;
     return posts.filter((post) => post.category === activeCategory);
@@ -82,12 +213,31 @@ function CommunityPage() {
       ?.label || "전체";
 
   const resetForm = () => {
+    setEditingPostId("");
     setForm({
       category: "reviews",
       title: "",
       content: "",
       images: [],
     });
+  };
+
+  const openWriteModal = () => {
+    resetForm();
+    setWriteOpen(true);
+  };
+
+  const openEditPost = (post) => {
+    setDetailMenuOpen(false);
+    setEditingPostId(post.id);
+    setForm({
+      category: post.category,
+      title: post.title,
+      content: post.content,
+      images: post.images || [],
+    });
+    closePostDetail();
+    setWriteOpen(true);
   };
 
   const handleImageChange = (event) => {
@@ -193,25 +343,74 @@ function CommunityPage() {
       return;
     }
 
+    if (editingPostId) {
+      const updatedPost = applyPostUpdate(editingPostId, (currentPost) => ({
+        ...currentPost,
+        category: form.category,
+        title,
+        content,
+        excerpt: content,
+        images: form.images,
+        image: form.images[0]?.src || "",
+        updatedAt: new Date().toISOString(),
+      }));
+
+      resetForm();
+      setWriteOpen(false);
+      setActiveCategory(updatedPost?.category || form.category);
+      return;
+    }
+
+    const currentUser = getCurrentUser();
     const createdPost = createCommunityPost({
       category: form.category,
       title,
       content,
       images: form.images,
+      author: currentUser.name,
+      authorId: currentUser.id,
+      authorAvatar: currentUser.avatarUrl,
     });
 
-    setPosts((prev) => [createdPost, ...prev]);
+    setPosts((prev) => {
+      const withoutDuplicate = prev.filter((post) => post.id !== createdPost.id);
+      return [createdPost, ...withoutDuplicate];
+    });
 
     resetForm();
     setWriteOpen(false);
     setActiveCategory(form.category);
   };
 
-  const openPostDetail = (post) => {
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm("이 글을 삭제할까요?")) return;
+
+    setDetailMenuOpen(false);
+    setPosts((prev) => prev.filter((post) => post.id !== postId));
+    closePostDetail();
+    await deleteCommunityPost(postId);
+  };
+
+  const closePostDetail = () => {
+    closingDetailRef.current = true;
+    setDetailMenuOpen(false);
+    setSearchParams({}, { replace: true });
+    setDetailPost(null);
+    window.requestAnimationFrame(() => {
+      closingDetailRef.current = false;
+    });
+  };
+
+  const openPostDetail = (post, options = {}) => {
     setCommentText("");
     setReplyDrafts({});
     setEditingComment(null);
     setSelectedImageIndex(0);
+    setDetailMenuOpen(false);
+
+    if (!options.keepQuery) {
+      setSearchParams({ post: post.id }, { replace: true });
+    }
 
     const optimisticPost = {
       ...post,
@@ -242,7 +441,9 @@ function CommunityPage() {
     const updatedPost = applyPostUpdate(detailPost.id, (currentPost) => {
       const nextComment = {
         id: `comment-${Date.now()}`,
-        author: "뚝딱 회원",
+        author: getCurrentUser().name,
+        authorId: getCurrentUser().id,
+        authorAvatar: getCurrentUser().avatarUrl,
         message,
         createdAt: new Date().toISOString(),
       };
@@ -297,7 +498,9 @@ function CommunityPage() {
                 ...(comment.replies || []),
                 {
                   id: `reply-${Date.now()}`,
-                  author: "뚝딱 회원",
+                  author: getCurrentUser().name,
+                  authorId: getCurrentUser().id,
+                  authorAvatar: getCurrentUser().avatarUrl,
                   message,
                   createdAt: new Date().toISOString(),
                 },
@@ -543,6 +746,10 @@ function CommunityPage() {
         </div>
         <h3>{post.title}</h3>
         <p>{post.excerpt}</p>
+        <div className="community-author-mini">
+          {renderAuthorAvatar(post.author, getAuthorAvatar(post))}
+          <span>{post.author || "뚝딱 회원"}</span>
+        </div>
         <div className="community-row-meta">
           <span>{formatCommunityTime(post.createdAt)}</span>
           <span>조회 {Number(post.views || 0).toLocaleString()}</span>
@@ -560,7 +767,7 @@ function CommunityPage() {
   );
   };
 
-  const showPhotoGrid = activeCategory === "reviews";
+  const showPhotoGrid = false;
 
   return (
     <main
@@ -589,13 +796,16 @@ function CommunityPage() {
           <button
             type="button"
             className="community-primary-button"
-            onClick={() => setWriteOpen(true)}
+            onClick={openWriteModal}
           >
             글쓰기
           </button>
         </header>
 
-        <div className="community-layout">
+        <div
+          className="community-layout"
+          style={{ display: detailPost ? "none" : undefined }}
+        >
           <aside className="community-sidebar">
             {communityCategories.map((category) => {
               const isActive = activeCategory === category.id;
@@ -705,15 +915,27 @@ function CommunityPage() {
       </div>
 
       {writeOpen && (
-        <div className="community-modal-backdrop" onClick={() => setWriteOpen(false)}>
+        <div
+          className="community-modal-backdrop"
+          onClick={() => {
+            setWriteOpen(false);
+            setEditingPostId("");
+          }}
+        >
           <form
             className="community-write-modal"
             onClick={(event) => event.stopPropagation()}
             onSubmit={handleCreatePost}
           >
             <div className="community-modal-head">
-              <h2>커뮤니티 글쓰기</h2>
-              <button type="button" onClick={() => setWriteOpen(false)}>
+              <h2>{editingPostId ? "커뮤니티 글 수정" : "커뮤니티 글쓰기"}</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setWriteOpen(false);
+                  setEditingPostId("");
+                }}
+              >
                 ×
               </button>
             </div>
@@ -798,29 +1020,92 @@ function CommunityPage() {
               <button type="button" onClick={() => setWriteOpen(false)}>
                 취소
               </button>
-              <button type="submit">등록하기</button>
+              <button type="submit">{editingPostId ? "수정하기" : "등록하기"}</button>
             </div>
           </form>
         </div>
       )}
 
       {detailPost && (
-        <div
-          className="community-modal-backdrop"
-          onClick={() => setDetailPost(null)}
+        <section
+          className="community-detail-page"
+          onClick={() => detailMenuOpen && setDetailMenuOpen(false)}
         >
-          <article
-            className="community-detail-modal"
-            onClick={(event) => event.stopPropagation()}
+          <button
+            type="button"
+            className="community-detail-back"
+            onClick={closePostDetail}
           >
-            <div className="community-modal-head">
+            ← 목록으로
+          </button>
+
+          <article className="community-detail-article">
+            <div className="community-detail-page-head">
               <div>
-                <span>{getCategoryLabel(detailPost.category)}</span>
+                <div className="community-detail-breadcrumb">
+                  커뮤니티 &gt; {getCategoryLabel(detailPost.category)}
+                </div>
+                <span className="community-detail-category">
+                  {getCategoryLabel(detailPost.category)}
+                </span>
                 <h2>{detailPost.title}</h2>
+                <div className="community-detail-author">
+                  {renderAuthorAvatar(detailPost.author, getAuthorAvatar(detailPost))}
+                  <strong>{detailPost.author || "뚝딱 회원"}</strong>
+                </div>
               </div>
-              <button type="button" onClick={() => setDetailPost(null)}>
-                ×
-              </button>
+              <div className="community-detail-head-actions">
+                <button
+                  type="button"
+                  className="community-more-button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDetailMenuOpen((prev) => !prev);
+                  }}
+                  aria-label="게시글 메뉴 열기"
+                >
+                  ⋮
+                </button>
+                {detailMenuOpen && (
+                  <div className="community-more-menu">
+                    {canManageDetailPost ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditPost(detailPost);
+                          }}
+                        >
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeletePost(detailPost.id);
+                          }}
+                        >
+                          삭제
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          alert("신고가 접수되었습니다.");
+                          setDetailMenuOpen(false);
+                        }}
+                      >
+                        이 게시글 신고
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {detailPost.images?.length > 0 && (
@@ -904,7 +1189,10 @@ function CommunityPage() {
                   {detailPost.commentList.map((comment) => (
                     <div key={comment.id} className="community-comment">
                       <div className="community-comment-head">
-                        <strong>{comment.author}</strong>
+                        <div className="community-comment-profile">
+                          {renderAuthorAvatar(comment.author, getAuthorAvatar(comment))}
+                          <strong>{comment.author}</strong>
+                        </div>
                         <span>{formatCommunityTime(comment.createdAt)}</span>
                       </div>
 
@@ -931,32 +1219,37 @@ function CommunityPage() {
                         <p>{comment.message}</p>
                       )}
 
-                      <div className="community-comment-actions">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditingComment({
-                              commentId: comment.id,
-                              message: comment.message,
-                            })
-                          }
-                        >
-                          수정
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteComment(comment.id)}
-                        >
-                          삭제
-                        </button>
-                      </div>
+                      {canManageAuthorContent(comment) && (
+                        <div className="community-comment-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingComment({
+                                commentId: comment.id,
+                                message: comment.message,
+                              })
+                            }
+                          >
+                            수정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(comment.id)}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      )}
 
                       {(comment.replies || []).length > 0 && (
                         <div className="community-replies">
                           {comment.replies.map((reply) => (
                             <div key={reply.id} className="community-reply">
                               <div className="community-comment-head">
-                                <strong>{reply.author}</strong>
+                                <div className="community-comment-profile">
+                                  {renderAuthorAvatar(reply.author, getAuthorAvatar(reply))}
+                                  <strong>{reply.author}</strong>
+                                </div>
                                 <span>{formatCommunityTime(reply.createdAt)}</span>
                               </div>
                               {editingComment?.commentId === comment.id &&
@@ -984,28 +1277,30 @@ function CommunityPage() {
                               ) : (
                                 <p>{reply.message}</p>
                               )}
-                              <div className="community-comment-actions">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setEditingComment({
-                                      commentId: comment.id,
-                                      replyId: reply.id,
-                                      message: reply.message,
-                                    })
-                                  }
-                                >
-                                  수정
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteComment(comment.id, reply.id)
-                                  }
-                                >
-                                  삭제
-                                </button>
-                              </div>
+                              {canManageAuthorContent(reply) && (
+                                <div className="community-comment-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setEditingComment({
+                                        commentId: comment.id,
+                                        replyId: reply.id,
+                                        message: reply.message,
+                                      })
+                                    }
+                                  >
+                                    수정
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteComment(comment.id, reply.id)
+                                    }
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1043,8 +1338,18 @@ function CommunityPage() {
                 <button type="submit">등록</button>
               </form>
             </section>
+
+            <div className="community-detail-bottom-actions">
+              <button
+                type="button"
+                className="community-detail-bottom-back"
+                onClick={closePostDetail}
+              >
+                목록으로
+              </button>
+            </div>
           </article>
-        </div>
+        </section>
       )}
 
       {editingImage && (
@@ -1440,6 +1745,174 @@ function CommunityPage() {
             font-weight: 800;
           }
 
+          .community-author-mini,
+          .community-detail-author,
+          .community-comment-profile {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+          }
+
+          .community-author-mini {
+            margin: -2px 0 12px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 800;
+          }
+
+          .community-author-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: #eaf3ff;
+            color: ${BRAND_COLOR};
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            font-size: 12px;
+            font-weight: 900;
+            overflow: hidden;
+          }
+
+          .community-author-avatar img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+          }
+
+          .community-detail-author {
+            margin-top: 10px;
+            color: #475569;
+            font-size: 13px;
+          }
+
+          .community-detail-page {
+            width: min(760px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 6px 0 40px;
+          }
+
+          .community-detail-back {
+            border: none;
+            background: transparent;
+            color: ${TEXT_MUTED};
+            padding: 0;
+            margin-bottom: 34px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: color 0.18s ease, transform 0.18s ease;
+          }
+
+          .community-detail-back:hover {
+            color: ${BRAND_COLOR};
+            transform: translateX(-2px);
+          }
+
+          .community-detail-article {
+            background: transparent;
+          }
+
+          .community-detail-page-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            padding-bottom: 26px;
+            border-bottom: 1px solid ${CARD_BORDER};
+            margin-bottom: 30px;
+          }
+
+          .community-detail-breadcrumb {
+            color: #b4c0d0;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 34px;
+          }
+
+          .community-detail-category {
+            display: block;
+            color: ${TEXT_MUTED};
+            font-size: 14px;
+            font-weight: 900;
+            margin-bottom: 10px;
+          }
+
+          .community-detail-page-head h2 {
+            margin: 0;
+            color: ${TEXT_DARK};
+            font-size: 25px;
+            line-height: 1.45;
+            letter-spacing: -0.35px;
+          }
+
+          .community-detail-head-actions {
+            position: relative;
+            flex: 0 0 auto;
+          }
+
+          .community-more-button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 999px;
+            background: transparent;
+            color: #111827;
+            font-size: 26px;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+          }
+
+          .community-more-button:hover {
+            background: #f1f5f9;
+            transform: translateY(-1px);
+          }
+
+          .community-more-menu {
+            position: absolute;
+            top: 42px;
+            right: 0;
+            z-index: 5;
+            min-width: 116px;
+            padding: 6px;
+            border: 1px solid ${CARD_BORDER};
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+          }
+
+          .community-more-menu button {
+            width: 100%;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: ${TEXT_DARK};
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            text-align: left;
+            padding: 0 10px;
+            cursor: pointer;
+          }
+
+          .community-more-menu button:hover {
+            background: #f8fbff;
+            color: ${BRAND_COLOR};
+          }
+
+          .community-more-menu button.danger:hover {
+            background: #fff1f2;
+            color: #e11d48;
+          }
+
           .community-card-image {
             position: relative;
           }
@@ -1727,12 +2200,12 @@ function CommunityPage() {
           }
 
           .community-detail-gallery {
-            margin-bottom: 18px;
+            margin-bottom: 28px;
           }
 
           .community-detail-image {
             position: relative;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             background: #f1f5f9;
           }
@@ -1813,28 +2286,30 @@ function CommunityPage() {
             object-fit: cover;
           }
 
+          .community-detail-article > p,
           .community-detail-modal p {
-            margin: 0;
+            margin: 0 0 34px;
             color: #334155;
-            font-size: 15px;
-            line-height: 1.85;
+            font-size: 16px;
+            line-height: 1.9;
             white-space: pre-wrap;
           }
 
           .community-detail-meta {
             display: flex;
             flex-wrap: wrap;
+            align-items: center;
             gap: 12px;
-            margin-top: 20px;
+            padding-bottom: 22px;
+            border-bottom: 1px solid ${CARD_BORDER};
             color: ${TEXT_MUTED};
             font-size: 13px;
             font-weight: 800;
           }
 
           .community-comments {
-            border-top: 1px solid ${CARD_BORDER};
             margin-top: 22px;
-            padding-top: 18px;
+            padding-top: 0;
           }
 
           .community-comments h3 {
@@ -1868,10 +2343,16 @@ function CommunityPage() {
 
           .community-comment-head {
             display: flex;
+            align-items: center;
             justify-content: space-between;
             gap: 10px;
             margin-bottom: 6px;
             font-size: 12px;
+          }
+
+          .community-comment-profile strong {
+            color: ${TEXT_DARK};
+            font-size: 13px;
           }
 
           .community-comment strong {
@@ -1989,6 +2470,34 @@ function CommunityPage() {
 
           .community-comment-form button:hover {
             background: #1f6fd6;
+            transform: translateY(-1px);
+          }
+
+          .community-detail-bottom-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 34px;
+            padding-top: 24px;
+            border-top: 1px solid ${CARD_BORDER};
+          }
+
+          .community-detail-bottom-back {
+            min-width: 132px;
+            height: 44px;
+            border: 1px solid ${CARD_BORDER};
+            border-radius: 10px;
+            background: #ffffff;
+            color: ${TEXT_DARK};
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+          }
+
+          .community-detail-bottom-back:hover {
+            background: #f8fbff;
+            color: ${BRAND_COLOR};
             transform: translateY(-1px);
           }
 
