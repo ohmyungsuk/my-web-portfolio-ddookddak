@@ -446,7 +446,15 @@ function App() {
           }
         />
 
-        <Route path="/community" element={<CommunityPage />} />
+        <Route
+          path="/community"
+          element={
+            <CommunityPage
+              isLoggedIn={isLoggedIn}
+              onGoLogin={() => navigate("/login")}
+            />
+          }
+        />
         <Route
           path="/support"
           element={<SupportPage isLoggedIn={isLoggedIn} />}

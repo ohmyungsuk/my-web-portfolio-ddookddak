@@ -22,7 +22,7 @@ const writableCategories = communityCategories.filter(
   (category) => category.id !== "all"
 );
 
-function CommunityPage() {
+function CommunityPage({ isLoggedIn = false, onGoLogin }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const closingDetailRef = useRef(false);
   const [posts, setPosts] = useState([]);
@@ -34,6 +34,7 @@ function CommunityPage() {
   const [commentText, setCommentText] = useState("");
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [replyDrafts, setReplyDrafts] = useState({});
+  const [activeReplyId, setActiveReplyId] = useState("");
   const [editingComment, setEditingComment] = useState(null);
   const [editingImage, setEditingImage] = useState(null);
   const [editingPostId, setEditingPostId] = useState("");
@@ -437,6 +438,11 @@ function CommunityPage() {
   const handleAddComment = (event) => {
     event.preventDefault();
 
+    if (!isLoggedIn) {
+      onGoLogin?.();
+      return;
+    }
+
     const message = commentText.trim();
     if (!detailPost || !message) return;
 
@@ -488,6 +494,11 @@ function CommunityPage() {
   };
 
   const handleAddReply = (commentId) => {
+    if (!isLoggedIn) {
+      onGoLogin?.();
+      return;
+    }
+
     const message = (replyDrafts[commentId] || "").trim();
     if (!detailPost || !message) return;
 
@@ -523,6 +534,7 @@ function CommunityPage() {
       prev.map((post) => (post.id === updatedPost?.id ? updatedPost : post))
     );
     setReplyDrafts((prev) => ({ ...prev, [commentId]: "" }));
+    setActiveReplyId("");
   };
 
   const handleDeleteComment = (commentId, replyId = null) => {
@@ -1221,25 +1233,41 @@ function CommunityPage() {
                         <p>{comment.message}</p>
                       )}
 
-                      {canManageAuthorContent(comment) && (
+                      {(isLoggedIn || canManageAuthorContent(comment)) && (
                         <div className="community-comment-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditingComment({
-                                commentId: comment.id,
-                                message: comment.message,
-                              })
-                            }
-                          >
-                            수정
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteComment(comment.id)}
-                          >
-                            삭제
-                          </button>
+                          {isLoggedIn && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReplyId((prev) =>
+                                  prev === comment.id ? "" : comment.id
+                                )
+                              }
+                            >
+                              {activeReplyId === comment.id ? "\uB2EB\uAE30" : "\uB2F5\uAE00"}
+                            </button>
+                          )}
+                          {canManageAuthorContent(comment) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingComment({
+                                    commentId: comment.id,
+                                    message: comment.message,
+                                  })
+                                }
+                              >
+                                {"\uC218\uC815"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                {"\uC0AD\uC81C"}
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
 
@@ -1267,13 +1295,13 @@ function CommunityPage() {
                                     }
                                   />
                                   <button type="button" onClick={handleSaveCommentEdit}>
-                                    저장
+                                    {"\uC800\uC7A5"}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setEditingComment(null)}
                                   >
-                                    취소
+                                    {"\uCDE8\uC18C"}
                                   </button>
                                 </div>
                               ) : (
@@ -1291,7 +1319,7 @@ function CommunityPage() {
                                       })
                                     }
                                   >
-                                    수정
+                                    {"\uC218\uC815"}
                                   </button>
                                   <button
                                     type="button"
@@ -1299,7 +1327,7 @@ function CommunityPage() {
                                       handleDeleteComment(comment.id, reply.id)
                                     }
                                   >
-                                    삭제
+                                    {"\uC0AD\uC81C"}
                                   </button>
                                 </div>
                               )}
@@ -1308,37 +1336,51 @@ function CommunityPage() {
                         </div>
                       )}
 
-                      <div className="community-reply-form">
-                        <input
-                          value={replyDrafts[comment.id] || ""}
-                          onChange={(event) =>
-                            setReplyDrafts((prev) => ({
-                              ...prev,
-                              [comment.id]: event.target.value,
-                            }))
-                          }
-                          placeholder="답글을 입력해주세요"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddReply(comment.id)}
-                        >
-                          답글
-                        </button>
-                      </div>
+                      {isLoggedIn && activeReplyId === comment.id && (
+                        <div className="community-reply-form">
+                          <input
+                            value={replyDrafts[comment.id] || ""}
+                            onChange={(event) =>
+                              setReplyDrafts((prev) => ({
+                                ...prev,
+                                [comment.id]: event.target.value,
+                              }))
+                            }
+                            placeholder={"\uB2F5\uAE00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddReply(comment.id)}
+                          >
+                            {"\uB4F1\uB85D"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              <form className="community-comment-form" onSubmit={handleAddComment}>
-                <input
-                  value={commentText}
-                  onChange={(event) => setCommentText(event.target.value)}
-                  placeholder="댓글을 입력해주세요"
-                />
-                <button type="submit">등록</button>
-              </form>
+              {isLoggedIn ? (
+                <form className="community-comment-form" onSubmit={handleAddComment}>
+                  <input
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    placeholder={"\uB313\uAE00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694"}
+                  />
+                  <button type="submit">{"\uB4F1\uB85D"}</button>
+                </form>
+              ) : (
+                <div className="community-comment-login-guard">
+                  <div>
+                    <strong>{"\uB85C\uADF8\uC778 \uD6C4 \uB313\uAE00\uC744 \uB0A8\uAE38 \uC218 \uC788\uC5B4\uC694"}</strong>
+                    <p>{"\uCEE4\uBBA4\uB2C8\uD2F0 \uB313\uAE00\uACFC \uB2F5\uAE00\uC740 \uD68C\uC6D0\uB9CC \uC791\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."}</p>
+                  </div>
+                  <button type="button" onClick={onGoLogin}>
+                    {"\uB85C\uADF8\uC778"}
+                  </button>
+                </div>
+              )}
             </section>
 
             <div className="community-detail-bottom-actions">
@@ -2332,15 +2374,16 @@ function CommunityPage() {
 
           .community-comment-list {
             display: grid;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 12px;
           }
 
           .community-comment {
             border: 1px solid ${CARD_BORDER};
             border-radius: 8px;
-            padding: 12px;
-            background: #f8fafc;
+            padding: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.035);
           }
 
           .community-comment-head {
@@ -2375,36 +2418,43 @@ function CommunityPage() {
 
           .community-comment-actions {
             display: flex;
-            gap: 8px;
-            margin-top: 8px;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
           }
 
           .community-comment-actions button {
-            border: none;
-            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: #f8fafc;
             color: ${TEXT_MUTED};
-            padding: 0;
+            padding: 5px 9px;
             font-size: 12px;
             font-weight: 800;
             cursor: pointer;
+            transition: background-color 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease;
           }
 
           .community-comment-actions button:hover {
+            background: #f8fbff;
+            border-color: #bfd7ff;
             color: ${BRAND_COLOR};
           }
 
           .community-replies {
             display: grid;
-            gap: 8px;
+            gap: 10px;
             margin-top: 12px;
-            padding-left: 14px;
-            border-left: 2px solid ${CARD_BORDER};
+            padding: 12px 0 0 16px;
+            border-left: 2px solid #dbeafe;
           }
 
           .community-reply {
             border-radius: 8px;
-            background: #ffffff;
-            padding: 10px;
+            background: #f8fbff;
+            border: 1px solid #e5edf6;
+            padding: 12px;
           }
 
           .community-reply-form,
@@ -2412,7 +2462,9 @@ function CommunityPage() {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
             gap: 8px;
-            margin-top: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eef4fb;
           }
 
           .community-comment-edit {
@@ -2438,6 +2490,12 @@ function CommunityPage() {
             padding: 0 12px;
             font-weight: 800;
             cursor: pointer;
+          }
+
+          .community-reply-form button {
+            border-color: #bfd7ff;
+            background: #f8fbff;
+            color: ${BRAND_COLOR};
           }
 
           .community-comment-form {
@@ -2473,6 +2531,43 @@ function CommunityPage() {
           .community-comment-form button:hover {
             background: #1f6fd6;
             transform: translateY(-1px);
+          }
+
+          .community-comment-login-guard {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            border: 1px solid ${CARD_BORDER};
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 14px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.035);
+          }
+
+          .community-comment-login-guard strong {
+            display: block;
+            color: ${TEXT_DARK};
+            font-size: 14px;
+            margin-bottom: 4px;
+          }
+
+          .community-comment-login-guard p {
+            margin: 0;
+            color: ${TEXT_MUTED};
+            font-size: 13px;
+            line-height: 1.5;
+          }
+
+          .community-comment-login-guard button {
+            border: none;
+            border-radius: 10px;
+            background: ${BRAND_COLOR};
+            color: #ffffff;
+            min-width: 76px;
+            height: 38px;
+            font-weight: 900;
+            cursor: pointer;
           }
 
           .community-detail-bottom-actions {

@@ -1190,7 +1190,7 @@ export const getCommunityPreviewSections = (
     .filter((section) => section.id !== "notice")
     .map((section) => ({
       ...section,
-      posts: section.posts.slice(0, 4),
+      posts: section.posts.slice(0, 10),
     }));
 
 export const formatCommunityTime = (value) => {

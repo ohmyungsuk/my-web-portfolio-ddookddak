@@ -47,6 +47,9 @@ function LandingPage({
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredGhostButton, setHoveredGhostButton] = useState("");
   const [hoveredCategory, setHoveredCategory] = useState("");
+  const [hoveredProcess, setHoveredProcess] = useState("");
+  const [hoveredCommunityPost, setHoveredCommunityPost] = useState("");
+  const [carouselStates, setCarouselStates] = useState({});
   const [previewSections, setPreviewSections] = useState(() =>
     getCommunityPreviewSections()
   );
@@ -101,6 +104,32 @@ function LandingPage({
     if (onReadNotification) {
       onReadNotification(notification);
     }
+  };
+
+  const updateCarouselState = (sectionId, element) => {
+    const target =
+      element || document.getElementById(`community-carousel-${sectionId}`);
+
+    if (!target) return;
+
+    const maxScrollLeft = Math.max(target.scrollWidth - target.clientWidth, 0);
+
+    setCarouselStates((prev) => ({
+      ...prev,
+      [sectionId]: {
+        canPrev: target.scrollLeft > 6,
+        canNext: target.scrollLeft < maxScrollLeft - 6,
+      },
+    }));
+  };
+
+  const scrollCommunityCarousel = (sectionId, amount) => {
+    const target = document.getElementById(`community-carousel-${sectionId}`);
+
+    if (!target) return;
+
+    target.scrollBy({ left: amount, behavior: "smooth" });
+    window.setTimeout(() => updateCarouselState(sectionId, target), 260);
   };
 
   const renderProfileAvatar = (size = 40) => (
@@ -1460,7 +1489,7 @@ function LandingPage({
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: isMobile ? "0 16px 32px" : "0 24px 46px",
+          padding: isMobile ? "0 16px 42px" : "0 24px 58px",
         }}
       >
         <SectionHeader
@@ -1473,34 +1502,65 @@ function LandingPage({
           style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-            gap: "16px",
+            gap: isMobile ? "14px" : "18px",
           }}
         >
-          {processCards.map((item) => (
+          {processCards.map((item, index) => {
+            const isProcessHover = hoveredProcess === item.step;
+
+            return (
             <div
               key={item.step}
+              onMouseEnter={() => setHoveredProcess(item.step)}
+              onMouseLeave={() => setHoveredProcess("")}
               style={{
                 backgroundColor: "#ffffff",
-                border: `1px solid ${CARD_BORDER}`,
-                borderRadius: "24px",
-                padding: "24px",
-                boxShadow: CARD_SHADOW,
+                border: `1px solid ${
+                  isProcessHover ? "#BFD7FF" : CARD_BORDER
+                }`,
+                borderRadius: "8px",
+                padding: isMobile ? "20px" : "24px",
+                boxShadow: isProcessHover
+                  ? "0 14px 28px rgba(47, 128, 237, 0.1)"
+                  : "0 8px 20px rgba(15, 23, 42, 0.035)",
+                transform: isProcessHover ? "translateY(-2px)" : "none",
+                transition:
+                  "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease",
+                position: "relative",
+                overflow: "hidden",
+                minHeight: isMobile ? "auto" : "190px",
               }}
             >
               <div
                 style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "2px",
+                  background: isProcessHover ? BRAND_COLOR : "transparent",
+                  transition: "background-color 0.18s ease",
+                }}
+              />
+              <div
+                style={{
                   width: "44px",
                   height: "44px",
-                  borderRadius: "14px",
-                  background: BRAND_COLOR,
-                  color: "#ffffff",
+                  borderRadius: "999px",
+                  background: isProcessHover ? BRAND_COLOR : BRAND_SOFT,
+                  color: isProcessHover ? "#ffffff" : BRAND_COLOR,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: "13px",
                   fontWeight: "900",
                   marginBottom: "18px",
-                  boxShadow: "0 10px 22px rgba(47, 128, 237, 0.18)",
+                  border: "4px solid #ffffff",
+                  boxShadow: isProcessHover
+                    ? "0 10px 22px rgba(47, 128, 237, 0.18)"
+                    : "0 8px 18px rgba(47, 128, 237, 0.08)",
+                  transition:
+                    "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
                 }}
               >
                 {item.step}
@@ -1510,10 +1570,11 @@ function LandingPage({
                 style={{
                   margin: "0 0 10px 0",
                   fontSize: "18px",
-                  fontWeight: "800",
+                  fontWeight: "900",
                   letterSpacing: "-0.3px",
-                  color: TEXT_DARK,
+                  color: isProcessHover ? BRAND_HOVER : TEXT_DARK,
                   lineHeight: "1.4",
+                  transition: "color 0.18s ease",
                 }}
               >
                 {item.title}
@@ -1525,12 +1586,14 @@ function LandingPage({
                   fontSize: "14px",
                   lineHeight: "1.85",
                   color: TEXT_MUTED,
+                  wordBreak: "keep-all",
                 }}
               >
                 {item.desc}
               </p>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -1585,8 +1648,31 @@ function LandingPage({
           </button>
         </div>
 
-        {previewSections.map((section) => (
-          <div key={section.id} style={{ marginBottom: "46px" }}>
+        {previewSections.map((section, sectionIndex) => {
+          const sectionBadge =
+            section.title.includes("후기")
+              ? "이용후기"
+              : section.title.includes("팁")
+              ? "작업 팁"
+              : "최근 요청";
+          const isRecentSection = sectionIndex === 0;
+          const visiblePosts = isRecentSection
+            ? section.posts.slice(0, 4)
+            : section.posts;
+          const isCarouselSection =
+            !isRecentSection && visiblePosts.length > 4;
+          const isFeaturedSection =
+            !isMobile && isRecentSection && visiblePosts.length > 0;
+          const carouselState = carouselStates[section.id] || {};
+          const showPrevCarousel = isCarouselSection && Boolean(carouselState.canPrev);
+          const showNextCarousel =
+            isCarouselSection && (carouselState.canNext ?? true);
+
+          return (
+          <div
+            key={section.id}
+            style={{ marginBottom: "46px", position: "relative" }}
+          >
             <div
               style={{
                 display: "flex",
@@ -1608,35 +1694,116 @@ function LandingPage({
                 {section.title}
               </h3>
 
-              <button
-                type="button"
-                onClick={onGoCommunity}
-                onMouseDown={(e) => e.currentTarget.blur()}
+              <div
                 style={{
-                  border: "none",
-                  background: "transparent",
-                  color: BRAND_COLOR,
-                  padding: "6px 0",
-                  fontSize: "14px",
-                  fontWeight: "900",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flexShrink: 0,
                 }}
               >
-                {section.moreLabel}
-              </button>
+                <button
+                  type="button"
+                  onClick={onGoCommunity}
+                  onMouseDown={(e) => e.currentTarget.blur()}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: BRAND_COLOR,
+                    padding: "6px 0",
+                    fontSize: "14px",
+                    fontWeight: "900",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {section.moreLabel}
+                </button>
+              </div>
             </div>
 
+            {isCarouselSection && !isMobile && (
+              <>
+                {showPrevCarousel && (
+                  <button
+                    type="button"
+                    onClick={() => scrollCommunityCarousel(section.id, -304)}
+                    onMouseDown={(e) => e.currentTarget.blur()}
+                    style={{
+                      position: "absolute",
+                      left: "-8px",
+                      top: "128px",
+                      zIndex: 2,
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "999px",
+                      border: "1px solid rgba(255, 255, 255, 0.82)",
+                      background: "rgba(255, 255, 255, 0.72)",
+                      color: TEXT_DARK,
+                      fontSize: "20px",
+                      fontWeight: "900",
+                      cursor: "pointer",
+                      boxShadow: "0 16px 34px rgba(15, 23, 42, 0.14)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                    }}
+                    aria-label="이전 보기"
+                  >
+                    {"\u2039"}
+                  </button>
+                )}
+                {showNextCarousel && (
+                  <button
+                    type="button"
+                    onClick={() => scrollCommunityCarousel(section.id, 304)}
+                    onMouseDown={(e) => e.currentTarget.blur()}
+                    style={{
+                      position: "absolute",
+                      right: "-8px",
+                      top: "128px",
+                      zIndex: 2,
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "999px",
+                      border: "1px solid rgba(255, 255, 255, 0.82)",
+                      background: "rgba(255, 255, 255, 0.72)",
+                      color: TEXT_DARK,
+                      fontSize: "20px",
+                      fontWeight: "900",
+                      cursor: "pointer",
+                      boxShadow: "0 16px 34px rgba(15, 23, 42, 0.14)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                    }}
+                    aria-label="다음 보기"
+                  >
+                    {"\u203A"}
+                  </button>
+                )}
+              </>
+            )}
             <div
+              id={`community-carousel-${section.id}`}
+              onScroll={(event) =>
+                updateCarouselState(section.id, event.currentTarget)
+              }
               style={{
-                display: "grid",
-                gridTemplateColumns: isMobile
-                  ? "repeat(2, minmax(0, 1fr))"
-                  : "repeat(4, minmax(0, 1fr))",
-                gap: isMobile ? "14px" : "16px",
+                display: isRecentSection ? "grid" : "flex",
+                gridTemplateColumns: isRecentSection
+                  ? isMobile
+                    ? "repeat(2, minmax(0, 1fr))"
+                    : "repeat(4, minmax(0, 1fr))"
+                  : undefined,
+                gap: isMobile ? "12px" : "16px",
+                overflowX: isRecentSection ? "visible" : "auto",
+                overflowY: "visible",
+                scrollSnapType: isRecentSection ? "none" : "x mandatory",
+                scrollBehavior: "smooth",
+                padding: isRecentSection ? 0 : "2px 2px 18px",
+                scrollbarWidth: "none",
               }}
             >
-              {section.posts.length === 0 ? (
+              {visiblePosts.length === 0 ? (
                 <div
                   style={{
                     gridColumn: "1 / -1",
@@ -1653,25 +1820,63 @@ function LandingPage({
                   아직 등록된 글이 없습니다.
                 </div>
               ) : (
-                section.posts.map((post) => (
+                visiblePosts.map((post, postIndex) => {
+                  const hoverKey = `${section.id}-${post.id}`;
+                  const isHovered = hoveredCommunityPost === hoverKey;
+                  const isLeadCard = isFeaturedSection && postIndex === 0;
+                  const isWideSmallCard =
+                    isFeaturedSection &&
+                    visiblePosts.length === 4 &&
+                    postIndex === 3;
+                  const hasImage = Boolean(post.image);
+                  const metaText =
+                    section.title.includes("후기")
+                      ? "완료 후기"
+                      : section.title.includes("팁")
+                      ? "작업 전 체크"
+                      : "현장 요청";
+
+                  return (
                   <article
                     key={post.id}
                     onClick={() => onGoCommunity?.(post.id)}
+                    onMouseEnter={() => setHoveredCommunityPost(hoverKey)}
+                    onMouseLeave={() => setHoveredCommunityPost("")}
                     style={{
                       minWidth: 0,
+                      flex: isMobile ? "0 0 78%" : "0 0 276px",
+                      scrollSnapAlign: "start",
                       cursor: "pointer",
+                      gridColumn:
+                        isLeadCard || isWideSmallCard ? "span 2" : "auto",
+                      gridRow: isLeadCard ? "span 2" : "auto",
+                      borderRadius: "8px",
+                      border: `1px solid ${
+                        isHovered ? "#CFE1FF" : CARD_BORDER
+                      }`,
+                      backgroundColor: "#ffffff",
+                      overflow: "hidden",
+                      boxShadow: isHovered
+                        ? "0 18px 38px rgba(47, 128, 237, 0.12)"
+                        : "0 10px 22px rgba(15, 23, 42, 0.045)",
+                      transform: isHovered ? "translateY(-4px)" : "none",
+                      transition:
+                        "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
                     }}
                   >
-                    {post.image ? (
+                    {hasImage ? (
                       <div
                         style={{
                           position: "relative",
-                          aspectRatio: isMobile ? "1.25 / 1" : "1.34 / 1",
+                          aspectRatio: isLeadCard
+                            ? "1.58 / 1"
+                            : isWideSmallCard
+                            ? "2.82 / 1"
+                            : isMobile
+                            ? "1.18 / 1"
+                            : "1.34 / 1",
                           overflow: "hidden",
-                          borderRadius: "8px",
                           backgroundColor: "#F1F5F9",
-                          border: `1px solid ${CARD_BORDER}`,
-                          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
                         }}
                       >
                         <img
@@ -1683,23 +1888,54 @@ function LandingPage({
                             height: "100%",
                             objectFit: "cover",
                             display: "block",
+                            transform: isHovered ? "scale(1.045)" : "scale(1)",
+                            transition: "transform 0.35s ease",
                           }}
                         />
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: "12px",
+                            top: "12px",
+                            padding: "6px 10px",
+                            borderRadius: "999px",
+                            backgroundColor: "rgba(255, 255, 255, 0.92)",
+                            color: BRAND_COLOR,
+                            fontSize: "12px",
+                            fontWeight: "900",
+                            boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)",
+                          }}
+                        >
+                          {sectionBadge}
+                        </span>
                       </div>
                     ) : (
                       <div
                         style={{
-                          aspectRatio: isMobile ? "1.25 / 1" : "1.34 / 1",
-                          borderRadius: "8px",
-                          border: `1px solid ${CARD_BORDER}`,
-                          backgroundColor: "#ffffff",
-                          padding: "16px",
+                          aspectRatio: isMobile ? "1.18 / 1" : "1.34 / 1",
+                          background:
+                            "linear-gradient(135deg, #F8FBFF 0%, #EEF6FF 100%)",
+                          padding: isLeadCard ? "22px" : "16px",
                           boxSizing: "border-box",
                           display: "flex",
-                          alignItems: "flex-start",
-                          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
                         }}
                       >
+                        <span
+                          style={{
+                            width: "fit-content",
+                            padding: "6px 10px",
+                            borderRadius: "999px",
+                            backgroundColor: "#ffffff",
+                            color: BRAND_COLOR,
+                            fontSize: "12px",
+                            fontWeight: "900",
+                            boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
+                          }}
+                        >
+                          {sectionBadge}
+                        </span>
                         <p
                           style={{
                             margin: 0,
@@ -1707,7 +1943,7 @@ function LandingPage({
                             fontSize: "13px",
                             lineHeight: "1.6",
                             display: "-webkit-box",
-                            WebkitLineClamp: 3,
+                            WebkitLineClamp: isLeadCard ? 5 : 3,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
                           }}
@@ -1717,32 +1953,82 @@ function LandingPage({
                       </div>
                     )}
 
-                    <div style={{ padding: "10px 0 0" }}>
+                    <div
+                      style={{
+                        padding: isLeadCard ? "18px 18px 20px" : "14px 14px 16px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: TEXT_MUTED,
+                            fontSize: "12px",
+                            fontWeight: "800",
+                          }}
+                        >
+                          {metaText}
+                        </span>
+                        <span
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "999px",
+                            backgroundColor: isHovered ? BRAND_COLOR : "#CBD5E1",
+                            flexShrink: 0,
+                          }}
+                        />
+                      </div>
                       <h4
                         style={{
                           margin: 0,
-                          fontSize: "15px",
-                          lineHeight: "1.35",
+                          fontSize: isLeadCard ? "20px" : "15px",
+                          lineHeight: isLeadCard ? "1.32" : "1.35",
                           fontWeight: "900",
-                          color: TEXT_DARK,
+                          color: isHovered ? BRAND_HOVER : TEXT_DARK,
                           letterSpacing: "-0.2px",
                           display: "-webkit-box",
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
+                          transition: "color 0.2s ease",
                         }}
                       >
                         {post.title}
                       </h4>
+                      {isLeadCard && post.excerpt && (
+                        <p
+                          style={{
+                            margin: "10px 0 0",
+                            color: TEXT_MUTED,
+                            fontSize: "14px",
+                            lineHeight: "1.6",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {post.excerpt}
+                        </p>
+                      )}
                     </div>
                   </article>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
-
       <footer
         style={{
           borderTop: `1px solid ${CARD_BORDER}`,
