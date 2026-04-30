@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { getCategoryIcon } from "../utils/categoryIcons.js";
 
@@ -585,7 +585,14 @@ function buildQuestions(serviceName, issues) {
 
 export default function RequestCreateFlow() {
   const navigate = useNavigate();
-  const [selectedCategoryId, setSelectedCategoryId] = useState("electrical");
+  const location = useLocation();
+  const requestedCategoryId = useMemo(() => {
+    const categoryId = new URLSearchParams(location.search).get("category");
+    const exists = CATEGORY_DATA.some((item) => item.id === categoryId);
+    return exists ? categoryId : "electrical";
+  }, [location.search]);
+  const [selectedCategoryId, setSelectedCategoryId] =
+    useState(requestedCategoryId);
   const [selectedService, setSelectedService] = useState(null);
 
   const [step, setStep] = useState(0);
@@ -627,6 +634,17 @@ export default function RequestCreateFlow() {
     dragStateRef.current.isDown = false;
     if (row) row.classList.remove("dragging");
   };
+
+  useEffect(() => {
+    setSelectedCategoryId(requestedCategoryId);
+    setSelectedService(null);
+    setStep(0);
+    setAnswers(EMPTY_ANSWERS);
+    setDraftOption("");
+    setDraftText("");
+    submitLockRef.current = false;
+    setIsSubmitting(false);
+  }, [requestedCategoryId]);
 
   const selectedCategory = useMemo(() => {
     return (

@@ -591,6 +591,7 @@ export default function MyPage({
         name: trimmedName,
         username: trimmedName,
         avatarUrl: editAvatarUrl,
+        avatar_url: editAvatarUrl,
       };
 
       localStorage.setItem("loginUser", JSON.stringify(nextLoginUser));

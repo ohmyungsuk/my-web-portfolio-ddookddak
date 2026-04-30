@@ -16,6 +16,9 @@ function LandingPage({
   onGoAllRequests,
   onGoAssignedRequests,
   onGoCommunity,
+  onGoSupport,
+  onGoTerms,
+  onGoPrivacy,
   onLogout,
   isLoggedIn,
   loginUser,
@@ -43,6 +46,7 @@ function LandingPage({
   const [hoveredTextButton, setHoveredTextButton] = useState("");
   const [hoveredPrimaryButton, setHoveredPrimaryButton] = useState("");
   const [hoveredGhostButton, setHoveredGhostButton] = useState("");
+  const [hoveredCategory, setHoveredCategory] = useState("");
   const [previewSections, setPreviewSections] = useState(() =>
     getCommunityPreviewSections()
   );
@@ -57,6 +61,12 @@ function LandingPage({
 
   const displayName =
     loginUser?.username || loginUser?.name || loginUser?.email || "사용자";
+  const avatarUrl =
+    loginUser?.avatarUrl ||
+    loginUser?.avatar_url ||
+    loginUser?.picture ||
+    loginUser?.photoUrl ||
+    "";
 
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const visibleNotifications = safeNotifications.slice(0, 8);
@@ -92,6 +102,41 @@ function LandingPage({
       onReadNotification(notification);
     }
   };
+
+  const renderProfileAvatar = (size = 40) => (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        background: "#F1F5F9",
+        color: BRAND_COLOR,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "700",
+        fontSize: size <= 34 ? "12px" : "14px",
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt="프로필 사진"
+          referrerPolicy="no-referrer"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "cover",
+          }}
+        />
+      ) : (
+        String(displayName).slice(0, 1)
+      )}
+    </div>
+  );
 
   const handleReadAllNotifications = () => {
     if (onReadAllNotifications) {
@@ -157,6 +202,10 @@ function LandingPage({
     if (action) action();
   };
 
+  const showFooterNotice = (title, message) => {
+    window.alert(`${title}\n\n${message}`);
+  };
+
   const topMenuButton = {
     background: "none",
     border: "none",
@@ -217,14 +266,14 @@ function LandingPage({
   };
 
   const categoryItems = [
-    { title: "전기", bg: ICON_BG },
-    { title: "설비", bg: ICON_BG },
-    { title: "누수", bg: ICON_BG },
-    { title: "도어락", bg: ICON_BG },
-    { title: "에어컨", bg: ICON_BG },
-    { title: "CCTV", bg: ICON_BG },
-    { title: "간판", bg: ICON_BG },
-    { title: "기타", bg: ICON_BG },
+    { title: "전기", bg: ICON_BG, categoryId: "electrical" },
+    { title: "설비", bg: ICON_BG, categoryId: "plumbing" },
+    { title: "누수", bg: ICON_BG, categoryId: "waterproof" },
+    { title: "도어락", bg: ICON_BG, categoryId: "doorlock" },
+    { title: "에어컨", bg: ICON_BG, categoryId: "aircon" },
+    { title: "CCTV", bg: ICON_BG, categoryId: "cctv" },
+    { title: "간판", bg: ICON_BG, categoryId: "etc" },
+    { title: "기타", bg: ICON_BG, categoryId: "etc" },
   ];
 
   const featuredRequests = [
@@ -726,7 +775,10 @@ function LandingPage({
                     ...primaryButton,
                     padding: "0 20px",
                     minWidth: "118px",
-                    background: BRAND_COLOR,
+                    background:
+                      hoveredPrimaryButton === "guest-create"
+                        ? BRAND_HOVER
+                        : BRAND_COLOR,
                     transform:
                       hoveredPrimaryButton === "guest-create"
                         ? "translateY(-1px)"
@@ -770,22 +822,7 @@ function LandingPage({
                       cursor: "pointer",
                     }}
                   >
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: "#F1F5F9",
-                        color: BRAND_COLOR,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: "700",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {String(displayName).slice(0, 1)}
-                    </div>
+                    {renderProfileAvatar(40)}
 
                     <span
                       style={{
@@ -880,7 +917,10 @@ function LandingPage({
                     ...primaryButton,
                     padding: "0 20px",
                     minWidth: "118px",
-                    background: BRAND_COLOR,
+                    background:
+                      hoveredPrimaryButton === "login-create"
+                        ? BRAND_HOVER
+                        : BRAND_COLOR,
                     transform:
                       hoveredPrimaryButton === "login-create"
                         ? "translateY(-1px)"
@@ -915,20 +955,14 @@ function LandingPage({
                         onClick={() => setProfileOpen((prev) => !prev)}
                         onMouseDown={(e) => e.currentTarget.blur()}
                         style={{
-                          width: "34px",
-                          height: "34px",
-                          borderRadius: "50%",
                           border: "none",
                           outline: "none",
-                          background: "#F1F5F9",
-                          color: BRAND_COLOR,
+                          background: "transparent",
                           cursor: "pointer",
                           padding: 0,
-                          fontWeight: "700",
-                          fontSize: "12px",
                         }}
                       >
-                        {String(displayName).slice(0, 1)}
+                        {renderProfileAvatar(34)}
                       </button>
 
                       {profileOpen && (
@@ -1150,15 +1184,16 @@ function LandingPage({
               borderRadius: "16px",
               width: isMobile ? "100%" : "auto",
               padding: "0 22px",
-              background: "#6846F5",
+              background:
+                hoveredPrimaryButton === "hero-ai" ? BRAND_HOVER : BRAND_COLOR,
               transform:
                 hoveredPrimaryButton === "hero-ai" && !isMobile
                   ? "translateY(-1px)"
                   : "none",
               boxShadow:
                 hoveredPrimaryButton === "hero-ai" && !isMobile
-                  ? "0 14px 28px rgba(104, 70, 245, 0.24)"
-                  : "0 8px 20px rgba(104, 70, 245, 0.16)",
+                  ? "0 14px 28px rgba(31, 111, 214, 0.24)"
+                  : "0 8px 20px rgba(47, 128, 237, 0.16)",
             }}
           >
             ✨ AI 견적 요청
@@ -1176,11 +1211,16 @@ function LandingPage({
             margin: "0 auto",
           }}
         >
-          {categoryItems.map((item) => (
+          {categoryItems.map((item) => {
+            const isCategoryHover = hoveredCategory === item.title;
+
+            return (
             <button
               key={item.title}
               type="button"
-              onClick={onGoCreate}
+              onClick={() => onGoCreate?.(item.categoryId)}
+              onMouseEnter={() => setHoveredCategory(item.title)}
+              onMouseLeave={() => setHoveredCategory("")}
               onMouseDown={(e) => e.currentTarget.blur()}
               style={{
                 border: "none",
@@ -1192,6 +1232,8 @@ function LandingPage({
                 alignItems: "center",
                 gap: "8px",
                 padding: 0,
+                transform: isCategoryHover ? "translateY(-3px)" : "none",
+                transition: "transform 0.18s ease",
                 WebkitTapHighlightColor: "transparent",
               }}
             >
@@ -1200,11 +1242,19 @@ function LandingPage({
                   width: isMobile ? "52px" : "58px",
                   height: isMobile ? "52px" : "58px",
                   borderRadius: "18px",
-                  backgroundColor: item.bg,
+                  backgroundColor: isCategoryHover ? "#EAF3FF" : item.bg,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 8px 18px rgba(47, 128, 237, 0.06)",
+                  boxShadow: isCategoryHover
+                    ? "0 14px 28px rgba(47, 128, 237, 0.14)"
+                    : "0 8px 18px rgba(47, 128, 237, 0.06)",
+                  border: `1px solid ${
+                    isCategoryHover ? "#BFD7FF" : "transparent"
+                  }`,
+                  transform: isCategoryHover ? "scale(1.04)" : "none",
+                  transition:
+                    "background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease",
                 }}
               >
                 <img
@@ -1226,13 +1276,15 @@ function LandingPage({
                 style={{
                   fontSize: "14px",
                   fontWeight: "700",
-                  color: "#334155",
+                  color: isCategoryHover ? BRAND_COLOR : "#334155",
+                  transition: "color 0.18s ease",
                 }}
               >
                 {item.title}
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -1707,7 +1759,9 @@ function LandingPage({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : "1.4fr 0.8fr 1fr 1fr",
               gap: "24px",
               alignItems: "start",
             }}
@@ -1768,11 +1822,47 @@ function LandingPage({
 
             <FooterColumn
               title="메뉴"
-              items={["홈", "서비스 소개", "커뮤니티"]}
+              items={[
+                { label: "홈", onClick: goTop },
+                {
+                  label: "서비스 소개",
+                  onClick: () => moveToSection("service-intro"),
+                },
+                { label: "커뮤니티", onClick: onGoCommunity },
+              ]}
             />
             <FooterColumn
               title="서비스"
-              items={["요청 접수", "상태 확인", "담당자 연결"]}
+              items={[
+                { label: "요청 접수", onClick: onGoCreate },
+                { label: "상태 확인", onClick: onGoMyRequests },
+                { label: "전체 요청 보기", onClick: onGoAllRequests },
+                {
+                  label: "담당자 연결",
+                  onClick: () =>
+                    showFooterNotice(
+                      "담당자 연결",
+                      "요청을 등록하면 담당자가 내용을 확인한 뒤 진행 상태를 안내합니다."
+                    ),
+                },
+              ]}
+            />
+            <FooterColumn
+              title="고객지원"
+              items={[
+                {
+                  label: "고객센터",
+                  onClick: onGoSupport,
+                },
+                {
+                  label: "이용약관",
+                  onClick: onGoTerms,
+                },
+                {
+                  label: "개인정보 처리방침",
+                  onClick: onGoPrivacy,
+                },
+              ]}
             />
           </div>
         </div>
@@ -1857,6 +1947,8 @@ function SectionHeader({ title, desc, isMobile, noMargin = false }) {
 }
 
 function FooterColumn({ title, items }) {
+  const [hoveredItem, setHoveredItem] = useState("");
+
   return (
     <div>
       <div
@@ -1877,17 +1969,38 @@ function FooterColumn({ title, items }) {
           gap: "10px",
         }}
       >
-        {items.map((item) => (
-          <div
-            key={item}
+        {items.map((item) => {
+          const label = typeof item === "string" ? item : item.label;
+          const onClick = typeof item === "string" ? undefined : item.onClick;
+          const isHover = hoveredItem === label;
+
+          return (
+          <button
+            key={label}
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setHoveredItem(label)}
+            onMouseLeave={() => setHoveredItem("")}
+            onMouseDown={(e) => e.currentTarget.blur()}
             style={{
+              width: "fit-content",
+              border: "none",
+              background: "transparent",
+              padding: 0,
               fontSize: "14px",
-              color: "#64748B",
+              color: isHover ? "#2F80ED" : "#64748B",
+              cursor: onClick ? "pointer" : "default",
+              fontFamily:
+                '"Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontWeight: isHover ? "800" : "500",
+              textAlign: "left",
+              transition: "color 0.16s ease, font-weight 0.16s ease",
             }}
           >
-            {item}
-          </div>
-        ))}
+            {label}
+          </button>
+          );
+        })}
       </div>
     </div>
   );

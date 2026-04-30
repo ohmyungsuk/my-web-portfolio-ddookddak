@@ -129,7 +129,7 @@ function OAuthCallback() {
 
         const { data: existingProfile, error: profileReadError } = await supabase
           .from("profiles")
-          .select("id, username, name, role, email, provider, auth_created_at")
+          .select("id, username, name, role, email, provider, avatar_url, auth_created_at")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -185,6 +185,7 @@ function OAuthCallback() {
           username: payload.username,
           nickname: payload.name,
           avatarUrl: payload.avatar_url,
+          avatar_url: payload.avatar_url,
           provider: payload.provider,
           role: payload.role,
         };

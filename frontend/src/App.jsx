@@ -11,12 +11,15 @@ import { supabase } from "./supabaseClient.js";
 import useNotificationSocket from "./hooks/useNotificationSocket";
 
 import Header from "./components/common/Header";
+import SiteFooter from "./components/common/SiteFooter";
 
 import LandingPage from "./pages/LandingPage";
 import CommunityPage from "./pages/CommunityPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
+import SupportPage from "./pages/SupportPage";
+import PolicyPage from "./pages/PolicyPage";
 
 import MyPage from "./pages/MyPage";
 
@@ -232,7 +235,7 @@ function App() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, username, name, role")
+          .select("id, username, name, role, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -261,6 +264,7 @@ function App() {
         username: profile?.username || safeUsername,
         nickname: profile?.name || safeName,
         avatarUrl,
+        avatar_url: avatarUrl,
         provider: user.app_metadata?.provider || "email",
         role: finalRole,
       };
@@ -353,7 +357,10 @@ function App() {
     return <div style={{ minHeight: "100vh", background: "#fff" }} />;
   }
 
-  const hideHeader = ["/login", "/signup"].includes(location.pathname);
+  const authLayoutPages = ["/login", "/signup", "/oauth/callback"];
+  const hideHeader = authLayoutPages.includes(location.pathname);
+  const hideFooter =
+    authLayoutPages.includes(location.pathname) || location.pathname === "/";
 
   const notificationProps = {
     notifications,
@@ -364,6 +371,8 @@ function App() {
 
   return (
     <>
+      <ScrollToTop />
+
       {!hideHeader && (
         <Header
           isLoggedIn={isLoggedIn}
@@ -372,8 +381,12 @@ function App() {
           onGoHome={() => navigate("/")}
           onGoLogin={() => navigate("/login")}
           onGoSignup={() => navigate("/signup")}
-          onGoCreate={() =>
-            isLoggedIn ? navigate("/requests/new") : navigate("/login")
+          onGoCreate={(categoryId) =>
+            isLoggedIn
+              ? navigate(
+                  categoryId ? `/requests/new?category=${categoryId}` : "/requests/new"
+                )
+              : navigate("/login")
           }
           onGoMyPage={() => navigate("/mypage")}
           onGoMyRequests={() => navigate("/requests/my")}
@@ -401,8 +414,14 @@ function App() {
               {...notificationProps}
               onGoLogin={() => navigate("/login")}
               onGoSignup={() => navigate("/signup")}
-              onGoCreate={() =>
-                isLoggedIn ? navigate("/requests/new") : navigate("/login")
+              onGoCreate={(categoryId) =>
+                isLoggedIn
+                  ? navigate(
+                      categoryId
+                        ? `/requests/new?category=${categoryId}`
+                        : "/requests/new"
+                    )
+                  : navigate("/login")
               }
               onGoAiRequest={() =>
                 isLoggedIn ? navigate("/requests/ai") : navigate("/login")
@@ -419,12 +438,21 @@ function App() {
                 }
                 navigate("/community");
               }}
+              onGoSupport={() => navigate("/support")}
+              onGoTerms={() => navigate("/terms")}
+              onGoPrivacy={() => navigate("/privacy")}
               onLogout={handleLogout}
             />
           }
         />
 
         <Route path="/community" element={<CommunityPage />} />
+        <Route
+          path="/support"
+          element={<SupportPage isLoggedIn={isLoggedIn} />}
+        />
+        <Route path="/terms" element={<PolicyPage type="terms" />} />
+        <Route path="/privacy" element={<PolicyPage type="privacy" />} />
 
         <Route
           path="/login"
@@ -598,6 +626,8 @@ function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {!hideFooter && <SiteFooter isLoggedIn={isLoggedIn} />}
     </>
   );
 }
@@ -620,6 +650,16 @@ function RequireRole({ isLoggedIn, userRole, allow, children }) {
   }
 
   return children;
+}
+
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname, search]);
+
+  return null;
 }
 
 export default App;

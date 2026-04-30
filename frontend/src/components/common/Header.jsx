@@ -109,6 +109,7 @@ function Header({
         <img
           src={avatarUrl}
           alt="프로필 사진"
+          referrerPolicy="no-referrer"
           style={{
             width: "100%",
             height: "100%",
@@ -771,7 +772,10 @@ function Header({
                   ...primaryButton,
                   padding: "0 20px",
                   minWidth: "118px",
-                  background: BRAND_COLOR,
+                  background:
+                    hoveredPrimaryButton === "header-create"
+                      ? "#1F6FD6"
+                      : BRAND_COLOR,
                   transform:
                     hoveredPrimaryButton === "header-create"
                       ? "translateY(-1px)"
@@ -840,7 +844,10 @@ function Header({
                   ...primaryButton,
                   padding: "0 20px",
                   minWidth: "118px",
-                  background: BRAND_COLOR,
+                  background:
+                    hoveredPrimaryButton === "login-create"
+                      ? "#1F6FD6"
+                      : BRAND_COLOR,
                   transform:
                     hoveredPrimaryButton === "login-create"
                       ? "translateY(-1px)"

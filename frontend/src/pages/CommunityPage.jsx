@@ -145,6 +145,8 @@ function CommunityPage() {
   useEffect(() => {
     if (!selectedPostId) {
       closingDetailRef.current = false;
+      setDetailMenuOpen(false);
+      setDetailPost(null);
       return;
     }
     if (closingDetailRef.current) return;
