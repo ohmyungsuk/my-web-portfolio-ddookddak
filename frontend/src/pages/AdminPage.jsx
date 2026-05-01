@@ -273,6 +273,12 @@ export default function AdminPage() {
     completed: 0,
     cancelled: 0,
   });
+  const [userSummary, setUserSummary] = useState({
+    total: 0,
+    user: 0,
+    worker: 0,
+    admin: 0,
+  });
   const [recentRequests, setRecentRequests] = useState([]);
 
   const isMobile = windowWidth <= 760;
@@ -320,14 +326,22 @@ export default function AdminPage() {
 
       setIsAdmin(true);
 
-      const { data: requests, error: requestsError } = await supabase
-        .from("requests")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [
+        { data: requests, error: requestsError },
+        { data: profiles, error: profilesError },
+      ] = await Promise.all([
+        supabase
+          .from("requests")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase.from("profiles").select("role"),
+      ]);
 
       if (requestsError) throw requestsError;
+      if (profilesError) throw profilesError;
 
       const safeRequests = Array.isArray(requests) ? requests : [];
+      const safeProfiles = Array.isArray(profiles) ? profiles : [];
       const nextSummary = {
         total: safeRequests.length,
         pending: 0,
@@ -344,7 +358,27 @@ export default function AdminPage() {
         }
       });
 
+      const nextUserSummary = {
+        total: safeProfiles.length,
+        user: 0,
+        worker: 0,
+        admin: 0,
+      };
+
+      safeProfiles.forEach((profile) => {
+        const role = String(profile?.role || "user").trim().toLowerCase();
+
+        if (role === "admin") {
+          nextUserSummary.admin += 1;
+        } else if (role === "worker") {
+          nextUserSummary.worker += 1;
+        } else {
+          nextUserSummary.user += 1;
+        }
+      });
+
       setSummary(nextSummary);
+      setUserSummary(nextUserSummary);
       setRecentRequests(safeRequests.slice(0, 6));
     } catch (error) {
       console.error("관리자 페이지 로딩 실패:", error);
@@ -533,7 +567,7 @@ export default function AdminPage() {
     },
     quickGrid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))",
       gap: "12px",
       marginBottom: "18px",
     },
@@ -834,6 +868,13 @@ export default function AdminPage() {
             tone="red"
             styles={styles}
           />
+          <SummaryCard
+            label="전체 회원"
+            value={userSummary.total}
+            desc={`전문가 ${userSummary.worker}명 · 관리자 ${userSummary.admin}명`}
+            tone="indigo"
+            styles={styles}
+          />
         </section>
 
         <section style={styles.quickGrid}>
@@ -848,6 +889,13 @@ export default function AdminPage() {
             title="회원 관리"
             desc="회원 목록을 확인하고 일반회원, 전문가, 관리자 역할을 관리해요."
             buttonText="회원 관리로 이동"
+            onClick={() => navigate("/admin/users")}
+            styles={styles}
+          />
+          <QuickCard
+            title="전문가 관리"
+            desc="전문가 계정을 확인하고 요청 담당자로 배정할 계정을 정리해요."
+            buttonText="전문가 확인"
             onClick={() => navigate("/admin/users")}
             styles={styles}
           />

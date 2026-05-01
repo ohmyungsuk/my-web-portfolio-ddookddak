@@ -35,6 +35,7 @@ function Header({
   onGoHome,
   onGoLogin,
   onGoSignup,
+  onGoServiceIntro,
   onGoCreate,
   onGoMyPage,
   onGoMyRequests,
@@ -158,13 +159,6 @@ function Header({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const moveToSection = (id) => {
-    const target = document.getElementById(id);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const closeAndRun = (action) => {
     setProfileOpen(false);
     if (action) action();
@@ -173,6 +167,14 @@ function Header({
   const goAdminPage = () => {
     setProfileOpen(false);
     navigate("/admin");
+  };
+
+  const goServiceIntro = () => {
+    if (onGoServiceIntro) {
+      onGoServiceIntro();
+      return;
+    }
+    navigate("/service");
   };
 
   const handleNotificationToggle = () => {
@@ -692,7 +694,7 @@ function Header({
                   {
                     key: "intro",
                     text: "서비스 소개",
-                    onClick: () => moveToSection("service-intro"),
+                    onClick: goServiceIntro,
                   },
                   {
                     key: "community",

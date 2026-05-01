@@ -11,6 +11,7 @@ function LandingPage({
   onGoSignup,
   onGoCreate,
   onGoAiRequest,
+  onGoServiceIntro,
   onGoMyPage,
   onGoMyRequests,
   onGoAllRequests,
@@ -295,14 +296,16 @@ function LandingPage({
   };
 
   const categoryItems = [
-    { title: "전기", bg: ICON_BG, categoryId: "electrical" },
-    { title: "설비", bg: ICON_BG, categoryId: "plumbing" },
-    { title: "누수", bg: ICON_BG, categoryId: "waterproof" },
-    { title: "도어락", bg: ICON_BG, categoryId: "doorlock" },
-    { title: "에어컨", bg: ICON_BG, categoryId: "aircon" },
-    { title: "CCTV", bg: ICON_BG, categoryId: "cctv" },
-    { title: "간판", bg: ICON_BG, categoryId: "etc" },
-    { title: "기타", bg: ICON_BG, categoryId: "etc" },
+    { title: "전기/조명", bg: ICON_BG, categoryId: "electrical" },
+    { title: "설비/배관", bg: ICON_BG, categoryId: "plumbing" },
+    { title: "누수/방수", bg: ICON_BG, categoryId: "waterproof" },
+    { title: "도어락/출입문", bg: ICON_BG, categoryId: "doorlock" },
+    { title: "에어컨/환기", bg: ICON_BG, categoryId: "aircon" },
+    { title: "CCTV/네트워크", bg: ICON_BG, categoryId: "cctv" },
+    { title: "유리/창호", bg: ICON_BG, categoryId: "window" },
+    { title: "가전/생활수리", bg: ICON_BG, categoryId: "appliance" },
+    { title: "청소/철거", bg: ICON_BG, categoryId: "cleaning" },
+    { title: "기타 유지보수", bg: ICON_BG, categoryId: "etc" },
   ];
 
   const featuredRequests = [
@@ -721,7 +724,7 @@ function LandingPage({
                     {
                       key: "intro",
                       text: "서비스 소개",
-                      onClick: () => moveToSection("service-intro"),
+                      onClick: onGoServiceIntro,
                     },
                     {
                       key: "community",
@@ -1233,10 +1236,10 @@ function LandingPage({
           style={{
             display: "grid",
             gridTemplateColumns: isMobile
-              ? "repeat(4, 1fr)"
-              : "repeat(8, minmax(0, 1fr))",
-            gap: isMobile ? "12px" : "16px",
-            maxWidth: "1080px",
+              ? "repeat(5, minmax(0, 1fr))"
+              : "repeat(10, minmax(0, 1fr))",
+            gap: isMobile ? "12px 8px" : "14px",
+            maxWidth: "1120px",
             margin: "0 auto",
           }}
         >
@@ -1307,6 +1310,9 @@ function LandingPage({
                   fontWeight: "700",
                   color: isCategoryHover ? BRAND_COLOR : "#334155",
                   transition: "color 0.18s ease",
+                  textAlign: "center",
+                  lineHeight: 1.35,
+                  wordBreak: "keep-all",
                 }}
               >
                 {item.title}
@@ -1492,11 +1498,43 @@ function LandingPage({
           padding: isMobile ? "0 16px 42px" : "0 24px 58px",
         }}
       >
-        <SectionHeader
-          title="서비스 소개"
-          desc="요청 등록부터 작업 수락, 상태 확인까지 이어지는 흐름을 간단하게 사용할 수 있습니다."
-          isMobile={isMobile}
-        />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: isMobile ? "flex-start" : "flex-end",
+            flexDirection: isMobile ? "column" : "row",
+            gap: "16px",
+            marginBottom: "22px",
+          }}
+        >
+          <SectionHeader
+            title="서비스 소개"
+            desc="요청 등록부터 작업 수락, 상태 확인까지 이어지는 흐름을 간단하게 사용할 수 있습니다."
+            isMobile={isMobile}
+            noMargin
+          />
+
+          <button
+            type="button"
+            onClick={onGoServiceIntro}
+            onMouseEnter={() => setHoveredGhostButton("service-more")}
+            onMouseLeave={() => setHoveredGhostButton("")}
+            onMouseDown={(e) => e.currentTarget.blur()}
+            style={{
+              ...ghostButton,
+              borderColor:
+                hoveredGhostButton === "service-more" ? "#BFD7FF" : BUTTON_BORDER,
+              color:
+                hoveredGhostButton === "service-more" ? BRAND_COLOR : TEXT_BODY,
+              backgroundColor:
+                hoveredGhostButton === "service-more" ? "#F8FBFF" : "#ffffff",
+              width: isMobile ? "100%" : "auto",
+            }}
+          >
+            더보기
+          </button>
+        </div>
 
         <div
           style={{
@@ -2112,7 +2150,7 @@ function LandingPage({
                 { label: "홈", onClick: goTop },
                 {
                   label: "서비스 소개",
-                  onClick: () => moveToSection("service-intro"),
+                  onClick: onGoServiceIntro,
                 },
                 { label: "커뮤니티", onClick: onGoCommunity },
               ]}

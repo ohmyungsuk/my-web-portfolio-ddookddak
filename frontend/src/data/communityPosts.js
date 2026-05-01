@@ -1175,6 +1175,78 @@ export const updateCommunityPost = (postId, updater) => {
   return updatedPost;
 };
 
+export const updateCommunityAuthorProfile = ({
+  authorId = "",
+  authorName = "",
+  authorAvatar = "",
+}) => {
+  const nextAuthorId = String(authorId || "");
+  const nextAuthorName = String(authorName || "").trim();
+
+  if (!nextAuthorId && !nextAuthorName) return false;
+
+  const matchesAuthor = (item) => {
+    if (!item) return false;
+
+    if (
+      nextAuthorId &&
+      item.authorId &&
+      String(item.authorId) === nextAuthorId
+    ) {
+      return true;
+    }
+
+    return (
+      !item.authorId &&
+      nextAuthorName &&
+      item.author &&
+      String(item.author) === nextAuthorName
+    );
+  };
+
+  const updateAuthorFields = (item) => {
+    if (!matchesAuthor(item)) return item;
+
+    return {
+      ...item,
+      author: nextAuthorName || item.author,
+      authorAvatar,
+    };
+  };
+
+  const nextPosts = dedupePosts(
+    getStoredCommunityPosts().map((post) => {
+      const nextPost = updateAuthorFields(post);
+      const nextCommentList = (nextPost.commentList || []).map((comment) => ({
+        ...updateAuthorFields(comment),
+        replies: (comment.replies || []).map(updateAuthorFields),
+      }));
+
+      return normalizePost({
+        ...nextPost,
+        commentList: nextCommentList,
+      });
+    })
+  );
+
+  saveCommunityPosts(nextPosts, { syncRemote: false });
+
+  nextPosts
+    .filter((post) => {
+      if (matchesAuthor(post)) return true;
+      return (post.commentList || []).some(
+        (comment) =>
+          matchesAuthor(comment) ||
+          (comment.replies || []).some((reply) => matchesAuthor(reply))
+      );
+    })
+    .forEach((post) => {
+      persistCommunityPostToSupabase(post);
+    });
+
+  return true;
+};
+
 export const getCommunitySections = (
   posts = withScreenOnlyPosts(getStoredCommunityPosts())
 ) =>

@@ -15,6 +15,7 @@ import SiteFooter from "./components/common/SiteFooter";
 
 import LandingPage from "./pages/LandingPage";
 import CommunityPage from "./pages/CommunityPage";
+import ServiceIntroPage from "./pages/ServiceIntroPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
@@ -381,6 +382,7 @@ function App() {
           onGoHome={() => navigate("/")}
           onGoLogin={() => navigate("/login")}
           onGoSignup={() => navigate("/signup")}
+          onGoServiceIntro={() => navigate("/service")}
           onGoCreate={(categoryId) =>
             isLoggedIn
               ? navigate(
@@ -426,6 +428,7 @@ function App() {
               onGoAiRequest={() =>
                 isLoggedIn ? navigate("/requests/ai") : navigate("/login")
               }
+              onGoServiceIntro={() => navigate("/service")}
               onGoMyPage={() => navigate("/mypage")}
               onGoMyRequests={() => navigate("/requests/my")}
               onGoAllRequests={() => navigate("/requests/all")}
@@ -444,6 +447,11 @@ function App() {
               onLogout={handleLogout}
             />
           }
+        />
+
+        <Route
+          path="/service"
+          element={<ServiceIntroPage isLoggedIn={isLoggedIn} />}
         />
 
         <Route
@@ -499,6 +507,7 @@ function App() {
                 onGoMyRequests={() => navigate("/requests/my")}
                 onGoAllRequests={() => navigate("/requests/all")}
                 onGoAssignedRequests={() => navigate("/requests/assigned")}
+                onGoAdmin={() => navigate("/admin")}
                 onLogout={handleLogout}
               />
             </RequireAuth>

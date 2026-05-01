@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient.js";
+import { updateCommunityAuthorProfile } from "../data/communityPosts.js";
 
 const BRAND = "#2F80ED";
 const BRAND_HOVER = "#1F6FD6";
@@ -199,6 +200,7 @@ export default function MyPage({
   onGoMyRequests,
   onGoAllRequests,
   onGoAssignedRequests,
+  onGoAdmin,
   onLogout,
 }) {
   const [activeTab, setActiveTab] = useState("profile");
@@ -245,7 +247,9 @@ export default function MyPage({
   const [completedCount, setCompletedCount] = useState(0);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  const isTablet = windowWidth <= 980;
   const isMobile = windowWidth <= 768;
+  const isSmallMobile = windowWidth <= 460;
   const isWorker = loginUser?.role === "worker" || loginUser?.role === "admin";
   const canManageWorkerCategories = loginUser?.role === "worker";
   const isAdmin = loginUser?.role === "admin";
@@ -491,8 +495,24 @@ export default function MyPage({
       });
     }
 
+    if (isAdmin) {
+      cards.unshift({
+        title: "관리자 대시보드",
+        desc: "요청 현황과 회원 관리를 한 화면에서 확인해요.",
+        buttonText: "관리자 페이지",
+        onClick: onGoAdmin,
+      });
+    }
+
     return cards;
-  }, [isWorker, onGoMyRequests, onGoAllRequests, onGoAssignedRequests]);
+  }, [
+    isAdmin,
+    isWorker,
+    onGoAdmin,
+    onGoMyRequests,
+    onGoAllRequests,
+    onGoAssignedRequests,
+  ]);
 
   const handleStartEdit = () => {
     setSaveMessage("");
@@ -596,6 +616,11 @@ export default function MyPage({
 
       localStorage.setItem("loginUser", JSON.stringify(nextLoginUser));
       setAvatarUrl(editAvatarUrl);
+      updateCommunityAuthorProfile({
+        authorId: nextLoginUser.supabaseUserId || nextLoginUser.id,
+        authorName: trimmedName,
+        authorAvatar: editAvatarUrl,
+      });
 
       setSaveMessage("내 정보가 수정되었습니다.");
       setIsEditingProfile(false);
@@ -756,7 +781,11 @@ export default function MyPage({
     page: {
       minHeight: "100dvh",
       background: BG,
-      padding: isMobile ? "88px 16px 36px" : "104px 42px 56px",
+      padding: isSmallMobile
+        ? "82px 12px 30px"
+        : isMobile
+          ? "88px 16px 36px"
+          : "104px 42px 56px",
       boxSizing: "border-box",
       color: TEXT,
       fontFamily:
@@ -776,7 +805,7 @@ export default function MyPage({
     },
     title: {
       margin: 0,
-      fontSize: isMobile ? "25px" : "30px",
+      fontSize: isSmallMobile ? "23px" : isMobile ? "25px" : "30px",
       fontWeight: 900,
       color: TEXT,
       letterSpacing: "-0.7px",
@@ -792,6 +821,7 @@ export default function MyPage({
     topBtnRow: {
       display: "flex",
       gap: "10px",
+      flexWrap: "wrap",
       width: isMobile ? "100%" : "auto",
     },
     whiteBtn: {
@@ -813,7 +843,7 @@ export default function MyPage({
     },
     layout: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "320px minmax(0, 1fr)",
+      gridTemplateColumns: isTablet ? "1fr" : "320px minmax(0, 1fr)",
       gap: "18px",
       alignItems: "start",
     },
@@ -823,7 +853,7 @@ export default function MyPage({
       borderRadius: isMobile ? "20px" : "24px",
       padding: isMobile ? "22px 18px" : "28px 24px",
       boxShadow: "0 14px 34px rgba(47, 128, 237, 0.08)",
-      position: isMobile ? "static" : "sticky",
+      position: isTablet ? "static" : "sticky",
       top: "96px",
       boxSizing: "border-box",
       outline: "none",
@@ -869,7 +899,9 @@ export default function MyPage({
     },
     profileMeta: {
       display: "grid",
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: isSmallMobile
+        ? "1fr"
+        : "repeat(2, minmax(0, 1fr))",
       gap: "8px",
       marginBottom: "14px",
     },
@@ -996,7 +1028,9 @@ export default function MyPage({
     },
     statGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: isSmallMobile
+        ? "1fr"
+        : "repeat(2, minmax(0, 1fr))",
       gap: "8px",
       marginTop: "16px",
       paddingTop: "16px",
@@ -1032,7 +1066,9 @@ export default function MyPage({
       gap: isMobile ? "10px" : "14px",
       marginBottom: "14px",
       overflowX: "auto",
-      paddingBottom: "4px",
+      paddingBottom: "6px",
+      WebkitOverflowScrolling: "touch",
+      scrollbarWidth: "none",
     },
     tabBtn: (active) => ({
       minHeight: "42px",
@@ -1055,7 +1091,7 @@ export default function MyPage({
       background: CARD,
       border: `1px solid ${BORDER}`,
       borderRadius: isMobile ? "20px" : "24px",
-      padding: isMobile ? "20px 16px" : "26px",
+      padding: isSmallMobile ? "18px 14px" : isMobile ? "20px 16px" : "26px",
       boxShadow: "0 14px 34px rgba(47, 128, 237, 0.08)",
       boxSizing: "border-box",
       outline: "none",
@@ -1080,7 +1116,7 @@ export default function MyPage({
       background: SOFT,
       border: `1px solid ${BORDER}`,
       borderRadius: "20px",
-      padding: isMobile ? "18px" : "22px",
+      padding: isSmallMobile ? "15px" : isMobile ? "18px" : "22px",
       boxSizing: "border-box",
       outline: "none",
       outlineOffset: 0,
@@ -1171,14 +1207,14 @@ export default function MyPage({
     },
     activityGrid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gridTemplateColumns: isTablet ? "1fr" : "repeat(2, minmax(0, 1fr))",
       gap: "12px",
     },
     activityCard: {
       background: SOFT,
       border: `1px solid ${BORDER}`,
       borderRadius: "20px",
-      padding: isMobile ? "18px" : "20px",
+      padding: isSmallMobile ? "15px" : isMobile ? "18px" : "20px",
       minHeight: isMobile ? "auto" : "170px",
       display: "flex",
       flexDirection: "column",
@@ -1211,7 +1247,7 @@ export default function MyPage({
       background: SOFT,
       border: `1px solid ${BORDER}`,
       borderRadius: "20px",
-      padding: isMobile ? "18px" : "20px",
+      padding: isSmallMobile ? "15px" : isMobile ? "18px" : "20px",
       display: "flex",
       flexDirection: isMobile ? "column" : "row",
       justifyContent: "space-between",
@@ -1254,7 +1290,7 @@ export default function MyPage({
     },
     categoryGrid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gridTemplateColumns: isTablet ? "1fr" : "repeat(2, minmax(0, 1fr))",
       gap: "10px",
       marginTop: "14px",
     },

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "../supabaseClient.js";
 import {
   COMMUNITY_POSTS_UPDATED,
   communityCategories,
@@ -39,6 +40,8 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
   const [editingImage, setEditingImage] = useState(null);
   const [editingPostId, setEditingPostId] = useState("");
   const [detailMenuOpen, setDetailMenuOpen] = useState(false);
+  const [profileMap, setProfileMap] = useState({});
+  const [profileModalUser, setProfileModalUser] = useState(null);
   const [form, setForm] = useState({
     category: "reviews",
     title: "",
@@ -66,7 +69,7 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
         id: user?.supabaseUserId || user?.id || "",
         name,
         role: String(user?.role || "").toLowerCase(),
-        avatarUrl: user?.avatarUrl || "",
+        avatarUrl: user?.avatarUrl || user?.avatar_url || "",
       };
     } catch {
       return { id: "", name: "뚝딱 회원", role: "", avatarUrl: "" };
@@ -100,8 +103,49 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
     return trimmed.slice(0, 1).toUpperCase();
   };
 
+  const getProfileByAuthor = (item) => {
+    if (!item?.authorId) return null;
+    return profileMap[String(item.authorId)] || null;
+  };
+
+  const getAuthorName = (item) => {
+    const profile = getProfileByAuthor(item);
+    return profile?.name || item?.author || "뚝딱 회원";
+  };
+
+  const getAuthorRole = (item) => {
+    const profile = getProfileByAuthor(item);
+    const role = String(profile?.role || item?.role || "").toLowerCase();
+
+    if (role === "admin") return "관리자";
+    if (role === "worker") return "전문가";
+    return "일반 회원";
+  };
+
+  const getAuthorRoleType = (item) => {
+    const profile = getProfileByAuthor(item);
+    const role = String(profile?.role || item?.role || "").toLowerCase();
+    const name = String(profile?.name || item?.author || "");
+
+    if (role === "admin" || name.includes("운영팀")) return "admin";
+    if (role === "worker") return "worker";
+    return "user";
+  };
+
+  const getAuthorBadgeText = (item) => {
+    const roleType = getAuthorRoleType(item);
+    const name = String(getAuthorName(item) || item?.author || "");
+
+    if (name.includes("운영팀")) return "뚝딱 운영팀";
+    if (roleType === "admin") return "운영자";
+    if (roleType === "worker") return "전문가";
+    return "";
+  };
+
   const getAuthorAvatar = (item) => {
     if (!item) return "";
+    const profile = getProfileByAuthor(item);
+    if (profile?.avatarUrl) return profile.avatarUrl;
     if (item.authorAvatar) return item.authorAvatar;
     if (
       currentUser.avatarUrl &&
@@ -113,6 +157,18 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
     return "";
   };
 
+  const openAuthorProfile = (item) => {
+    if (!item) return;
+
+    setProfileModalUser({
+      id: item.authorId || "",
+      name: getAuthorName(item),
+      role: getAuthorRole(item),
+      avatarUrl: getAuthorAvatar(item),
+      fallbackName: item.author || "뚝딱 회원",
+    });
+  };
+
   const renderAuthorAvatar = (name, avatarUrl = "") => (
     <span className="community-author-avatar">
       {avatarUrl ? (
@@ -122,6 +178,31 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
       )}
     </span>
   );
+
+  const renderAuthorButton = (item, className = "community-author-mini") => {
+    const name = getAuthorName(item);
+    const badgeText = getAuthorBadgeText(item);
+    const roleType = getAuthorRoleType(item);
+
+    return (
+      <button
+        type="button"
+        className={`community-author-button ${className}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          openAuthorProfile(item);
+        }}
+      >
+        {renderAuthorAvatar(name, getAuthorAvatar(item))}
+        <span>{name}</span>
+        {badgeText && (
+          <em className={`community-author-badge ${roleType}`}>
+            {badgeText}
+          </em>
+        )}
+      </button>
+    );
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -142,6 +223,77 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
       window.removeEventListener("storage", loadLocalPosts);
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const collectAuthorIds = () => {
+      const ids = new Set();
+
+      posts.forEach((post) => {
+        if (post.authorId) ids.add(String(post.authorId));
+
+        (post.commentList || []).forEach((comment) => {
+          if (comment.authorId) ids.add(String(comment.authorId));
+
+          (comment.replies || []).forEach((reply) => {
+            if (reply.authorId) ids.add(String(reply.authorId));
+          });
+        });
+      });
+
+      return Array.from(ids);
+    };
+
+    const loadProfiles = async () => {
+      const authorIds = collectAuthorIds();
+
+      if (authorIds.length === 0) {
+        setProfileMap({});
+        return;
+      }
+
+      try {
+        let response = await supabase
+          .from("profiles")
+          .select("id, username, name, role, avatar_url, created_at, auth_created_at")
+          .in("id", authorIds);
+
+        if (response.error?.code === "PGRST204") {
+          response = await supabase
+            .from("profiles")
+            .select("id, username, name, role, avatar_url, created_at")
+            .in("id", authorIds);
+        }
+
+        const { data, error } = response;
+        if (error) throw error;
+        if (!mounted) return;
+
+        const nextMap = {};
+        (data || []).forEach((profile) => {
+          nextMap[String(profile.id)] = {
+            id: profile.id,
+            name: profile.name || profile.username || "뚝딱 회원",
+            username: profile.username || "",
+            role: profile.role || "user",
+            avatarUrl: profile.avatar_url || "",
+            joinedAt: profile.auth_created_at || profile.created_at || "",
+          };
+        });
+
+        setProfileMap(nextMap);
+      } catch (error) {
+        console.error("커뮤니티 프로필 조회 실패:", error);
+      }
+    };
+
+    loadProfiles();
+
+    return () => {
+      mounted = false;
+    };
+  }, [posts]);
 
   useEffect(() => {
     if (!selectedPostId) {
@@ -182,6 +334,11 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
         return;
       }
 
+      if (profileModalUser) {
+        setProfileModalUser(null);
+        return;
+      }
+
       if (detailPost) {
         closePostDetail();
         return;
@@ -191,11 +348,12 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
         setWriteOpen(false);
         setEditingPostId("");
       }
+
     };
 
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [detailPost, editingImage, writeOpen]);
+  }, [detailPost, editingImage, profileModalUser, writeOpen]);
 
   const filteredPosts = useMemo(() => {
     if (activeCategory === "all") return posts;
@@ -760,10 +918,7 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
         </div>
         <h3>{post.title}</h3>
         <p>{post.excerpt}</p>
-        <div className="community-author-mini">
-          {renderAuthorAvatar(post.author, getAuthorAvatar(post))}
-          <span>{post.author || "뚝딱 회원"}</span>
-        </div>
+        {renderAuthorButton(post)}
         <div className="community-row-meta">
           <span>{formatCommunityTime(post.createdAt)}</span>
           <span>조회 {Number(post.views || 0).toLocaleString()}</span>
@@ -1063,10 +1218,7 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
                   {getCategoryLabel(detailPost.category)}
                 </span>
                 <h2>{detailPost.title}</h2>
-                <div className="community-detail-author">
-                  {renderAuthorAvatar(detailPost.author, getAuthorAvatar(detailPost))}
-                  <strong>{detailPost.author || "뚝딱 회원"}</strong>
-                </div>
+                {renderAuthorButton(detailPost, "community-detail-author")}
               </div>
               <div className="community-detail-head-actions">
                 <button
@@ -1203,10 +1355,7 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
                   {detailPost.commentList.map((comment) => (
                     <div key={comment.id} className="community-comment">
                       <div className="community-comment-head">
-                        <div className="community-comment-profile">
-                          {renderAuthorAvatar(comment.author, getAuthorAvatar(comment))}
-                          <strong>{comment.author}</strong>
-                        </div>
+                        {renderAuthorButton(comment, "community-comment-profile")}
                         <span>{formatCommunityTime(comment.createdAt)}</span>
                       </div>
 
@@ -1276,10 +1425,7 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
                           {comment.replies.map((reply) => (
                             <div key={reply.id} className="community-reply">
                               <div className="community-comment-head">
-                                <div className="community-comment-profile">
-                                  {renderAuthorAvatar(reply.author, getAuthorAvatar(reply))}
-                                  <strong>{reply.author}</strong>
-                                </div>
+                                {renderAuthorButton(reply, "community-comment-profile")}
                                 <span>{formatCommunityTime(reply.createdAt)}</span>
                               </div>
                               {editingComment?.commentId === comment.id &&
@@ -1503,6 +1649,56 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {profileModalUser && (
+        <div
+          className="community-profile-backdrop"
+          onClick={() => setProfileModalUser(null)}
+        >
+          <section
+            className="community-profile-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="community-profile-close"
+              onClick={() => setProfileModalUser(null)}
+              aria-label="프로필 닫기"
+            >
+              ×
+            </button>
+
+            <div className="community-profile-cover" />
+            <div className="community-profile-content">
+              <div className="community-profile-avatar">
+                {profileModalUser.avatarUrl ? (
+                  <img src={profileModalUser.avatarUrl} alt="프로필 사진" />
+                ) : (
+                  getInitial(profileModalUser.name)
+                )}
+              </div>
+
+              <h2>{profileModalUser.name}</h2>
+              <p>{profileModalUser.role}</p>
+
+              <div className="community-profile-info-grid">
+                <div>
+                  <span>커뮤니티 이름</span>
+                  <strong>{profileModalUser.name}</strong>
+                </div>
+                <div>
+                  <span>계정 유형</span>
+                  <strong>{profileModalUser.role}</strong>
+                </div>
+              </div>
+
+              <div className="community-profile-note">
+                공개 프로필입니다. 이름, 프로필 사진, 계정 유형만 표시됩니다.
+              </div>
+            </div>
+          </section>
         </div>
       )}
 
@@ -1798,6 +1994,48 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
             min-width: 0;
           }
 
+          .community-author-button {
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            font: inherit;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .community-author-button:hover span:last-child {
+            color: ${BRAND_COLOR};
+          }
+
+          .community-author-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 22px;
+            padding: 0 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-style: normal;
+            font-weight: 950;
+            line-height: 1;
+            white-space: nowrap;
+          }
+
+          .community-author-badge.admin {
+            background: #eff6ff;
+            border-color: #bfd7ff;
+            color: ${BRAND_COLOR};
+            box-shadow: 0 8px 16px rgba(47, 128, 237, 0.08);
+          }
+
+          .community-author-badge.worker {
+            background: #f5f3ff;
+            border-color: #ddd6fe;
+            color: #7c3aed;
+          }
+
           .community-author-mini {
             margin: -2px 0 12px;
             color: #64748b;
@@ -1831,6 +2069,11 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
             margin-top: 10px;
             color: #475569;
             font-size: 13px;
+          }
+
+          .community-detail-author span:last-child {
+            color: #475569;
+            font-weight: 900;
           }
 
           .community-detail-page {
@@ -2395,9 +2638,11 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
             font-size: 12px;
           }
 
+          .community-comment-profile span:last-child,
           .community-comment-profile strong {
             color: ${TEXT_DARK};
             font-size: 13px;
+            font-weight: 900;
           }
 
           .community-comment strong {
@@ -2696,6 +2941,137 @@ function CommunityPage({ isLoggedIn = false, onGoLogin }) {
 
           .community-crop-control input {
             width: 100%;
+          }
+
+          .community-profile-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 160;
+            background: rgba(15, 23, 42, 0.42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+
+          .community-profile-modal {
+            width: min(420px, 100%);
+            position: relative;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid ${CARD_BORDER};
+            overflow: hidden;
+            box-shadow: 0 30px 70px rgba(15, 23, 42, 0.24);
+          }
+
+          .community-profile-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 2;
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.86);
+            color: ${TEXT_DARK};
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+          }
+
+          .community-profile-cover {
+            height: 116px;
+            background:
+              linear-gradient(135deg, rgba(47, 128, 237, 0.96), rgba(31, 111, 214, 0.8)),
+              linear-gradient(45deg, #eff6ff, #dbeafe);
+          }
+
+          .community-profile-content {
+            padding: 0 24px 24px;
+          }
+
+          .community-profile-avatar {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            margin-top: -42px;
+            border: 4px solid #ffffff;
+            background: #eaf3ff;
+            color: ${BRAND_COLOR};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-size: 30px;
+            font-weight: 950;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+          }
+
+          .community-profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+
+          .community-profile-content h2 {
+            margin: 14px 0 4px;
+            color: ${TEXT_DARK};
+            font-size: 25px;
+            line-height: 1.25;
+            font-weight: 950;
+            letter-spacing: -0.5px;
+          }
+
+          .community-profile-content > p {
+            margin: 0;
+            color: ${BRAND_COLOR};
+            font-size: 13px;
+            font-weight: 900;
+          }
+
+          .community-profile-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+          }
+
+          .community-profile-info-grid div {
+            min-width: 0;
+            border: 1px solid ${CARD_BORDER};
+            border-radius: 8px;
+            background: #f8fbff;
+            padding: 12px;
+          }
+
+          .community-profile-info-grid span {
+            display: block;
+            margin-bottom: 6px;
+            color: ${TEXT_MUTED};
+            font-size: 12px;
+            font-weight: 850;
+          }
+
+          .community-profile-info-grid strong {
+            display: block;
+            color: ${TEXT_DARK};
+            font-size: 14px;
+            line-height: 1.45;
+            font-weight: 900;
+            word-break: break-word;
+          }
+
+          .community-profile-note {
+            margin-top: 14px;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: ${TEXT_MUTED};
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.65;
+            font-weight: 750;
           }
 
           @media (max-width: 820px) {

@@ -268,6 +268,7 @@ export default function AdminRequestsPage() {
   const [windowWidth, setWindowWidth] = useState(getWindowWidth);
   const [message, setMessage] = useState("");
 
+  const isTablet = windowWidth <= 1080;
   const isMobile = windowWidth <= 900;
   const isSmallMobile = windowWidth <= 480;
 
@@ -592,7 +593,7 @@ export default function AdminRequestsPage() {
     },
     shell: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 310px",
+      gridTemplateColumns: isTablet ? "1fr" : "minmax(0, 1fr) 310px",
       gap: isMobile ? "14px" : "18px",
       alignItems: "start",
     },
@@ -643,7 +644,11 @@ export default function AdminRequestsPage() {
     },
     statGrid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))",
+      gridTemplateColumns: isSmallMobile
+        ? "1fr"
+        : isMobile
+          ? "repeat(2, minmax(0, 1fr))"
+          : "repeat(4, minmax(0, 1fr))",
       gap: "10px",
       marginTop: "16px",
     },
@@ -758,7 +763,7 @@ export default function AdminRequestsPage() {
     },
     requestLayout: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 280px",
+      gridTemplateColumns: isTablet ? "1fr" : "minmax(0, 1fr) 280px",
       gap: "14px",
       alignItems: "start",
     },
@@ -895,7 +900,7 @@ export default function AdminRequestsPage() {
       borderRadius: isMobile ? "20px" : "24px",
       padding: isMobile ? "16px" : "18px",
       boxShadow: "0 14px 34px rgba(15, 23, 42, 0.06)",
-      position: isMobile ? "static" : "sticky",
+      position: isTablet ? "static" : "sticky",
       top: "94px",
       boxSizing: "border-box",
     },
